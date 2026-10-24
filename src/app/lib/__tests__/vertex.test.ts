@@ -41,6 +41,7 @@ describe('Vertex AI provider', () => {
     api.mockResolvedValueOnce(Response.json({ candidates: [{ content: { parts: [{ text: 'hi' }] } }] }));
     expect(await generateText({ provider: 'vertex', apiKey: 'AQ.key', prompt: 'x' })).toBe('hi');
     expect(api.mock.calls[0][1].headers['x-goog-api-key']).toBe('AQ.key');
+    expect(api.mock.calls[0][0]).toBe('/vertex/models/gemini-3.8-flash:generateContent');
   });
 
   it('explains that the helper is missing on a hosted site', async () => {

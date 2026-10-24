@@ -21,6 +21,7 @@ const GEMINI_IMAGE_MODELS: Record<ModelId, string> = {
   'nano-banana-2': 'gemini-3.1-flash-image',
 };
 const GEMINI_TEXT_MODEL = 'gemini-3.6-flash';
+const VERTEX_TEXT_MODEL = 'gemini-3.8-flash';
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 /** Same-origin route of the local Vertex helper; it adds the gcloud token and the project. */
@@ -32,7 +33,7 @@ const OPENROUTER_IMAGE_MODELS: Record<ModelId, string> = {
   'nano-banana-pro': 'google/gemini-3-pro-image',
   'nano-banana-2': 'google/gemini-3.1-flash-image',
 };
-const OPENROUTER_TEXT_MODEL = 'google/gemini-3.6-flash';
+const OPENROUTER_TEXT_MODEL = 'google/gemini-3.8-flash';
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 /** Hard ceiling for one generation. Nano Banana Pro at 4K can take a couple of minutes. */
@@ -284,7 +285,7 @@ async function geminiText(req: TextRequest, signal: AbortSignal): Promise<string
   ];
   const data = await geminiCall(
     req.provider as GoogleProvider,
-    GEMINI_TEXT_MODEL,
+    req.provider === 'vertex' ? VERTEX_TEXT_MODEL : GEMINI_TEXT_MODEL,
     {
       contents: [{ role: 'user', parts }],
       ...(req.system ? { systemInstruction: { parts: [{ text: req.system }] } } : {}),
