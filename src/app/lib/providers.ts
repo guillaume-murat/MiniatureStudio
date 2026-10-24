@@ -4,6 +4,8 @@ import { dataUrlToBlob, fetchBlob } from './images';
 /**
  * Provider layer. Replicate has no browser CORS support, so its calls go through
  * our own Netlify function; Gemini and OpenRouter support CORS and are called directly.
+ * Vertex AI needs an OAuth token from gcloud, so it goes through the local helper
+ * (`local/vertex.ts`, served by `npm run dev` and the macOS app).
  */
 
 export const PROXY_URL = '/.netlify/functions/replicate-proxy?url=';
@@ -20,6 +22,11 @@ const GEMINI_IMAGE_MODELS: Record<ModelId, string> = {
 };
 const GEMINI_TEXT_MODEL = 'gemini-3.6-flash';
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
+
+/** Same-origin route of the local Vertex helper; it adds the gcloud token and the project. */
+export const VERTEX_BASE = '/vertex/models';
+/** Stands in for the key when Vertex should authenticate with gcloud (no express-mode key). */
+export const VERTEX_GCLOUD = 'gcloud';
 
 const OPENROUTER_IMAGE_MODELS: Record<ModelId, string> = {
   'nano-banana-pro': 'google/gemini-3-pro-image',
@@ -210,15 +217,32 @@ function toInlinePart(dataUrl: string): GeminiPart | null {
   return m ? { inlineData: { mimeType: m[1], data: m[2] } } : null;
 }
 
-async function geminiCall(model: string, body: unknown, apiKey: string, signal: AbortSignal): Promise<GeminiResponse> {
+/** Gemini API and Vertex AI share the generateContent format; only the endpoint and auth differ. */
+type GoogleProvider = Extract<Provider, 'gemini' | 'vertex'>;
+
+async function geminiCall(
+  provider: GoogleProvider,
+  model: string,
+  body: unknown,
+  apiKey: string,
+  signal: AbortSignal,
+): Promise<GeminiResponse> {
+  const vertex = provider === 'vertex';
   // Key goes in a header, never in the URL (URLs end up in logs and history).
-  const res = await fetch(`${GEMINI_BASE}/${model}:generateContent`, {
+  const auth: Record<string, string> = vertex && apiKey === VERTEX_GCLOUD ? {} : { 'x-goog-api-key': apiKey };
+  const res = await fetch(`${vertex ? VERTEX_BASE : GEMINI_BASE}/${model}:generateContent`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+    headers: { 'Content-Type': 'application/json', ...auth },
     body: JSON.stringify(body),
     signal,
   });
-  if (!res.ok) throw await readError(res, 'gemini');
+  if (!res.ok) {
+    // No helper behind this origin (e.g. the hosted site): a plain 404 page instead of a JSON error.
+    if (vertex && res.status === 404 && !res.headers.get('content-type')?.includes('json')) {
+      throw new ProviderError('Local Vertex AI helper not found', 503, null, provider);
+    }
+    throw await readError(res, provider);
+  }
   return res.json();
 }
 
@@ -227,7 +251,9 @@ async function geminiImage(req: ImageRequest, signal: AbortSignal): Promise<Blob
   const tick = req.onProgress ? setInterval(() => req.onProgress?.(Date.now() - started), 500) : undefined;
   try {
     const parts: GeminiPart[] = [{ text: req.prompt }, ...req.images.map(toInlinePart).filter((p): p is GeminiPart => !!p)];
+    const provider = req.params.provider as GoogleProvider;
     const data = await geminiCall(
+      provider,
       GEMINI_IMAGE_MODELS[req.params.model],
       {
         contents: [{ role: 'user', parts }],
@@ -243,7 +269,7 @@ async function geminiImage(req: ImageRequest, signal: AbortSignal): Promise<Blob
     const image = candidate?.content?.parts?.find((p) => p.inlineData)?.inlineData;
     if (!image) {
       const reason = data.promptFeedback?.blockReason || candidate?.finishReason || 'NO_IMAGE';
-      throw new ProviderError(`Gemini returned no image (${reason})`, 422, data, 'gemini');
+      throw new ProviderError(`Gemini returned no image (${reason})`, 422, data, provider);
     }
     return dataUrlToBlob(`data:${image.mimeType};base64,${image.data}`);
   } finally {
@@ -257,6 +283,7 @@ async function geminiText(req: TextRequest, signal: AbortSignal): Promise<string
     ...(req.images ?? []).map(toInlinePart).filter((p): p is GeminiPart => !!p),
   ];
   const data = await geminiCall(
+    req.provider as GoogleProvider,
     GEMINI_TEXT_MODEL,
     {
       contents: [{ role: 'user', parts }],
@@ -359,6 +386,7 @@ export async function generateImage(req: ImageRequest): Promise<Blob> {
   const signal = withTimeout(req.signal, GENERATION_TIMEOUT_MS);
   switch (req.params.provider) {
     case 'gemini':
+    case 'vertex':
       return geminiImage(req, signal);
     case 'openrouter':
       return openRouterImage(req, signal);
@@ -371,6 +399,7 @@ export async function generateText(req: TextRequest): Promise<string> {
   const signal = withTimeout(req.signal, 90_000);
   switch (req.provider) {
     case 'gemini':
+    case 'vertex':
       return geminiText(req, signal);
     case 'openrouter':
       return openRouterText(req, signal);

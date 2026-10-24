@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Download, ExternalLink, Eye, EyeOff, Loader2, ShieldCheck, Upload } from 'lucide-react';
+import { CircleAlert, CircleCheck, Download, ExternalLink, Eye, EyeOff, Loader2, ShieldCheck, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -21,13 +21,32 @@ const KEY_LINKS: Record<Provider, string> = {
   replicate: 'https://replicate.com/account/api-tokens',
   gemini: 'https://aistudio.google.com/apikey',
   openrouter: 'https://openrouter.ai/settings/keys',
+  vertex: 'https://console.cloud.google.com/vertex-ai',
 };
 
 const KEY_PLACEHOLDERS: Record<Provider, string> = {
   replicate: 'r8_…',
   gemini: 'AIza…',
   openrouter: 'sk-or-…',
+  vertex: '',
 };
+
+type VertexStatus = { ok: true; project: string; location: string } | { ok: false; error?: string } | null;
+
+/** Asks the local helper (local/vertex.ts) whether gcloud is ready. */
+function useVertexStatus(enabled: boolean): VertexStatus {
+  const [status, setStatus] = useState<VertexStatus>(null);
+  useEffect(() => {
+    if (!enabled) return;
+    const controller = new AbortController();
+    setStatus(null);
+    fetch('/vertex/status', { signal: controller.signal, cache: 'no-store' })
+      .then((res) => (res.headers.get('content-type')?.includes('json') ? res.json() : { ok: false }))
+      .then(setStatus, () => !controller.signal.aborted && setStatus({ ok: false }));
+    return () => controller.abort();
+  }, [enabled]);
+  return status;
+}
 
 function formatBytes(n: number): string {
   if (n < 1e6) return `${Math.round(n / 1e3)} KB`;
@@ -43,6 +62,7 @@ export function SettingsDialog() {
   const [reveal, setReveal] = useState(false);
   const [usage, setUsage] = useState<{ usage: number; quota: number } | null>(null);
   const [busy, setBusy] = useState<'export' | 'import' | null>(null);
+  const vertex = useVertexStatus(open && s.provider === 'vertex');
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -96,8 +116,28 @@ export function SettingsDialog() {
               <ToggleGroupItem value="openrouter" className="h-auto min-h-9 min-w-0 flex-1 leading-tight whitespace-normal">
                 {t('settings.openrouter')}
               </ToggleGroupItem>
+              <ToggleGroupItem value="vertex" className="h-auto min-h-9 min-w-0 flex-1 leading-tight whitespace-normal">
+                {t('settings.vertex')}
+              </ToggleGroupItem>
             </ToggleGroup>
             <p className="text-xs text-muted-foreground">{t(`settings.${s.provider}Hint`)}</p>
+            {s.provider === 'vertex' && (
+              <p className="flex items-start gap-1.5 text-xs">
+                {!vertex ? (
+                  <Loader2 className="mt-px size-3.5 shrink-0 animate-spin text-muted-foreground" />
+                ) : vertex.ok ? (
+                  <>
+                    <CircleCheck className="mt-px size-3.5 shrink-0 text-success" />
+                    {t('settings.vertexReady', { project: vertex.project, location: vertex.location })}
+                  </>
+                ) : (
+                  <>
+                    <CircleAlert className="mt-px size-3.5 shrink-0 text-destructive" />
+                    {vertex.error ? t('settings.vertexError', { error: vertex.error }) : t('settings.vertexMissing')}
+                  </>
+                )}
+              </p>
+            )}
           </Field>
 
           <Field
@@ -119,7 +159,7 @@ export function SettingsDialog() {
                 spellCheck={false}
                 value={s.keys[s.provider]}
                 onChange={(e) => s.setKey(s.provider, e.target.value)}
-                placeholder={KEY_PLACEHOLDERS[s.provider]}
+                placeholder={s.provider === 'vertex' ? t('settings.vertexKeyPlaceholder') : KEY_PLACEHOLDERS[s.provider]}
                 className="pr-10 font-mono text-sm"
               />
               <Button

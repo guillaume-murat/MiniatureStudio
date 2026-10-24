@@ -132,7 +132,7 @@ const THEME_ICON: Record<Theme, typeof Sun> = { light: Sun, dark: Moon, system: 
 export function TopBar() {
   const t = useT();
   const { theme, lang, set } = useSettings();
-  const hasKey = useSettings((s) => !!s.keys[s.provider]);
+  const hasKey = useSettings((s) => !!s.apiKey());
   const open = useUI((s) => s.open);
   const agentOn = useAgent((s) => s.enabled);
   const ThemeIcon = THEME_ICON[theme];

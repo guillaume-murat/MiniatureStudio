@@ -8,6 +8,7 @@ export function explainError(error: unknown): { key: TKey; message: string; deta
   if (error instanceof ProviderError) {
     const msg = error.message.toLowerCase();
     const base = { message: error.message, details: error.details, status: error.status };
+    if (error.provider === 'vertex' && error.status === 503) return { key: 'errors.vertexLocal', ...base };
     if (error.status === 401 || (error.status === 403 && !msg.includes('origin'))) return { key: 'errors.auth', ...base };
     if (error.status === 402 || msg.includes('credit') || msg.includes('billing')) return { key: 'errors.credit', ...base };
     if (error.status === 429 || msg.includes('quota') || msg.includes('rate')) return { key: 'errors.rate', ...base };

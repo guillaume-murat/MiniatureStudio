@@ -1,6 +1,17 @@
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
+import { createVertexHandler } from './local/vertex.ts';
+
+/** Vertex AI through the user's gcloud credentials, in dev only (local/vertex.ts). */
+const vertexLocal = {
+  name: 'vertex-local',
+  hooks: {
+    'astro:server:setup': ({ server }) => {
+      server.middlewares.use(createVertexHandler());
+    },
+  },
+};
 
 // Base path: "/" for Netlify and local dev, "/NanoThumbnail/" for GitHub Pages
 const isGitHubPages = process.env.GITHUB_ACTIONS === 'true';
@@ -10,7 +21,7 @@ const basePath = isGitHubPages ? '/NanoThumbnail/' : '/';
 export default defineConfig({
   output: 'static',
   base: basePath,
-  integrations: [react()],
+  integrations: [react(), vertexLocal],
   security: {
     // Emits a <meta> CSP with hashes for every script Astro renders.
     csp: {

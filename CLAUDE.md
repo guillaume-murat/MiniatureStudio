@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-NanoThumbnail is a free, open-source, local-first studio to generate, edit and test YouTube thumbnails with Google's Nano Banana models (Pro / 2), BYOK via Replicate, Google Gemini or OpenRouter.
+NanoThumbnail is a free, open-source, local-first studio to generate, edit and test YouTube thumbnails with Google's Nano Banana models (Pro / 2), BYOK via Replicate, Google Gemini or OpenRouter, or Vertex AI through the user's gcloud (local only).
 
 **Stack**: Astro 7 (static), React 19 island for `/app`, shadcn/ui + Radix + Tailwind v4, Zustand, IndexedDB (`idb`), Vitest. Deployed on Netlify.
 
@@ -16,6 +16,8 @@ npm run build      # → dist/
 npm test           # Vitest
 npm run typecheck  # tsc --noEmit (src + netlify)
 npm run check      # typecheck + test + build (CI)
+npm run local      # build + local server (dist + Vertex helper + Netlify functions) on 127.0.0.1:17830
+npm run app:mac:install  # macOS app → ~/Applications
 ```
 
 ## Architecture
@@ -23,7 +25,7 @@ npm run check      # typecheck + test + build (CI)
 - `src/app/` — the studio, a single React island (`<App client:only="react" />` in `src/pages/app.astro`).
   - `stores/workspace.ts` — core state & actions: projects, generations (with `parentId` lineage), jobs (abortable), brief, refs, personas, brand kit, edit/region-edit, score/rank.
   - `stores/settings.ts` — provider, keys (localStorage or sessionStorage), output params, theme, lang. Keys: `nt_prefs`, `nt_key_<provider>`, `nano_lang`.
-  - `lib/providers.ts` — Replicate (via proxy, `Prefer: wait`, backoff polling, cancel on abort) Gemini (direct, `x-goog-api-key`) and OpenRouter (direct, OpenAI-style chat completions). `generateImage`, `generateText`, `generateJSON`.
+  - `lib/providers.ts` — Replicate (via proxy, `Prefer: wait`, backoff polling, cancel on abort) Gemini (direct, `x-goog-api-key`), OpenRouter (direct, OpenAI-style chat completions) and Vertex AI (same body as Gemini, sent to the same-origin `/vertex/*` helper; the key is optional, `apiKey()` returns the `VERTEX_GCLOUD` sentinel when empty). `generateImage`, `generateText`, `generateJSON`.
   - `lib/prompt.ts` — prompt builder following Google's Nano Banana guidance (declared image roles, identity lock, "change only X" edits). Covered by tests.
   - `lib/ai.ts` — critique, ranking, concepts, channel style analysis (Gemini 3 Flash).
   - `lib/images.ts` — canvas helpers: reference downscaling, YouTube export (1280×720 ≤ 2 MB), mask highlight/merge for region edits.
@@ -34,6 +36,7 @@ npm run check      # typecheck + test + build (CI)
 - `src/components/site/Landing.astro` + `src/site/i18n.ts` — static landing, pre-rendered in fr (`/`) and en (`/en/`), no client JS. Images live in `src/assets/` and go through `<Image>` (responsive srcset). The style gallery (`src/assets/gallery/`) holds one thumbnail per preset in `lib/styles.ts`, generated in the studio: `<id>.webp` (FR or language-neutral text) and `<id>-en.webp` when the text differs in English. Styles: `src/styles/site.css` (scans only the site, inlined) vs `tailwind.css` (studio); shared tokens in `tokens.css`.
 - SEO/GEO: `SiteLayout.astro` (Open Graph per language `public/og-{fr,en}.jpg`, hreflang, JSON-LD WebApplication + FAQPage), `src/pages/sitemap.xml.ts`, `src/pages/llms.txt.ts` and `llms-full.txt.ts` (generated from `src/site/i18n.ts` via `src/site/llms.ts`), `public/robots.txt` (AI crawlers allowed). Landing currently scores 100/100/100/100 on Lighthouse (mobile and desktop).
 - `src/app/agent/` + `mcp/` — AI agent bridge. `mcp/` (npm workspace `nanothumbnail-mcp`, bundled with esbuild) is a stdio MCP server that relays tool calls over a WebSocket on `127.0.0.1:17821` to the studio tab (`agent/bridge.ts`, paired with a token via `#agent=<port>:<token>`). Tool definitions are shared in `agent/protocol.ts` (pure, no DOM/Node); handlers in `agent/tools.ts` call the store actions (`generate`/`edit`/`score`/`rankPicked` return an `Outcome` for this). Adding a tool: define it in `STUDIO_TOOLS`, implement it in `handlers`. `skills/nanothumbnail/` is the companion agent skill (skills.sh format: `SKILL.md` + `references/`); keep it in sync with the tool list.
+- `local/` — `vertex.ts`: connect-style middleware that relays `/vertex/models/{model}:generateContent` with a cached `gcloud auth print-access-token` and the gcloud project (local Host + same Origin only; tested). Mounted in `astro dev` by an integration in `astro.config.mjs` and by `server.ts`, the static server bundled (esbuild → `local/dist/server.mjs`) into the macOS app, which also adapts the Netlify functions. `macos/` — `NanoThumbnail.swift` (AppKit + WKWebView: starts the server with the login-shell `PATH`, handles downloads, file pickers, external links) and `build.sh` (swiftc, Info.plist, icon, ad-hoc signature). The port 17830 is fixed: IndexedDB is tied to the origin.
 - `netlify/functions/replicate-proxy.ts` — relays only create/poll/cancel Replicate routes, only for the site origin (`netlify/lib/origin.ts`). Tested.
 - `public/sw.js` — service worker (network-first pages, cache-first hashed assets). Bump `VERSION` when changing its logic.
 

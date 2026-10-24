@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { VERTEX_GCLOUD } from '../lib/providers';
 import type { AspectRatio, GenerationParams, ModelId, OutputFormat, Provider, Resolution, SafetyLevel } from '../lib/types';
 
 export type Theme = 'light' | 'dark' | 'system';
@@ -25,7 +26,7 @@ interface SettingsState {
   apiKey: () => string;
 }
 
-const PROVIDERS: Provider[] = ['replicate', 'gemini', 'openrouter'];
+const PROVIDERS: Provider[] = ['replicate', 'gemini', 'openrouter', 'vertex'];
 const PREFS_KEY = 'nt_prefs';
 const KEY_PREFIX = 'nt_key_';
 
@@ -128,5 +129,6 @@ export const useSettings = create<SettingsState>((set, get) => ({
     const { provider, model, aspectRatio, resolution, format, safety } = get();
     return { provider, model, aspectRatio, resolution, format: provider === 'replicate' ? format : 'png', safety };
   },
-  apiKey: () => get().keys[get().provider],
+  // Vertex works without a key: the local helper authenticates with gcloud.
+  apiKey: () => get().keys[get().provider] || (get().provider === 'vertex' ? VERTEX_GCLOUD : ''),
 }));

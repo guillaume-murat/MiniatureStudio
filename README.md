@@ -49,6 +49,7 @@ NanoThumbnail is a free, open-source studio to **generate, edit and test YouTube
 
 - **Gemini** is called directly from the browser (Google's API supports CORS). The key is sent in the `x-goog-api-key` header.
 - **OpenRouter** is called directly from the browser too (`google/gemini-3-pro-image`, `google/gemini-3.1-flash-image`), with the key in the `Authorization` header.
+- **Vertex AI** (local only) bills your own Google Cloud project. The browser can't run gcloud, so the studio calls `/vertex/*` on its own origin and a small helper (`local/vertex.ts`) adds a token from `gcloud auth print-access-token` and your gcloud project. It's mounted by `npm run dev` and by the macOS app, only answers requests from the local studio, and also accepts a Vertex express-mode key instead of gcloud. `VERTEX_LOCATION` (default `global`) and `VERTEX_PROJECT` override the defaults.
 - **Replicate** has no browser CORS support, so calls go through a small Netlify function (`netlify/functions/replicate-proxy.ts`). It only accepts requests from the site's own origin, only relays the three Replicate routes the app needs (create, poll, cancel), and never stores or logs anything.
 - Reference images are downscaled client-side before upload, so requests stay small.
 - Prompts are built as structured natural language following Google's Nano Banana prompting guidance (declared image roles, identity locks, “change only X, keep everything else” edits), see `src/app/lib/prompt.ts`.
@@ -87,6 +88,8 @@ src/
 ├── layouts/                # SiteLayout (SEO, JSON-LD), AppLayout, LegalLayout
 ├── pages/                  # index, en/index, app, legal pages, sitemap.xml, llms.txt, llms-full.txt
 └── styles/                 # tokens.css (light/dark), tailwind.css (studio), site.css (landing, inlined)
+local/                      # Vertex AI helper (vertex.ts) and local server for the macOS app (server.ts)
+macos/                      # macOS app: WKWebView shell (NanoThumbnail.swift) and build.sh
 netlify/
 ├── functions/              # replicate-proxy, youtube-thumbnail-proxy
 └── lib/origin.ts           # Origin allowlist
@@ -106,7 +109,15 @@ npm install
 npm run dev          # http://localhost:4321
 ```
 
-With `astro dev`, Gemini and OpenRouter work out of the box. To use Replicate locally, run `netlify dev` so the proxy function is available.
+With `astro dev`, Gemini and OpenRouter work out of the box, and so does Vertex AI if `gcloud` is logged in (`gcloud auth login`) with a project set (`gcloud config set project <id>`). To use Replicate locally, run `netlify dev` so the proxy function is available.
+
+### macOS app
+
+```bash
+npm run app:mac:install   # builds NanoThumbnail.app and copies it to ~/Applications
+```
+
+The app is a native window (WKWebView) around the studio. It starts a bundled local server on `127.0.0.1:17830` with your Node.js (found through your login shell's `PATH`) that serves the build, the Vertex AI helper and the Replicate/YouTube proxies, so every provider works. Needs the Xcode Command Line Tools to build, and Node.js 22+ at runtime. Its data (projects, images, keys) is separate from your browser's: use Settings → Export / Import to move it over. `npm run local` runs the same server without the app.
 
 | Command | Description |
 |---------|-------------|
@@ -116,6 +127,8 @@ With `astro dev`, Gemini and OpenRouter work out of the box. To use Replicate lo
 | `npm test` | Unit tests (Vitest) |
 | `npm run typecheck` | TypeScript check |
 | `npm run check` | Typecheck + tests + build (what CI runs) |
+| `npm run local` | Build and serve the studio with the local helpers on http://127.0.0.1:17830/app/ |
+| `npm run app:mac` | Build the macOS app into `macos/build/` (`app:mac:install` also copies it to `~/Applications`) |
 
 ## Upgrading from v1
 
