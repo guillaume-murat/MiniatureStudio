@@ -49,12 +49,13 @@ NanoThumbnail is a free, open-source studio to **generate, edit and test YouTube
 
 - **Gemini** is called directly from the browser (Google's API supports CORS). The key is sent in the `x-goog-api-key` header.
 - **OpenRouter** is called directly from the browser too (`google/gemini-3-pro-image`, `google/gemini-3.1-flash-image`), with the key in the `Authorization` header.
+- **Mammouth** is called directly from the browser as well, through the same OpenAI-style chat completions (`gemini-3-pro-image-preview`, `gemini-3.1-flash-image-preview`, key in the `Authorization` header).
 - **Vertex AI** (local only) bills your own Google Cloud project. The browser can't run gcloud, so the studio calls `/vertex/*` on its own origin and a small helper (`local/vertex.ts`) adds a token from `gcloud auth print-access-token` and your gcloud project. It's mounted by `npm run dev` and by the macOS app, only answers requests from the local studio, and also accepts a Vertex express-mode key instead of gcloud. `VERTEX_LOCATION` (default `global`) and `VERTEX_PROJECT` override the defaults.
 - **Replicate** has no browser CORS support, so calls go through a small Netlify function (`netlify/functions/replicate-proxy.ts`). It only accepts requests from the site's own origin, only relays the three Replicate routes the app needs (create, poll, cancel), and never stores or logs anything.
 - Reference images are downscaled client-side before upload, so requests stay small.
 - Prompts are built as structured natural language following Google's Nano Banana prompting guidance (declared image roles, identity locks, “change only X, keep everything else” edits), see `src/app/lib/prompt.ts`.
 - **AI agents**: the MCP server (`mcp/`, published as `nanothumbnail-mcp`) only relays tool calls over a WebSocket on `127.0.0.1` to the open studio tab, which runs them as store actions. Keys, projects and images never leave the browser. The socket accepts only the studio's origin and a pairing token; see [`mcp/README.md`](mcp/README.md).
-- Critique, ranking, concepts and style analysis use Gemini Flash: `gemini-3.8-flash` with a Gemini key or on Vertex AI, `google/gemini-3-flash` on Replicate, or `google/gemini-3.8-flash` on OpenRouter.
+- Critique, ranking, concepts and style analysis use Gemini Flash: `gemini-3.8-flash` with a Gemini key or on Vertex AI, `google/gemini-3-flash` on Replicate, `google/gemini-3.8-flash` on OpenRouter, or `gemini-3.8-flash` on Mammouth.
 
 ## Landing, SEO & GEO
 
@@ -100,7 +101,7 @@ public/                     # sw.js, manifest, icons, og-{fr,en}.jpg, robots.txt
 
 ## Getting started
 
-Prerequisites: Node.js 22+, and a [Replicate](https://replicate.com/account/api-tokens) or [Google Gemini](https://aistudio.google.com/apikey) or [OpenRouter](https://openrouter.ai/settings/keys) API key.
+Prerequisites: Node.js 22+, and a [Replicate](https://replicate.com/account/api-tokens) or [Google Gemini](https://aistudio.google.com/apikey) or [OpenRouter](https://openrouter.ai/settings/keys) or [Mammouth](https://mammouth.ai/app/account/settings/api) API key.
 
 ```bash
 git clone https://github.com/yoanbernabeu/NanoThumbnail.git
@@ -109,7 +110,7 @@ npm install
 npm run dev          # http://localhost:4321
 ```
 
-With `astro dev`, Gemini and OpenRouter work out of the box, and so does Vertex AI if `gcloud` is logged in (`gcloud auth login`) with a project set (`gcloud config set project <id>`). To use Replicate locally, run `netlify dev` so the proxy function is available.
+With `astro dev`, Gemini, OpenRouter and Mammouth work out of the box, and so does Vertex AI if `gcloud` is logged in (`gcloud auth login`) with a project set (`gcloud config set project <id>`). To use Replicate locally, run `netlify dev` so the proxy function is available.
 
 ### macOS app
 

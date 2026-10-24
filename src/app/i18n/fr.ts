@@ -248,6 +248,8 @@ export const fr: Dict = {
     geminiHint: 'Appelé directement depuis votre navigateur.',
     openrouter: 'OpenRouter',
     openrouterHint: 'Appelé directement depuis votre navigateur. Crédits prépayés, une seule clé pour de nombreux modèles.',
+    mammouth: 'Mammouth',
+    mammouthHint: 'Appelé directement depuis votre navigateur. Un abonnement et une clé pour de nombreux modèles, facturés en crédits.',
     vertex: 'Vertex AI',
     vertexHint: 'Votre projet Google Cloud, facturé dessus. En local uniquement (app macOS ou npm run dev) : un relais sur votre ordinateur signe les requêtes avec gcloud.',
     vertexKeyPlaceholder: 'Facultatif : laissez vide pour utiliser gcloud',

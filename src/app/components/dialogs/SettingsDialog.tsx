@@ -21,6 +21,7 @@ const KEY_LINKS: Record<Provider, string> = {
   replicate: 'https://replicate.com/account/api-tokens',
   gemini: 'https://aistudio.google.com/apikey',
   openrouter: 'https://openrouter.ai/settings/keys',
+  mammouth: 'https://mammouth.ai/app/account/settings/api',
   vertex: 'https://console.cloud.google.com/vertex-ai',
 };
 
@@ -28,6 +29,7 @@ const KEY_PLACEHOLDERS: Record<Provider, string> = {
   replicate: 'r8_…',
   gemini: 'AIza…',
   openrouter: 'sk-or-…',
+  mammouth: 'sk-…',
   vertex: '',
 };
 
@@ -115,6 +117,9 @@ export function SettingsDialog() {
               </ToggleGroupItem>
               <ToggleGroupItem value="openrouter" className="h-auto min-h-9 min-w-0 flex-1 leading-tight whitespace-normal">
                 {t('settings.openrouter')}
+              </ToggleGroupItem>
+              <ToggleGroupItem value="mammouth" className="h-auto min-h-9 min-w-0 flex-1 leading-tight whitespace-normal">
+                {t('settings.mammouth')}
               </ToggleGroupItem>
               <ToggleGroupItem value="vertex" className="h-auto min-h-9 min-w-0 flex-1 leading-tight whitespace-normal">
                 {t('settings.vertex')}

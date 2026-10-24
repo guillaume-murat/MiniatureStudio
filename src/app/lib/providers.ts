@@ -3,7 +3,7 @@ import { dataUrlToBlob, fetchBlob } from './images';
 
 /**
  * Provider layer. Replicate has no browser CORS support, so its calls go through
- * our own Netlify function; Gemini and OpenRouter support CORS and are called directly.
+ * our own Netlify function; Gemini, OpenRouter and Mammouth support CORS and are called directly.
  * Vertex AI needs an OAuth token from gcloud, so it goes through the local helper
  * (`local/vertex.ts`, served by `npm run dev` and the macOS app).
  */
@@ -34,6 +34,21 @@ const OPENROUTER_IMAGE_MODELS: Record<ModelId, string> = {
 };
 const OPENROUTER_TEXT_MODEL = 'google/gemini-3.8-flash';
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+
+// Mammouth speaks the same OpenAI-style dialect as OpenRouter, images included.
+const MAMMOUTH_IMAGE_MODELS: Record<ModelId, string> = {
+  'nano-banana-pro': 'gemini-3-pro-image-preview',
+  'nano-banana-2': 'gemini-3.1-flash-image-preview',
+};
+const MAMMOUTH_TEXT_MODEL = 'gemini-3.8-flash';
+const MAMMOUTH_URL = 'https://api.mammouth.ai/v1/chat/completions';
+
+/** OpenAI-compatible providers: endpoint and models. */
+type ChatProvider = Extract<Provider, 'openrouter' | 'mammouth'>;
+const CHAT_PROVIDERS: Record<ChatProvider, { url: string; image: Record<ModelId, string>; text: string }> = {
+  openrouter: { url: OPENROUTER_URL, image: OPENROUTER_IMAGE_MODELS, text: OPENROUTER_TEXT_MODEL },
+  mammouth: { url: MAMMOUTH_URL, image: MAMMOUTH_IMAGE_MODELS, text: MAMMOUTH_TEXT_MODEL },
+};
 
 /** Hard ceiling for one generation. Nano Banana Pro at 4K can take a couple of minutes. */
 const GENERATION_TIMEOUT_MS = 5 * 60_000;
@@ -299,7 +314,7 @@ async function geminiText(req: TextRequest, signal: AbortSignal): Promise<string
   return data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
 }
 
-// ─── OpenRouter ──────────────────────────────────────────
+// ─── OpenRouter & Mammouth ───────────────────────────────
 // OpenAI-compatible chat completions. Port of the v1 contribution by @przxmus (PR #4).
 
 type OpenRouterContent = Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }>;
@@ -315,25 +330,25 @@ function openRouterContent(prompt: string, images: string[] = []): OpenRouterCon
   return [{ type: 'text', text: prompt }, ...images.map((url) => ({ type: 'image_url' as const, image_url: { url } }))];
 }
 
-async function openRouterCall(body: unknown, apiKey: string, signal: AbortSignal): Promise<OpenRouterResponse> {
-  const res = await fetch(OPENROUTER_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-      // App attribution on openrouter.ai (optional headers).
-      'HTTP-Referer': location.origin,
-      'X-Title': 'NanoThumbnail',
-    },
-    body: JSON.stringify(body),
-    signal,
-  });
-  if (!res.ok) throw await readError(res, 'openrouter');
+async function openRouterCall(
+  provider: ChatProvider,
+  body: unknown,
+  apiKey: string,
+  signal: AbortSignal,
+): Promise<OpenRouterResponse> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` };
+  if (provider === 'openrouter') {
+    // App attribution on openrouter.ai (optional headers).
+    headers['HTTP-Referer'] = location.origin;
+    headers['X-Title'] = 'NanoThumbnail';
+  }
+  const res = await fetch(CHAT_PROVIDERS[provider].url, { method: 'POST', headers, body: JSON.stringify(body), signal });
+  if (!res.ok) throw await readError(res, provider);
   const data: OpenRouterResponse = await res.json();
   // Upstream failures can come back as 200 with an error object.
   if (data.error) {
     const status = typeof data.error.code === 'number' ? data.error.code : 500;
-    throw new ProviderError(data.error.message || 'OpenRouter error', status, data, 'openrouter');
+    throw new ProviderError(data.error.message || `${provider} error`, status, data, provider);
   }
   return data;
 }
@@ -341,10 +356,12 @@ async function openRouterCall(body: unknown, apiKey: string, signal: AbortSignal
 async function openRouterImage(req: ImageRequest, signal: AbortSignal): Promise<Blob> {
   const started = Date.now();
   const tick = req.onProgress ? setInterval(() => req.onProgress?.(Date.now() - started), 500) : undefined;
+  const provider = req.params.provider as ChatProvider;
   try {
     const data = await openRouterCall(
+      provider,
       {
-        model: OPENROUTER_IMAGE_MODELS[req.params.model],
+        model: CHAT_PROVIDERS[provider].image[req.params.model],
         messages: [{ role: 'user', content: openRouterContent(req.prompt, req.images) }],
         modalities: ['image', 'text'],
         image_config: { aspect_ratio: req.params.aspectRatio, image_size: req.params.resolution },
@@ -355,7 +372,7 @@ async function openRouterImage(req: ImageRequest, signal: AbortSignal): Promise<
     const choice = data.choices?.[0];
     const url = choice?.message?.images?.find((i) => i.image_url?.url)?.image_url?.url;
     if (!url) {
-      throw new ProviderError(`OpenRouter returned no image (${choice?.finish_reason || 'NO_IMAGE'})`, 422, data, 'openrouter');
+      throw new ProviderError(`${provider} returned no image (${choice?.finish_reason || 'NO_IMAGE'})`, 422, data, provider);
     }
     return url.startsWith('data:') ? dataUrlToBlob(url) : fetchBlob(url, signal);
   } finally {
@@ -364,9 +381,11 @@ async function openRouterImage(req: ImageRequest, signal: AbortSignal): Promise<
 }
 
 async function openRouterText(req: TextRequest, signal: AbortSignal): Promise<string> {
+  const provider = req.provider as ChatProvider;
   const data = await openRouterCall(
+    provider,
     {
-      model: OPENROUTER_TEXT_MODEL,
+      model: CHAT_PROVIDERS[provider].text,
       messages: [
         ...(req.system ? [{ role: 'system', content: req.system }] : []),
         { role: 'user', content: openRouterContent(req.prompt, req.images) },
@@ -389,6 +408,7 @@ export async function generateImage(req: ImageRequest): Promise<Blob> {
     case 'vertex':
       return geminiImage(req, signal);
     case 'openrouter':
+    case 'mammouth':
       return openRouterImage(req, signal);
     default:
       return replicateImage(req, signal);
@@ -402,6 +422,7 @@ export async function generateText(req: TextRequest): Promise<string> {
     case 'vertex':
       return geminiText(req, signal);
     case 'openrouter':
+    case 'mammouth':
       return openRouterText(req, signal);
     default:
       return replicateText(req, signal);

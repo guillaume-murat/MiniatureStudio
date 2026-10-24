@@ -26,7 +26,7 @@ interface SettingsState {
   apiKey: () => string;
 }
 
-const PROVIDERS: Provider[] = ['replicate', 'gemini', 'openrouter', 'vertex'];
+const PROVIDERS: Provider[] = ['replicate', 'gemini', 'openrouter', 'mammouth', 'vertex'];
 const PREFS_KEY = 'nt_prefs';
 const KEY_PREFIX = 'nt_key_';
 

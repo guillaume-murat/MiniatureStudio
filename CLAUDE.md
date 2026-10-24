@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-NanoThumbnail is a free, open-source, local-first studio to generate, edit and test YouTube thumbnails with Google's Nano Banana models (Pro / 2), BYOK via Replicate, Google Gemini or OpenRouter, or Vertex AI through the user's gcloud (local only).
+NanoThumbnail is a free, open-source, local-first studio to generate, edit and test YouTube thumbnails with Google's Nano Banana models (Pro / 2), BYOK via Replicate, Google Gemini, OpenRouter or Mammouth, or Vertex AI through the user's gcloud (local only).
 
 **Stack**: Astro 7 (static), React 19 island for `/app`, shadcn/ui + Radix + Tailwind v4, Zustand, IndexedDB (`idb`), Vitest. Deployed on Netlify.
 
@@ -25,7 +25,7 @@ npm run app:mac:install  # macOS app → /Applications (macos/auto-install.sh do
 - `src/app/` — the studio, a single React island (`<App client:only="react" />` in `src/pages/app.astro`).
   - `stores/workspace.ts` — core state & actions: projects, generations (with `parentId` lineage), jobs (abortable), brief, refs, personas, brand kit, edit/region-edit, score/rank.
   - `stores/settings.ts` — provider, keys (localStorage or sessionStorage), output params, theme, lang. Keys: `nt_prefs`, `nt_key_<provider>`, `nano_lang`.
-  - `lib/providers.ts` — Replicate (via proxy, `Prefer: wait`, backoff polling, cancel on abort) Gemini (direct, `x-goog-api-key`), OpenRouter (direct, OpenAI-style chat completions) and Vertex AI (same body as Gemini, sent to the same-origin `/vertex/*` helper; the key is optional, `apiKey()` returns the `VERTEX_GCLOUD` sentinel when empty). `generateImage`, `generateText`, `generateJSON`.
+  - `lib/providers.ts` — Replicate (via proxy, `Prefer: wait`, backoff polling, cancel on abort) Gemini (direct, `x-goog-api-key`), OpenRouter and Mammouth (direct, same OpenAI-style chat completions code, per-provider endpoint/models in `CHAT_PROVIDERS`) and Vertex AI (same body as Gemini, sent to the same-origin `/vertex/*` helper; the key is optional, `apiKey()` returns the `VERTEX_GCLOUD` sentinel when empty). `generateImage`, `generateText`, `generateJSON`.
   - `lib/prompt.ts` — prompt builder following Google's Nano Banana guidance (declared image roles, identity lock, "change only X" edits). Covered by tests.
   - `lib/ai.ts` — critique, ranking, concepts, channel style analysis (Gemini 3 Flash).
   - `lib/images.ts` — canvas helpers: reference downscaling, YouTube export (1280×720 ≤ 2 MB), mask highlight/merge for region edits.

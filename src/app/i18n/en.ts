@@ -246,6 +246,8 @@ export const en = {
     geminiHint: 'Called directly from your browser. Free tier available on some models.',
     openrouter: 'OpenRouter',
     openrouterHint: 'Called directly from your browser. Prepaid credits, one key for many models.',
+    mammouth: 'Mammouth',
+    mammouthHint: 'Called directly from your browser. One subscription and key for many models, billed in credits.',
     vertex: 'Vertex AI',
     vertexHint: 'Your Google Cloud project, billed there. Local only (macOS app or npm run dev): a helper on your computer signs requests with gcloud.',
     vertexKeyPlaceholder: 'Optional: leave empty to use gcloud',
