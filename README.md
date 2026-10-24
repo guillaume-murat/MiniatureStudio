@@ -114,7 +114,7 @@ With `astro dev`, Gemini and OpenRouter work out of the box, and so does Vertex 
 ### macOS app
 
 ```bash
-npm run app:mac:install   # builds NanoThumbnail.app and copies it to ~/Applications
+npm run app:mac:install   # builds NanoThumbnail.app and copies it to /Applications
 ```
 
 The app is a native window (WKWebView) around the studio. It starts a bundled local server on `127.0.0.1:17830` with your Node.js (found through your login shell's `PATH`) that serves the build, the Vertex AI helper and the Replicate/YouTube proxies, so every provider works. Needs the Xcode Command Line Tools to build, and Node.js 22+ at runtime. Its data (projects, images, keys) is separate from your browser's: use Settings → Export / Import to move it over. `npm run local` runs the same server without the app.
@@ -128,7 +128,7 @@ The app is a native window (WKWebView) around the studio. It starts a bundled lo
 | `npm run typecheck` | TypeScript check |
 | `npm run check` | Typecheck + tests + build (what CI runs) |
 | `npm run local` | Build and serve the studio with the local helpers on http://127.0.0.1:17830/app/ |
-| `npm run app:mac` | Build the macOS app into `macos/build/` (`app:mac:install` also copies it to `~/Applications`) |
+| `npm run app:mac` | Build the macOS app into `macos/build/` (`app:mac:install` also copies it to `/Applications`) |
 
 ## Upgrading from v1
 

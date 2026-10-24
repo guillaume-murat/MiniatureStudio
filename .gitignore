@@ -132,3 +132,6 @@ dist-ssr/
 
 # macOS app build
 macos/build/
+
+# Personal Claude Code settings
+.claude/settings.local.json

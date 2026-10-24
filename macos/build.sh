@@ -1,6 +1,7 @@
 #!/bin/sh
 # Builds macos/build/NanoThumbnail.app from dist/ and local/dist/server.mjs
-# (run through `npm run app:mac`). `--install` copies it to ~/Applications.
+# (run through `npm run app:mac`). `--install` copies it to /Applications
+# (or $NT_INSTALL_DIR).
 # Needs only the Xcode Command Line Tools; the app needs Node.js at runtime.
 set -eu
 cd "$(dirname "$0")/.."
@@ -8,10 +9,11 @@ cd "$(dirname "$0")/.."
 APP=macos/build/NanoThumbnail.app
 
 if [ "${1:-}" = "--install" ]; then
-  mkdir -p "$HOME/Applications"
-  rm -rf "$HOME/Applications/NanoThumbnail.app"
-  cp -R "$APP" "$HOME/Applications/"
-  echo "Installed: $HOME/Applications/NanoThumbnail.app"
+  DEST=${NT_INSTALL_DIR:-/Applications}
+  mkdir -p "$DEST"
+  rm -rf "$DEST/NanoThumbnail.app"
+  cp -R "$APP" "$DEST/"
+  echo "Installed: $DEST/NanoThumbnail.app"
   exit 0
 fi
 

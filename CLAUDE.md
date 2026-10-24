@@ -17,7 +17,7 @@ npm test           # Vitest
 npm run typecheck  # tsc --noEmit (src + netlify)
 npm run check      # typecheck + test + build (CI)
 npm run local      # build + local server (dist + Vertex helper + Netlify functions) on 127.0.0.1:17830
-npm run app:mac:install  # macOS app → ~/Applications
+npm run app:mac:install  # macOS app → /Applications (macos/auto-install.sh does it when sources changed)
 ```
 
 ## Architecture
