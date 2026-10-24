@@ -54,7 +54,7 @@ NanoThumbnail is a free, open-source studio to **generate, edit and test YouTube
 - Reference images are downscaled client-side before upload, so requests stay small.
 - Prompts are built as structured natural language following Google's Nano Banana prompting guidance (declared image roles, identity locks, “change only X, keep everything else” edits), see `src/app/lib/prompt.ts`.
 - **AI agents**: the MCP server (`mcp/`, published as `nanothumbnail-mcp`) only relays tool calls over a WebSocket on `127.0.0.1` to the open studio tab, which runs them as store actions. Keys, projects and images never leave the browser. The socket accepts only the studio's origin and a pairing token; see [`mcp/README.md`](mcp/README.md).
-- Critique, ranking, concepts and style analysis use Gemini Flash: `gemini-3.6-flash` with a Gemini key, `gemini-3.8-flash` on Vertex AI, `google/gemini-3-flash` on Replicate, or `google/gemini-3.8-flash` on OpenRouter.
+- Critique, ranking, concepts and style analysis use Gemini Flash: `gemini-3.8-flash` with a Gemini key or on Vertex AI, `google/gemini-3-flash` on Replicate, or `google/gemini-3.8-flash` on OpenRouter.
 
 ## Landing, SEO & GEO
 

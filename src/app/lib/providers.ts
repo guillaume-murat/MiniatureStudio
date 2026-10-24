@@ -20,8 +20,7 @@ const GEMINI_IMAGE_MODELS: Record<ModelId, string> = {
   'nano-banana-pro': 'gemini-3-pro-image',
   'nano-banana-2': 'gemini-3.1-flash-image',
 };
-const GEMINI_TEXT_MODEL = 'gemini-3.6-flash';
-const VERTEX_TEXT_MODEL = 'gemini-3.8-flash';
+const GEMINI_TEXT_MODEL = 'gemini-3.8-flash';
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 /** Same-origin route of the local Vertex helper; it adds the gcloud token and the project. */
@@ -285,7 +284,7 @@ async function geminiText(req: TextRequest, signal: AbortSignal): Promise<string
   ];
   const data = await geminiCall(
     req.provider as GoogleProvider,
-    req.provider === 'vertex' ? VERTEX_TEXT_MODEL : GEMINI_TEXT_MODEL,
+    GEMINI_TEXT_MODEL,
     {
       contents: [{ role: 'user', parts }],
       ...(req.system ? { systemInstruction: { parts: [{ text: req.system }] } } : {}),
