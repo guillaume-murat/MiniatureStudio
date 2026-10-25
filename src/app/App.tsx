@@ -15,6 +15,7 @@ import { AssistantDialog } from './components/dialogs/AssistantDialog';
 import { ErrorDialog } from './components/dialogs/ErrorDialog';
 import { CommandMenu } from './components/dialogs/CommandMenu';
 import { AgentDialog } from './components/dialogs/AgentDialog';
+import { PromptDialog } from './components/dialogs/PromptDialog';
 import { useAgent } from './agent/bridge';
 import { useApplyTheme } from './hooks/use-theme';
 import { useMediaQuery } from './hooks/use-media-query';
@@ -166,6 +167,7 @@ export default function App() {
       <ErrorDialog />
       <CommandMenu />
       <AgentDialog />
+      <PromptDialog />
       {/* Bottom-right would cover the mobile tab bar */}
       <Toaster position={isDesktop ? 'bottom-right' : 'top-center'} />
     </TooltipProvider>

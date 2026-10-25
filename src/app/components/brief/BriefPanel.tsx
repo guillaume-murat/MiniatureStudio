@@ -1,4 +1,4 @@
-import { Loader2, Plus, Sparkles, Square, Users, Wand2 } from 'lucide-react';
+import { Eye, Loader2, Plus, Sparkles, Square, Users, Wand2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
@@ -189,18 +189,28 @@ export function BriefPanel({ onGenerated }: { onGenerated?: () => void }) {
       </ScrollArea>
 
       <div className="flex gap-2 border-t bg-sidebar p-3">
-        <Button
-          size="lg"
-          className="flex-1 gap-2"
-          onClick={() => {
-            generate();
-            onGenerated?.();
-          }}
-        >
-          {running ? <Loader2 className="animate-spin" /> : <Wand2 />}
-          {running ? t('brief.generating') : t('brief.generate')}
-          <Kbd className="ml-1 hidden bg-primary-foreground/15 text-primary-foreground sm:inline-flex">{MOD} ↵</Kbd>
-        </Button>
+        <div className="flex flex-1" role="group">
+          <Button
+            size="lg"
+            className="flex-1 gap-2 rounded-r-none"
+            onClick={() => {
+              generate();
+              onGenerated?.();
+            }}
+          >
+            {running ? <Loader2 className="animate-spin" /> : <Wand2 />}
+            {running ? t('brief.generating') : t('brief.generate')}
+            <Kbd className="ml-1 hidden bg-primary-foreground/15 text-primary-foreground sm:inline-flex">{MOD} ↵</Kbd>
+          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button size="icon-lg" className="rounded-l-none border-l border-primary-foreground/20" onClick={() => open('prompt')} aria-label={t('prompt.open')}>
+                <Eye />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('prompt.open')}</TooltipContent>
+          </Tooltip>
+        </div>
         {running > 0 && (
           <Tooltip>
             <TooltipTrigger asChild>

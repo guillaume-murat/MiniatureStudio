@@ -90,6 +90,11 @@ export interface BrandKit {
   enabled: boolean;
   channelName: string;
   colors: string[];
+  /** Google Fonts family for the thumbnail text ('' = none). */
+  font: string;
+  /** Specimen of `font`, rendered in the studio and sent as a typography reference. */
+  fontSpecimen?: Blob;
+  /** Free description of the type treatment (weight, case, stroke…). */
   fontStyle: string;
   notes: string;
   logo?: Blob;

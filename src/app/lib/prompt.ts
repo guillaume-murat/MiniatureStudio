@@ -18,6 +18,7 @@ export type ImageRole =
   | { kind: 'persona'; name: string; description?: string; expression?: string }
   | { kind: 'style' }
   | { kind: 'logo' }
+  | { kind: 'font'; family: string }
   | { kind: 'reference'; label?: string };
 
 /**
@@ -38,7 +39,7 @@ export interface BriefInput {
   /** Art-direction fragment from a style preset. */
   style?: string;
   roles: ImageRole[];
-  brand?: Pick<BrandKit, 'enabled' | 'channelName' | 'colors' | 'fontStyle' | 'notes' | 'styleProfile'>;
+  brand?: Pick<BrandKit, 'enabled' | 'channelName' | 'colors' | 'font' | 'fontStyle' | 'notes' | 'styleProfile'>;
 }
 
 const FORMAT_HINT: Record<AspectRatio, string> = {
@@ -92,6 +93,11 @@ export function describeImages(roles: ImageRole[], offset = 0): string[] {
       case 'logo':
         lines.push(`- ${label}: the channel logo. Reproduce it faithfully and small, only where it fits naturally.`);
         break;
+      case 'font':
+        lines.push(
+          `- ${label}: a specimen of the ${role.family} typeface. Set the thumbnail text in this exact typeface — same letter shapes, proportions and weight contrast — but do not copy the specimen's words or its plain black-on-white look.`,
+        );
+        break;
       case 'reference':
         lines.push(`- ${label}: reference image${role.label ? ` (${role.label})` : ''}, to use as the brief describes.`);
         break;
@@ -101,7 +107,8 @@ export function describeImages(roles: ImageRole[], offset = 0): string[] {
   return lines;
 }
 
-function textSection(overlayText: string, textMode: TextMode, aspectRatio: AspectRatio): string {
+/** `brandType`: the brand kit sets the typography, so the default type treatment would contradict it. */
+function textSection(overlayText: string, textMode: TextMode, aspectRatio: AspectRatio, brandType = false): string {
   const text = overlayText.trim();
   if (!text) {
     return 'Text: a purely visual thumbnail — the image tells the story on its own, with clean surfaces free of lettering, captions and watermarks.';
@@ -112,7 +119,9 @@ function textSection(overlayText: string, textMode: TextMode, aspectRatio: Aspec
   }
   return (
     `Text: render the exact text ${quote(text)}, spelled exactly as written including accents and punctuation. ` +
-    `Typeset it huge in a heavy, bold sans-serif with a thick dark outline or drop shadow so it reads instantly on a phone, on at most two lines. ` +
+    (brandType
+      ? `Typeset it huge in the brand typography described below, high-contrast against the background so it reads instantly on a phone, on at most two lines. `
+      : `Typeset it huge in a heavy, bold sans-serif with a thick dark outline or drop shadow so it reads instantly on a phone, on at most two lines. `) +
     `Place it in the upper part or to one side, clear of the bottom-right corner where YouTube shows the video duration.`
   );
 }
@@ -132,7 +141,8 @@ export function buildGenerationPrompt(input: BriefInput): string {
 
   if (style?.trim()) sections.push(`Art direction: ${style.trim()}`);
 
-  sections.push(textSection(overlayText, textMode, aspectRatio));
+  const brandType = !!brand?.enabled && !!(brand.font || brand.fontStyle.trim());
+  sections.push(textSection(overlayText, textMode, aspectRatio, brandType));
 
   const imageLines = describeImages(roles);
   if (imageLines.length) sections.push(['Attached images, in order:', ...imageLines].join('\n'));
@@ -141,7 +151,9 @@ export function buildGenerationPrompt(input: BriefInput): string {
     const lines: string[] = [];
     if (brand.styleProfile.trim()) lines.push(`Channel visual identity: ${brand.styleProfile.trim()}`);
     if (brand.colors.length) lines.push(`Brand colours: ${brand.colors.join(', ')} — use them as the dominant accent colours.`);
-    if (brand.fontStyle.trim()) lines.push(`Typography: ${brand.fontStyle.trim()}.`);
+    const fontStyle = brand.fontStyle.trim();
+    if (brand.font) lines.push(`Typography: set all text in the ${brand.font} typeface (Google Fonts)${fontStyle ? `, ${fontStyle}` : ''}.`);
+    else if (fontStyle) lines.push(`Typography: ${fontStyle}.`);
     if (brand.notes.trim()) lines.push(brand.notes.trim());
     if (lines.length) sections.push(lines.join('\n'));
   }

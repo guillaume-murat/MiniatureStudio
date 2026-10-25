@@ -32,16 +32,38 @@ describe('buildGenerationPrompt', () => {
   });
 
   it('includes style and brand only when provided/enabled', () => {
-    const brand = { enabled: false, channelName: '', colors: ['#ff0000'], fontStyle: '', notes: '', styleProfile: 'Bold yellow' };
+    const brand = { enabled: false, channelName: '', colors: ['#ff0000'], font: '', fontStyle: '', notes: '', styleProfile: 'Bold yellow' };
     expect(buildGenerationPrompt({ ...base, brand })).not.toContain('Bold yellow');
     const p = buildGenerationPrompt({ ...base, style: 'Clay render', brand: { ...brand, enabled: true } });
     expect(p).toContain('Art direction: Clay render');
     expect(p).toContain('Channel visual identity: Bold yellow');
     expect(p).toContain('#ff0000');
   });
+
+  it('names the brand font with its style, or falls back to the style alone', () => {
+    const brand = { enabled: true, channelName: '', colors: [], font: 'Anton', fontStyle: 'all caps, white with a thick black stroke', notes: '', styleProfile: '' };
+    expect(buildGenerationPrompt({ ...base, brand })).toContain(
+      'Typography: set all text in the Anton typeface (Google Fonts), all caps, white with a thick black stroke.',
+    );
+    expect(buildGenerationPrompt({ ...base, brand: { ...brand, font: '' } })).toContain('Typography: all caps, white with a thick black stroke.');
+  });
+
+  it('lets the brand typography replace the default type treatment', () => {
+    const brand = { enabled: true, channelName: '', colors: [], font: 'Anton', fontStyle: '', notes: '', styleProfile: '' };
+    const withText = { ...base, overlayText: 'WOW', textMode: 'render' as const };
+    expect(buildGenerationPrompt({ ...withText, brand })).toContain('in the brand typography described below');
+    expect(buildGenerationPrompt({ ...withText, brand })).not.toContain('heavy, bold sans-serif');
+    expect(buildGenerationPrompt({ ...withText, brand: { ...brand, enabled: false } })).toContain('heavy, bold sans-serif');
+  });
 });
 
 describe('describeImages', () => {
+  it('describes a font specimen', () => {
+    const [line] = describeImages([{ kind: 'font', family: 'Bebas Neue' }]);
+    expect(line).toMatch(/^- Image 1: a specimen of the Bebas Neue typeface/);
+    expect(line).toContain('do not copy the specimen');
+  });
+
   it('groups consecutive photos of the same person', () => {
     const lines = describeImages([
       { kind: 'persona', name: 'Alex' },

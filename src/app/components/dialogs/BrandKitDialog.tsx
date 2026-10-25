@@ -17,6 +17,8 @@ import { analyseChannelStyle } from '../../lib/ai';
 import { extractVideoId, fetchThumbnail } from '../../lib/youtube';
 import { normaliseUpload } from '../../lib/images';
 import { explainError } from '../../lib/errors';
+import { renderFontSpecimen } from '../../lib/fonts';
+import { FontPicker } from './FontPicker';
 import { BRAND_PALETTES, MAX_BRAND_COLORS, mergeColors, normaliseHex, parseHexColors } from '../../lib/colors';
 import { useT } from '../../i18n';
 import type { BrandKit } from '../../lib/types';
@@ -61,6 +63,8 @@ export function BrandKitDialog() {
   const [urls, setUrls] = useState('');
   const [hexText, setHexText] = useState('');
   const [analysing, setAnalysing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const overlayText = useWorkspace((s) => s.brief.overlayText);
 
   useEffect(() => {
     if (open) setDraft(brand);
@@ -184,6 +188,10 @@ export function BrandKitDialog() {
             </div>
           </Field>
 
+          <Field label={t('brand.font')} hint={t('brand.fontHint')}>
+            <FontPicker value={draft.font} onChange={(font) => patch({ font })} sample={overlayText.trim() || draft.channelName.trim() || 'Thumbnail'} />
+          </Field>
+
           <Field label={t('brand.fontStyle')} htmlFor="font">
             <Input id="font" value={draft.fontStyle} onChange={(e) => patch({ fontStyle: e.target.value })} placeholder={t('brand.fontStylePlaceholder')} />
           </Field>
@@ -260,12 +268,25 @@ export function BrandKitDialog() {
             {t('common.cancel')}
           </Button>
           <Button
+            disabled={saving}
             onClick={async () => {
-              const configured = !!(draft.styleProfile || draft.colors.length || draft.fontStyle || draft.logo);
-              await saveBrand({ ...draft, enabled: draft.enabled || (configured && !brand.updatedAt) });
+              setSaving(true);
+              let { fontSpecimen } = draft;
+              if (!draft.font) fontSpecimen = undefined;
+              else if (draft.font !== brand.font || !fontSpecimen) {
+                // The image model can't load the font: it gets a rendered specimen instead.
+                fontSpecimen = await renderFontSpecimen(draft.font).catch(() => {
+                  toast.warning(t('brand.fontSpecimenFailed'));
+                  return undefined;
+                });
+              }
+              const configured = !!(draft.styleProfile || draft.colors.length || draft.font || draft.fontStyle || draft.logo);
+              await saveBrand({ ...draft, fontSpecimen, enabled: draft.enabled || (configured && !brand.updatedAt) });
+              setSaving(false);
               close();
             }}
           >
+            {saving && <Loader2 className="animate-spin" />}
             {t('common.save')}
           </Button>
         </DialogFooter>

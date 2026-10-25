@@ -88,6 +88,8 @@ interface WorkspaceState {
   togglePersona: (id: string) => void;
   // generation
   generate: () => Promise<Outcome<Generation>[]>;
+  /** The prompt `generate` would send for the current brief, without sending anything. */
+  previewPrompt: () => string;
   /** `mask` overrides the painted mask (the agent describes regions as rectangles). */
   edit: (instruction: string, opts?: { mask?: HTMLCanvasElement }) => Promise<Outcome<Generation>[]>;
   cancelJob: (id: string) => void;
@@ -146,6 +148,7 @@ const EMPTY_BRAND: BrandKit = {
   enabled: false,
   channelName: '',
   colors: [],
+  font: '',
   fontStyle: '',
   notes: '',
   styleProfile: '',
@@ -198,7 +201,33 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     const out: Array<{ blob: Blob; role: ImageRole }> = [];
     if (brand.sendStyleRefs) out.push(...brand.styleRefs.slice(0, 3).map((blob) => ({ blob, role: { kind: 'style' } as ImageRole })));
     if (brand.logo) out.push({ blob: brand.logo, role: { kind: 'logo' } });
+    // The specimen only helps when the model has text to draw.
+    const { overlayText, textMode } = get().brief;
+    if (brand.font && brand.fontSpecimen && overlayText.trim() && textMode === 'render') {
+      out.push({ blob: brand.fontSpecimen, role: { kind: 'font', family: brand.font } });
+    }
     return out;
+  }
+
+  /** Images and full prompt for the current brief, shared by `generate` and `previewPrompt`. */
+  function generationRequest() {
+    const { brief, refs } = get();
+    const attached = [
+      ...personaImages(),
+      ...brandImages(),
+      ...refs.map((r) => ({ blob: r.blob, role: { kind: 'reference', label: r.label } as ImageRole })),
+    ];
+    const fullPrompt = buildGenerationPrompt({
+      brief: brief.brief,
+      overlayText: brief.overlayText,
+      textMode: brief.textMode,
+      videoTitle: brief.videoTitle,
+      aspectRatio: useSettings.getState().aspectRatio,
+      style: findStyle(brief.styleId)?.prompt,
+      roles: attached.map((a) => a.role),
+      brand: get().brand,
+    });
+    return { attached, fullPrompt };
   }
 
   function fail(message: string): Outcome<Generation>[] {
@@ -412,30 +441,17 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       set({ personaIds: [...ids, id] });
     },
 
+    previewPrompt: () => generationRequest().fullPrompt,
+
     generate: async () => {
-      const { brief, refs } = get();
+      const { brief } = get();
       if (!brief.brief.trim()) return fail(t('brief.needPrompt'));
       const apiKey = checkKey();
       if (!apiKey) return [{ error: t('brief.needKey') }];
 
       const settings = useSettings.getState();
-      const attached = [
-        ...personaImages(),
-        ...brandImages(),
-        ...refs.map((r) => ({ blob: r.blob, role: { kind: 'reference', label: r.label } as ImageRole })),
-      ];
+      const { attached, fullPrompt } = generationRequest();
       if (attached.length > MAX_IMAGES) return fail(t('brief.tooManyRefs'));
-
-      const fullPrompt = buildGenerationPrompt({
-        brief: brief.brief,
-        overlayText: brief.overlayText,
-        textMode: brief.textMode,
-        videoTitle: brief.videoTitle,
-        aspectRatio: settings.aspectRatio,
-        style: findStyle(brief.styleId)?.prompt,
-        roles: attached.map((a) => a.role),
-        brand: get().brand,
-      });
       const params = settings.params();
       if (get().view === 'compare') set({ view: 'image' });
       const batch = { shown: false };
