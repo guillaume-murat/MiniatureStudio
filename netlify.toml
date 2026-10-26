@@ -37,6 +37,12 @@
     Content-Type = "application/manifest+json"
 
 # Un-hashed public images (icons, samples): cache a week
+# Bundled brand-kit fonts (un-hashed, rarely change): cache a week
+[[headers]]
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
 [[headers]]
   for = "/icons/*"
   [headers.values]

@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit && npm run typecheck -w nanothumbnail-mcp",
     "check": "npm run typecheck && npm test && npm run build",
     "build:mcp": "npm run build -w nanothumbnail-mcp",
+    "fonts:download": "node scripts/download-fonts.ts",
     "build:local": "esbuild local/server.ts --bundle --platform=node --format=esm --target=node22 --outfile=local/dist/server.mjs",
     "local": "npm run build && npm run build:local && node local/dist/server.mjs",
     "app:mac": "npm run build && npm run build:local && sh macos/build.sh",

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { FONT_CATEGORIES, fontCssUrl, GOOGLE_FONTS, normaliseFamily } from '../fonts';
+import { existsSync } from 'node:fs';
+import { bundledWeights, findBundledFont, FONT_CATEGORIES, fontCssUrl, GOOGLE_FONTS, localFontFile, normaliseFamily } from '../fonts';
 
 describe('normaliseFamily', () => {
   it('tidies spacing and keeps valid names', () => {
@@ -27,6 +28,20 @@ describe('GOOGLE_FONTS', () => {
     for (const f of GOOGLE_FONTS) {
       expect(normaliseFamily(f.family)).toBe(f.family);
       expect(FONT_CATEGORIES).toContain(f.category);
+      expect([400, 700, 800, 900]).toContain(f.heavy);
+    }
+  });
+
+  it('includes Bricolage Grotesque and finds families whatever the case', () => {
+    expect(findBundledFont('bricolage grotesque')).toMatchObject({ family: 'Bricolage Grotesque', heavy: 800 });
+    expect(findBundledFont('Not Listed')).toBeUndefined();
+  });
+
+  it('ships a file for every bundled weight', () => {
+    expect(localFontFile('Bebas Neue', 400)).toBe('fonts/bebas-neue-400.woff2');
+    expect(bundledWeights({ family: 'Anton', category: 'display', heavy: 400 })).toEqual([400]);
+    for (const f of GOOGLE_FONTS) {
+      for (const w of bundledWeights(f)) expect(existsSync(`public/${localFontFile(f.family, w)}`), `${f.family} ${w}`).toBe(true);
     }
   });
 });

@@ -31,7 +31,7 @@ npm run app:mac:install  # macOS app → /Applications (macos/auto-install.sh do
   - `lib/images.ts` — canvas helpers: reference downscaling, YouTube export (1280×720 ≤ 2 MB), mask highlight/merge for region edits.
   - `lib/db.ts` — IndexedDB `NanoThumbnail` (stores Blobs). `lib/migrate.ts` imports v1 data (`NanoThumbnailDB`) once.
   - `lib/styles.ts` — 14 style presets.
-  - `lib/colors.ts` — brand colour hex parsing and the 10 preset palettes. `lib/fonts.ts` — brand Google Font: curated list, loading through the Google Fonts CSS API (its 400s have no CORS header, so a failed fetch while online means "not available"), and the specimen image sent as a `font` image role, since the image model can't load the font itself.
+  - `lib/colors.ts` — brand colour hex parsing and the 10 preset palettes. `lib/fonts.ts` — brand Google Font: curated list shipped in `public/fonts` (latin subset, regular + heaviest weight, fetched by `npm run fonts:download` / `scripts/download-fonts.ts`; add a family to `GOOGLE_FONTS` then rerun it), loaded with the FontFace API; other families typed by the user go through the Google Fonts CSS API (its 400s have no CORS header, so a failed fetch while online means "not available"), and the specimen image sent as a `font` image role, since the image model can't load the font itself.
   - `components/dialogs/PromptDialog.tsx` — the eye button next to Generate: the prompt the next generation would send (`previewPrompt()`, same code path as `generate`) and the `fullPrompt` stored on the selected generation.
   - `i18n/` — typed dictionaries; `useT()` in components, `t()` elsewhere. `fr.ts` must satisfy the `en.ts` shape.
   - `components/ui/` — shadcn components (generated; `cn` comes from `@/app/lib/utils`).

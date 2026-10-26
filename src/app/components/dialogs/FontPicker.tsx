@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { Button } from '../ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
-import { FONT_CATEGORIES, FontNotFoundError, GOOGLE_FONTS, loadGoogleFont, normaliseFamily } from '../../lib/fonts';
+import { findBundledFont, FONT_CATEGORIES, FontNotFoundError, GOOGLE_FONTS, loadFontPreview, loadGoogleFont, normaliseFamily } from '../../lib/fonts';
 import { cn } from '../../lib/utils';
 import { useT } from '../../i18n';
 
@@ -28,7 +28,13 @@ export function FontPicker({ value, onChange, sample }: { value: string; onChang
     };
   }, [value]);
 
-  async function choose(family: string) {
+  // Bundled files, so previewing the whole list costs no request to Google.
+  useEffect(() => {
+    if (open) for (const f of GOOGLE_FONTS) loadFontPreview(f.family).catch(() => {});
+  }, [open]);
+
+  async function choose(name: string) {
+    const family = findBundledFont(name)?.family ?? name;
     setOpen(false);
     setQuery('');
     if (family === value) return;
@@ -56,11 +62,29 @@ export function FontPicker({ value, onChange, sample }: { value: string; onChang
               {state === 'loading' ? <Loader2 className="animate-spin opacity-50" /> : <ChevronsUpDown className="opacity-50" />}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
+          {/* The list is portaled outside the dialog, whose scroll lock cancels wheel and touch
+              scrolling there; stopping the events here keeps them from reaching that lock. */}
+          <PopoverContent
+            className="w-(--radix-popover-trigger-width) p-0"
+            align="start"
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+          >
             <Command>
               <CommandInput value={query} onValueChange={setQuery} placeholder={t('brand.fontSearch')} />
               <CommandList>
                 <CommandEmpty>{t('commands.empty')}</CommandEmpty>
+                {FONT_CATEGORIES.map((category) => (
+                  <CommandGroup key={category} heading={t(`brand.fontCategories.${category}`)}>
+                    {GOOGLE_FONTS.filter((f) => f.category === category).map((f) => (
+                      <CommandItem key={f.family} value={f.family} onSelect={() => choose(f.family)} className="text-base">
+                        <span style={{ fontFamily: `"${f.family}", var(--font-sans)` }}>{f.family}</span>
+                        <Check className={cn('ml-auto', f.family === value ? 'opacity-100' : 'opacity-0')} />
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                ))}
+                {/* Last, so Enter picks a listed font that matches the search first. */}
                 {custom && !isListed && (
                   <CommandGroup>
                     <CommandItem value={`custom ${custom}`} onSelect={() => choose(custom)}>
@@ -68,16 +92,6 @@ export function FontPicker({ value, onChange, sample }: { value: string; onChang
                     </CommandItem>
                   </CommandGroup>
                 )}
-                {FONT_CATEGORIES.map((category) => (
-                  <CommandGroup key={category} heading={t(`brand.fontCategories.${category}`)}>
-                    {GOOGLE_FONTS.filter((f) => f.category === category).map((f) => (
-                      <CommandItem key={f.family} value={f.family} onSelect={() => choose(f.family)}>
-                        {f.family}
-                        <Check className={cn('ml-auto', f.family === value ? 'opacity-100' : 'opacity-0')} />
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                ))}
               </CommandList>
             </Command>
           </PopoverContent>
