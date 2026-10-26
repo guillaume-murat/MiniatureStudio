@@ -29,15 +29,14 @@ swiftc -O -o "$APP/Contents/MacOS/NanoThumbnail" macos/NanoThumbnail.swift
 cp -R dist "$APP/Contents/Resources/dist"
 cp local/dist/server.mjs "$APP/Contents/Resources/server.mjs"
 
-# Icon from the PWA icon
+# Icon: macos/AppIcon.png (1024 px, already in the macOS icon shape; see make-icon.swift)
 ICONSET=macos/build/AppIcon.iconset
 rm -rf "$ICONSET" && mkdir -p "$ICONSET"
 for size in 16 32 128 256 512; do
-  sips -z $size $size public/icons/icon-512.png --out "$ICONSET/icon_${size}x${size}.png" >/dev/null
+  sips -z $size $size macos/AppIcon.png --out "$ICONSET/icon_${size}x${size}.png" >/dev/null
   double=$((size * 2))
-  [ $double -le 512 ] && sips -z $double $double public/icons/icon-512.png --out "$ICONSET/icon_${size}x${size}@2x.png" >/dev/null
+  sips -z $double $double macos/AppIcon.png --out "$ICONSET/icon_${size}x${size}@2x.png" >/dev/null
 done
-cp public/icons/icon-512.png "$ICONSET/icon_512x512@2x.png"
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
 
 cat > "$APP/Contents/Info.plist" <<PLIST

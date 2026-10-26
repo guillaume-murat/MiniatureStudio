@@ -135,3 +135,6 @@ macos/build/
 
 # Personal Claude Code settings
 .claude/settings.local.json
+
+# Logo drafts (the chosen one is macos/icon-source.png)
+macos/icon-candidates/

@@ -5,7 +5,7 @@
 set -u
 cd "$(dirname "$0")/.."
 
-PATHS="src public local netlify macos/NanoThumbnail.swift macos/build.sh astro.config.mjs package.json"
+PATHS="src public local netlify macos/NanoThumbnail.swift macos/build.sh macos/AppIcon.png astro.config.mjs package.json"
 STAMP=macos/build/.installed
 LOG=macos/build/auto-install.log
 LOCK=macos/build/.auto-install.lock
