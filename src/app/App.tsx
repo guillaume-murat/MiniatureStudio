@@ -85,14 +85,17 @@ export default function App() {
         ui.dialog === 'commands' ? ui.close() : ui.open('commands');
       } else if (!mod && !isTyping(e.target) && !useUI.getState().dialog) {
         const ws = useWorkspace.getState();
-        if (e.key === 'f') ws.setView(ws.view === 'feed' ? 'image' : 'feed');
-        else if (e.key === 'z') ws.setSafeZones(!ws.safeZones);
-        else if (e.key === 'm' && ws.selectedId) ws.setMaskMode(!ws.maskMode);
-        else if (e.key === 'Escape' && ws.maskMode) ws.setMaskMode(false);
-        else if (e.key === 't' && ws.selectedId) ws.setTextMode(!ws.textMode);
-        else if (e.key === 'Escape' && ws.textMode) ws.setTextMode(false);
-        else if (e.key === 'r' && ws.selectedId) toggleReframe();
-        else if (e.key === 'Escape' && ws.reframeMode) ws.setReframeMode(false);
+        // Letters work with caps lock on too. Each letter has one action (see the command palette).
+        const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+        if (key === 'p') ws.setView(ws.view === 'feed' ? 'image' : 'feed');
+        else if (key === 'z') ws.setSafeZones(!ws.safeZones);
+        else if (key === 'm' && ws.selectedId) ws.setMaskMode(!ws.maskMode);
+        else if (key === 'Escape' && ws.maskMode) ws.setMaskMode(false);
+        else if (key === 't' && ws.selectedId) ws.setTextMode(!ws.textMode);
+        else if (key === 'a' && ws.selectedId) ws.addArrow();
+        else if (key === 'Escape' && ws.textMode) ws.setTextMode(false);
+        else if (key === 'r' && ws.selectedId) toggleReframe();
+        else if (key === 'Escape' && ws.reframeMode) ws.setReframeMode(false);
         else if ((e.key === 'Delete' || e.key === 'Backspace') && ws.textMode) {
           const text = useText.getState();
           if (text.selectedId) text.remove(text.selectedId);

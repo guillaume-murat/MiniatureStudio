@@ -132,20 +132,6 @@ export function buildEditPrompt(instruction: string, extraRoles: ImageRole[] = [
   return lines.join('\n\n');
 }
 
-/**
- * Face restoration on image 1 using the people's reference photos (the roles
- * after image 1), changing nothing but the faces.
- */
-export function buildFaceFixPrompt(names: string[], roles: ImageRole[]): string {
-  const who = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0];
-  return [
-    `Using image 1 (the current thumbnail), restore the face${names.length > 1 ? 's' : ''} of ${who}. Fix every glitch and artefact on ${names.length > 1 ? 'them' : 'it'} — asymmetric, melted or misaligned eyes, malformed teeth, smeared or waxy skin, broken face outlines, mismatched ears and hairline — so each face looks like a sharp, natural, high-resolution photograph of that person.`,
-    `Rebuild their exact facial features from the reference photos: face shape, eyes, nose, mouth, skin tone and texture, hair. Keep the expression, head pose, gaze direction, framing and lighting exactly as in image 1.`,
-    'Change only the faces. Keep everything else in the image exactly the same, preserving the composition, bodies, clothing, background, text, colours and aspect ratio.',
-    ['Other attached images:', ...describeImages(roles, 1)].join('\n'),
-  ].join('\n\n');
-}
-
 /** Reframing: fill the flat grey areas left around the moved or zoomed-out image. */
 export function buildOutpaintPrompt(): string {
   return [
@@ -164,10 +150,14 @@ export function buildUpscalePrompt(): string {
   ].join('\n\n');
 }
 
-/** Healing brush: erase seams and hard edges in the marked area, adding nothing. */
+/**
+ * Healing brush: the marked area arrives already filled from its surroundings
+ * (« Lisser »), so the model only restores texture. An empty or highlighted
+ * area made it draw an object of the area's shape instead.
+ */
 export function buildHealPrompt(): string {
   return buildRegionEditPrompt(
-    'remove every visible seam, hard line, cut edge or discontinuity. Blend both sides together seamlessly by continuing the surrounding textures, colours, lighting, focus and grain, the way a retoucher’s healing brush would. Add nothing new: no objects, text or details that were not already there.',
+    'this area was patched and looks smeared. Restore the natural texture, grain, light and focus of what surrounds it so it blends in invisibly. Add nothing new: no objects, shapes, edges or lines.',
   );
 }
 

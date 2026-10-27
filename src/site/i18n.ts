@@ -103,7 +103,7 @@ const fr = {
     title: 'Pensé pour aller vite',
     items: [
       { key: 'concepts', title: 'Assistant de concepts', text: 'Donnez votre titre : trois angles vraiment différents, avec brief, texte et style, prêts à générer.' },
-      { key: 'commands', title: 'Tout au clavier', text: 'Palette ⌘K, ⌘↵ pour générer, F pour l’aperçu du fil, Z pour les zones, M pour le masque.' },
+      { key: 'commands', title: 'Tout au clavier', text: 'Palette ⌘K, ⌘↵ pour générer, P pour l’aperçu du fil, T pour le texte, A pour une flèche, R pour recadrer.' },
     ],
   },
   bento: {
@@ -344,7 +344,7 @@ const en: Dict = {
     title: 'Built for speed',
     items: [
       { key: 'concepts', title: 'Concept assistant', text: 'Give it your title: three genuinely different angles, with brief, text and style, ready to generate.' },
-      { key: 'commands', title: 'Keyboard-first', text: '⌘K palette, ⌘↵ to generate, F for feed preview, Z for safe zones, M for the mask.' },
+      { key: 'commands', title: 'Keyboard-first', text: '⌘K palette, ⌘↵ to generate, P for feed preview, T for text, A for an arrow, R to reframe.' },
     ],
   },
   bento: {
@@ -471,7 +471,7 @@ const en: Dict = {
   alts: {
     agents: '“Rust in 10 min” thumbnail generated in NanoThumbnail',
     hero: 'YouTube thumbnail made with NanoThumbnail: an amazed creator shows a tiny smartphone, a big red arrow points at it, yellow text “MINI ?!”',
-    studio: 'NanoThumbnail studio screenshot: brief on the left, thumbnail in the middle, version history and quick edits on the right',
+    studio: 'NanoThumbnail studio screenshot: brief on the left, thumbnail in the middle, version history and edits on the right',
     steps: ['Generated version: dark “MINI ?!” text, no arrow', 'First edit: a red arrow points at the phone', 'Second edit: the text turns bright yellow with a black outline'],
     mask: 'Area edit: the phone is painted in magenta to be transformed',
     safezones: 'Safe zones shown on the thumbnail: duration badge, hover icons, progress bar',

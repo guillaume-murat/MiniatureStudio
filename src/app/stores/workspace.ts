@@ -4,7 +4,6 @@ import * as db from '../lib/db';
 import { generateImage, isAbort } from '../lib/providers';
 import {
   buildEditPrompt,
-  buildFaceFixPrompt,
   buildGenerationPrompt,
   buildOutpaintPrompt,
   buildRegionEditPrompt,
@@ -16,6 +15,7 @@ import { composeReframe, composeZoneReframe, isIdentity, isZone, type Point, typ
 import { useReframe } from './reframe';
 import { dimensions, highlightRegion, mergeWithMask, normaliseUpload, prepareReference } from '../lib/images';
 import { explainError } from '../lib/errors';
+import { smoothRegion } from '../lib/smooth';
 import { findStyle } from '../lib/styles';
 import { rankThumbnails, type Ranking } from '../lib/ai';
 import type { BrandKit, Generation, GenerationKind, GenerationParams, LibraryImage, Persona, Project, RefImage, RefSource } from '../lib/types';
@@ -111,13 +111,13 @@ interface WorkspaceState {
   edit: (instruction: string, opts?: { mask?: HTMLCanvasElement }) => Promise<Outcome<Generation>[]>;
   /** Healing brush: the painted area is repainted to erase seams and hard edges. */
   heal: () => Promise<Outcome<Generation> | null>;
+  /** « Lisser »: the painted area is refilled from its surroundings, locally, without AI. */
+  smooth: () => Promise<Generation | null>;
   /**
    * AI upscale: a 2K version of the image with finer detail, saved as a new
    * version. Editable text is kept as text and redrawn on the upscaled image.
    */
   upscale: (id: string) => Promise<Outcome<Generation> | null>;
-  /** Restores these people's faces on the selected image from their reference photos (new version). */
-  fixFaces: (personaIds: string[]) => Promise<Outcome<Generation> | null>;
   cancelJob: (id: string) => void;
   dismissJob: (id: string) => void;
   cancelAll: () => void;
@@ -139,6 +139,8 @@ interface WorkspaceState {
   setSafeZones: (on: boolean) => void;
   setMaskMode: (on: boolean) => void;
   setTextMode: (on: boolean) => void;
+  /** Adds an arrow to the selected image, opening the text tool (its layer holds arrows too). */
+  addArrow: () => void;
   setReframeMode: (on: boolean) => void;
   /**
    * New version with the image moved / scaled in its frame. Done locally when it
@@ -504,7 +506,40 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       if (!source || !get().hasMask || !maskCanvas) return null;
       const apiKey = checkKey();
       if (!apiKey) return null;
-      return regionEdit(source, snapshotMask(maskCanvas), t('heal.done'), buildHealPrompt(), apiKey);
+      const mask = snapshotMask(maskCanvas);
+      // Filled locally first: the model then only restores texture, it has no hole to invent into.
+      const patched = await smoothRegion(source.blob, mask);
+      return regionEdit({ ...source, blob: patched }, mask, t('heal.done'), buildHealPrompt(), apiKey);
+    },
+
+    smooth: async () => {
+      const source = selectedGeneration(get());
+      if (!source || !get().hasMask || !maskCanvas) return null;
+      try {
+        const blob = await smoothRegion(source.blob, snapshotMask(maskCanvas));
+        const generation: Generation = {
+          id: db.uid('g_'),
+          projectId: source.projectId,
+          parentId: source.id,
+          kind: 'region',
+          prompt: t('smooth.done'),
+          fullPrompt: '',
+          videoTitle: source.videoTitle,
+          params: source.params,
+          blob,
+          width: source.width,
+          height: source.height,
+          createdAt: Date.now(),
+        };
+        await db.putGeneration(generation);
+        set({ generations: [generation, ...get().generations] });
+        // Leaves the area tool, so the result shows without the painted mask over it.
+        get().select(generation.id);
+        return generation;
+      } catch (error) {
+        reportError(error, set);
+        return null;
+      }
     },
 
     previewPrompt: () => generationRequest().fullPrompt,
@@ -555,30 +590,6 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         apiKey,
         textBlocks: source.textLayer?.blocks,
         // The model needs the full detail of the image it is asked to sharpen.
-        reference: { maxSide: 2048, bytes: 3_000_000 },
-        batch: { shown: false },
-      });
-    },
-
-    fixFaces: async (personaIds) => {
-      const source = get().generations.find((g) => g.id === get().selectedId);
-      const names = personaIds.map((id) => get().personas.find((p) => p.id === id)?.name).filter((n): n is string => !!n);
-      if (!source || !names.length) return null;
-      const apiKey = checkKey();
-      if (!apiKey) return null;
-      const people = personaImages(personaIds).slice(0, MAX_IMAGES - 1);
-      return runJob({
-        kind: 'edit',
-        prompt: t('iterate.fixFaceDone', { names: names.join(', ') }),
-        fullPrompt: buildFaceFixPrompt(names, people.map((p) => p.role)),
-        // Editable text stays text: the faces are fixed on the image under it.
-        images: [source.textLayer?.base ?? source.blob, ...people.map((p) => p.blob)],
-        params: { ...useSettings.getState().params(), aspectRatio: source.params.aspectRatio },
-        parentId: source.id,
-        videoTitle: source.videoTitle,
-        apiKey,
-        textBlocks: source.textLayer?.blocks,
-        // Faces are small in a thumbnail: send the image with all its detail.
         reference: { maxSide: 2048, bytes: 3_000_000 },
         batch: { shown: false },
       });
@@ -706,6 +717,11 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         reframeMode: on ? false : get().reframeMode,
         view: on ? 'image' : get().view,
       }),
+    addArrow: () => {
+      if (!get().selectedId) return;
+      if (!get().textMode) get().setTextMode(true);
+      useText.getState().addArrow();
+    },
     setTextMode: (on) => {
       const layer = selectedGeneration(get())?.textLayer;
       if (on && layer) useText.getState().load(layer.blocks);

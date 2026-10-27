@@ -235,7 +235,7 @@ export function MergeTextButton({ onMerge, disabled }: { onMerge: () => void; di
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="outline" size="sm" disabled={disabled}>
+        <Button variant="outline" size="sm" disabled={disabled} title={t('text.merge')} aria-label={t('text.merge')}>
           <Merge /> <span className="hidden md:inline">{t('text.merge')}</span>
         </Button>
       </AlertDialogTrigger>

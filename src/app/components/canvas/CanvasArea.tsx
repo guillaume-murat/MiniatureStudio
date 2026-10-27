@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import {
   Bandage,
+  Check,
+  Blend,
   Brush,
   Copy,
-  Crop,
   Download,
   Eraser,
   Grid2x2,
@@ -17,26 +18,21 @@ import {
   Star,
   Trash2,
   Tv,
-  Type,
-  ArrowUpRight,
   X,
   SquarePlay,
   AlertCircle,
-  Paintbrush,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
 import { Slider } from '../ui/slider';
-import { Toggle } from '../ui/toggle';
 import { Kbd } from '../ui/kbd';
 import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { SafeZones } from './SafeZones';
 import { MaskLayer, type MaskTool } from './MaskLayer';
-import { MergeTextButton, TextOverlay, TextToolbar } from './TextLayer';
+import { TextOverlay, TextToolbar } from './TextLayer';
 import { ReframeToolbar, ReframeView } from './ReframeLayer';
-import { toggleReframe } from './ReframeTextDialog';
 import { blockingJob } from './BlockingJob';
 import { FeedPreview } from './FeedPreview';
 import { CompareView } from './CompareView';
@@ -47,7 +43,6 @@ import { usePinch } from '../../hooks/use-pinch';
 import { clampPan, NO_ZOOM, zoomAt, type ViewZoom } from '../../lib/zoom';
 import { selectedGeneration, useWorkspace, type Job, type ViewMode } from '../../stores/workspace';
 import { useReframe } from '../../stores/reframe';
-import { useText } from '../../stores/text';
 import { downloadForYouTube } from '../../lib/exporting';
 import { downloadBlob, extensionFor, FULL_HD_SIZE } from '../../lib/images';
 import { useT } from '../../i18n';
@@ -145,7 +140,7 @@ function ImageView({ gen, tool, brushSize, clearSignal }: { gen: Generation; too
 
   return (
     <div ref={ref} className="relative flex size-full items-center justify-center overflow-hidden">
-      {zoom.z > 1 && (
+      {zoom.z !== 1 && (
         <Button variant="secondary" size="xs" className="tabular absolute right-3 bottom-3 z-10 shadow" onClick={() => setZoom(NO_ZOOM)}>
           {Math.round(zoom.z * 100)} % · {t('canvas.resetZoom')}
         </Button>
@@ -182,7 +177,7 @@ async function exportFullHd(gen: Generation, t: ReturnType<typeof useT>) {
 
 function ImageActions({ gen }: { gen: Generation }) {
   const t = useT();
-  const { toggleFavorite, removeGeneration, addRef, saveToLibrary, reuse } = useWorkspace();
+  const { toggleFavorite, removeGeneration, addRef, saveToLibrary, reuse, view, safeZones, setSafeZones } = useWorkspace();
   return (
     <>
       <IconTip label={gen.favorite ? t('canvas.unfavorite') : t('canvas.favorite')}>
@@ -202,6 +197,16 @@ function ImageActions({ gen }: { gen: Generation }) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-60">
+          {view === 'image' && (
+            <>
+              <DropdownMenuItem onSelect={() => setSafeZones(!safeZones)}>
+                <ScanLine /> {t('canvas.safeZones')}
+                {safeZones && <Check className="text-primary" />}
+                <DropdownMenuShortcut>Z</DropdownMenuShortcut>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          )}
           <DropdownMenuItem onSelect={() => downloadBlob(gen.blob, `nanothumbnail-${gen.id.slice(2, 10)}.${extensionFor(gen.blob)}`)}>
             <Download /> {t('canvas.download')} ({gen.width}×{gen.height})
           </DropdownMenuItem>
@@ -256,57 +261,17 @@ export function CanvasArea({ onDescribeRegion }: { onDescribeRegion?: () => void
       {/* Toolbar */}
       <div className="flex h-11 shrink-0 items-center gap-1 border-b bg-background px-2">
         <ToggleGroup type="single" size="sm" value={ws.view} onValueChange={(v) => v && ws.setView(v as ViewMode)}>
-          <ToggleGroupItem value="image" className="gap-1.5 px-2.5 text-xs">
+          <ToggleGroupItem value="image" className="gap-1.5 px-2.5 text-xs" title={t('canvas.viewImage')} aria-label={t('canvas.viewImage')}>
             <ImageIcon /> <span className="hidden sm:inline">{t('canvas.viewImage')}</span>
           </ToggleGroupItem>
-          <ToggleGroupItem value="feed" className="gap-1.5 px-2.5 text-xs" disabled={!gen}>
+          <ToggleGroupItem value="feed" className="gap-1.5 px-2.5 text-xs" title={t('canvas.viewFeed')} aria-label={t('canvas.viewFeed')} disabled={!gen}>
             <Tv /> <span className="hidden sm:inline">{t('canvas.viewFeed')}</span>
           </ToggleGroupItem>
-          <ToggleGroupItem value="compare" className="gap-1.5 px-2.5 text-xs">
+          <ToggleGroupItem value="compare" className="gap-1.5 px-2.5 text-xs" title={t('canvas.viewCompare')} aria-label={t('canvas.viewCompare')}>
             <Grid2x2 /> <span className="hidden sm:inline">{t('canvas.viewCompare')}</span>
             {ws.pickedIds.length > 0 && <span className="tabular text-muted-foreground">{ws.pickedIds.length}</span>}
           </ToggleGroupItem>
         </ToggleGroup>
-
-        {ws.view === 'image' && gen && (
-          <>
-            <span className="mx-1 h-5 w-px bg-border" />
-            <IconTip label={`${t('canvas.safeZones')} (Z)`}>
-              <Toggle size="sm" pressed={ws.safeZones} onPressedChange={ws.setSafeZones} aria-label={t('canvas.safeZones')}>
-                <ScanLine />
-              </Toggle>
-            </IconTip>
-            <IconTip label={`${t('canvas.maskTool')} (M)`}>
-              <Toggle size="sm" pressed={ws.maskMode} onPressedChange={ws.setMaskMode} aria-label={t('canvas.maskTool')}>
-                <Paintbrush />
-              </Toggle>
-            </IconTip>
-            <IconTip label={`${gen.textLayer ? t('canvas.textEdit') : t('canvas.textTool')} (T)`}>
-              <Toggle size="sm" pressed={ws.textMode} onPressedChange={ws.setTextMode} aria-label={gen.textLayer ? t('canvas.textEdit') : t('canvas.textTool')}>
-                <Type />
-              </Toggle>
-            </IconTip>
-            <IconTip label={t('arrow.addTool')}>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => {
-                  if (!ws.textMode) ws.setTextMode(true);
-                  useText.getState().addArrow();
-                }}
-                aria-label={t('arrow.addTool')}
-              >
-                <ArrowUpRight />
-              </Button>
-            </IconTip>
-            <IconTip label={`${t('canvas.reframeTool')} (R)`}>
-              <Toggle size="sm" pressed={ws.reframeMode} onPressedChange={toggleReframe} aria-label={t('canvas.reframeTool')}>
-                <Crop />
-              </Toggle>
-            </IconTip>
-            {gen.textLayer && !ws.textMode && <MergeTextButton onMerge={() => ws.mergeText(gen.id)} />}
-          </>
-        )}
 
         {gen && ws.view !== 'compare' && (
           <div className="ml-auto flex items-center">
@@ -340,7 +305,15 @@ export function CanvasArea({ onDescribeRegion }: { onDescribeRegion?: () => void
           </Button>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="outline" size="xs" className="ml-auto" disabled={!ws.hasMask} onClick={() => ws.heal()}>
+              <Button variant="outline" size="xs" className="ml-auto" disabled={!ws.hasMask} onClick={() => ws.smooth()}>
+                <Blend /> {t('smooth.button')}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-64">{t('smooth.hint')}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="xs" disabled={!ws.hasMask} onClick={() => ws.heal()}>
                 <Bandage /> {t('heal.button')}
               </Button>
             </TooltipTrigger>

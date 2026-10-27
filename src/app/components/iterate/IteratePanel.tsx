@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { ArrowUp, GitBranch, Loader2, Maximize2, ScanFace, Sparkles, SquareDashedMousePointer, Type, Wand2 } from 'lucide-react';
+import { ArrowUp, ArrowUpRight, Crop, GitBranch, Loader2, Maximize2, Paintbrush, Sparkles, SquareDashedMousePointer, Type, Wand2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { ScrollArea } from '../ui/scroll-area';
 import { Section } from '../Section';
-import { FaceFixDialog } from './FaceFixDialog';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
+import { Toggle } from '../ui/toggle';
+import { Kbd } from '../ui/kbd';
+import { toggleReframe } from '../canvas/ReframeTextDialog';
+import { MergeTextButton } from '../canvas/TextLayer';
 import { useBlobUrl } from '../../hooks/use-blob-url';
 import { lineage, selectedGeneration, useWorkspace } from '../../stores/workspace';
 import { useT, type TKey } from '../../i18n';
@@ -45,11 +47,73 @@ function VersionRow({ gen, active, onClick }: { gen: Generation; active: boolean
   );
 }
 
+/** The image tools (they work on the canvas), first in the edits panel. */
+function EditTools({ onUse }: { onUse?: () => void }) {
+  const t = useT();
+  const ws = useWorkspace();
+  const gen = useWorkspace(selectedGeneration);
+  // Mobile: the tools work on the canvas, in another tab.
+  const use = (action: () => void) => () => {
+    action();
+    onUse?.();
+  };
+  const tools = [
+    {
+      key: 'text',
+      icon: Type,
+      label: gen?.textLayer ? t('canvas.textEdit') : t('canvas.textTool'),
+      shortcut: 'T',
+      pressed: ws.textMode,
+      run: () => ws.setTextMode(!ws.textMode),
+    },
+    {
+      key: 'arrow',
+      icon: ArrowUpRight,
+      label: t('arrow.addTool'),
+      shortcut: 'A',
+      pressed: false,
+      run: ws.addArrow,
+    },
+    {
+      key: 'mask',
+      icon: Paintbrush,
+      label: t('canvas.maskTool'),
+      shortcut: 'M',
+      pressed: ws.maskMode,
+      run: () => ws.setMaskMode(!ws.maskMode),
+    },
+    {
+      key: 'reframe',
+      icon: Crop,
+      label: t('canvas.reframeTool'),
+      shortcut: 'R',
+      pressed: ws.reframeMode,
+      run: toggleReframe,
+    },
+  ];
+  return (
+    <>
+      <div className="mb-2 grid gap-1.5">
+        {tools.map(({ key, icon: Icon, label, shortcut, pressed, run }) => (
+          <Toggle key={key} variant="outline" size="sm" pressed={pressed} onPressedChange={use(run)} className="justify-start gap-2 px-2.5 text-xs">
+            <Icon /> <span className="truncate">{label}</span>
+            {shortcut && <Kbd className="ml-auto hidden sm:inline-flex">{shortcut}</Kbd>}
+          </Toggle>
+        ))}
+      </div>
+      {gen?.textLayer && !ws.textMode && (
+        <div className="mb-2 [&>button]:w-full">
+          <MergeTextButton onMerge={() => ws.mergeText(gen.id)} />
+        </div>
+      )}
+    </>
+  );
+}
+
 function EditTab({ gen, onEdited }: { gen: Generation; onEdited?: () => void }) {
   const t = useT();
-  const { generations, select, edit, maskMode, hasMask, jobs, personas } = useWorkspace();
+  const { generations, select, edit, maskMode, hasMask, jobs } = useWorkspace();
   const [instruction, setInstruction] = useState('');
-  const [faceFix, setFaceFix] = useState(false);
   const versions = lineage(generations, gen.id);
   const editing = jobs.some((j) => j.status === 'running' && j.parentId === gen.id);
   const region = maskMode && hasMask;
@@ -66,7 +130,13 @@ function EditTab({ gen, onEdited }: { gen: Generation; onEdited?: () => void }) 
       <ScrollArea className="min-h-0 flex-1">
         <div className="space-y-6 p-4">
           {versions.length > 1 && (
-            <Section title={<span className="flex items-center gap-1.5"><GitBranch className="size-3.5" /> {t('iterate.versions')}</span>}>
+            <Section
+              title={
+                <span className="flex items-center gap-1.5">
+                  <GitBranch className="size-3.5" /> {t('iterate.versions')}
+                </span>
+              }
+            >
               <div className="space-y-0.5">
                 {versions.map((v) => (
                   <VersionRow key={v.id} gen={v} active={v.id === gen.id} onClick={() => select(v.id)} />
@@ -76,18 +146,7 @@ function EditTab({ gen, onEdited }: { gen: Generation; onEdited?: () => void }) 
           )}
 
           <Section title={t('iterate.quick')}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                {/* A disabled button gets no pointer events: the wrapper keeps the tooltip working. */}
-                <span className="mb-2 block">
-                  <Button variant="outline" size="sm" className="w-full" disabled={editing || !personas.length} onClick={() => setFaceFix(true)}>
-                    <ScanFace /> {t('iterate.fixFace')}
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>{personas.length ? t('iterate.fixFaceHint') : t('iterate.fixFaceNoPeople')}</TooltipContent>
-            </Tooltip>
-            <FaceFixDialog open={faceFix} onOpenChange={setFaceFix} onStarted={onEdited} />
+            <EditTools onUse={onEdited} />
             <div className="flex flex-wrap gap-1.5">
               {QUICK_EDITS.map((key) => {
                 const text = t(`iterate.quickEdits.${key}` as TKey);

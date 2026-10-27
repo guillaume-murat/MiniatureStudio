@@ -1,4 +1,4 @@
-import { Bot, Folder, Plus, ScanLine, Settings, Sparkles, SunMoon, Tv, Users, Wand2 } from 'lucide-react';
+import { ArrowUpRight, Bot, Crop, Folder, Paintbrush, Plus, ScanLine, Settings, Sparkles, SunMoon, Tv, Type, Users, Wand2 } from 'lucide-react';
 import {
   CommandDialog,
   CommandEmpty,
@@ -10,6 +10,7 @@ import {
   CommandShortcut,
 } from '../ui/command';
 import { MOD } from '../TopBar';
+import { toggleReframe } from '../canvas/ReframeTextDialog';
 import { useUI } from '../../stores/ui';
 import { useWorkspace } from '../../stores/workspace';
 import { useSettings } from '../../stores/settings';
@@ -44,11 +45,30 @@ export function CommandMenu() {
           </CommandItem>
           <CommandItem onSelect={run(() => ws.setView(ws.view === 'feed' ? 'image' : 'feed'))} disabled={!ws.selectedId}>
             <Tv /> {t('commands.feed')}
-            <CommandShortcut>F</CommandShortcut>
+            <CommandShortcut>P</CommandShortcut>
           </CommandItem>
           <CommandItem onSelect={run(() => ws.setSafeZones(!ws.safeZones))}>
             <ScanLine /> {t('commands.safeZones')}
             <CommandShortcut>Z</CommandShortcut>
+          </CommandItem>
+        </CommandGroup>
+        <CommandSeparator />
+        <CommandGroup>
+          <CommandItem onSelect={run(() => ws.setTextMode(true))} disabled={!ws.selectedId}>
+            <Type /> {t('canvas.textTool')}
+            <CommandShortcut>T</CommandShortcut>
+          </CommandItem>
+          <CommandItem onSelect={run(ws.addArrow)} disabled={!ws.selectedId}>
+            <ArrowUpRight /> {t('arrow.addTool')}
+            <CommandShortcut>A</CommandShortcut>
+          </CommandItem>
+          <CommandItem onSelect={run(() => ws.setMaskMode(true))} disabled={!ws.selectedId}>
+            <Paintbrush /> {t('canvas.maskTool')}
+            <CommandShortcut>M</CommandShortcut>
+          </CommandItem>
+          <CommandItem onSelect={run(toggleReframe)} disabled={!ws.selectedId}>
+            <Crop /> {t('canvas.reframeTool')}
+            <CommandShortcut>R</CommandShortcut>
           </CommandItem>
         </CommandGroup>
         <CommandSeparator />

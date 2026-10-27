@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildEditPrompt, buildFaceFixPrompt, buildGenerationPrompt, buildOutpaintPrompt, buildRegionEditPrompt, buildUpscalePrompt, describeImages, quote } from '../prompt';
+import { buildEditPrompt, buildGenerationPrompt, buildOutpaintPrompt, buildRegionEditPrompt, buildUpscalePrompt, describeImages, quote } from '../prompt';
 
 const base = { brief: 'A developer on Mars', aspectRatio: '16:9' as const, roles: [] };
 
@@ -83,21 +83,6 @@ describe('buildUpscalePrompt', () => {
     expect(p).toMatch(/^Upscale image 1/);
     expect(p).toContain('Reproduce it exactly');
     expect(p).toContain('Do not add, remove, move or restyle anything');
-  });
-});
-
-describe('buildFaceFixPrompt', () => {
-  it('names the people, keeps the rest, and declares their photos', () => {
-    const roles = [
-      { kind: 'persona' as const, name: 'Alex' },
-      { kind: 'persona' as const, name: 'Alex' },
-      { kind: 'persona' as const, name: 'Sam' },
-    ];
-    const p = buildFaceFixPrompt(['Alex', 'Sam'], roles);
-    expect(p).toContain('restore the faces of Alex and Sam');
-    expect(p).toContain('Change only the faces');
-    expect(p).toContain('- Images 2–3: photos of Alex');
-    expect(p).toContain('- Image 4: photos of Sam');
   });
 });
 

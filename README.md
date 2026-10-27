@@ -23,7 +23,7 @@ NanoThumbnail is a free, open-source studio to **generate, edit and test YouTube
 
 **Iterate**
 - **Conversational edits**: “make the face more surprised” changes only that. Every version is kept, with its lineage.
-- **Area edits**: paint a mask, describe the change; the model gets the clean image plus a marked copy as a location guide, and pixels outside the mask are merged back untouched. **Heal** repaints the painted area to erase seams and hard edges (like Photoshop's healing brush).
+- **Area edits**: paint a mask, describe the change; the model gets the clean image plus a marked copy as a location guide, and pixels outside the mask are merged back untouched. **Smooth** refills the painted area from its surroundings, locally and instantly (for seams and lines on soft backgrounds); **AI heal** does the same, then lets the model restore texture.
 - **Text & arrows** (`T`): editable text blocks and curved arrows (solid, open or double head, thickness, bend, colour, border, dashes, shadow) drawn over the image; they stay editable until you merge them.
 - **Reframe** (`R`): move or zoom the whole image, or circle one part freehand (a person, an object) and move only that part; the AI fills only what's left empty and repaints the cut so no seam shows, everything else stays pixel-exact. The studio is locked, image blurred, while the AI works.
 
@@ -38,7 +38,7 @@ NanoThumbnail is a free, open-source studio to **generate, edit and test YouTube
 - Companion skill with the workflow and thumbnail craft: `npx skills add yoanbernabeu/NanoThumbnail --skill nanothumbnail`.
 
 **Keyboard-first**
-- `⌘K` command palette, `⌘↵` generate, `F` feed preview, `Z` safe zones, `M` mask, `Esc` leave mask.
+- `⌘K` command palette, `⌘↵` generate, `P` feed preview, `Z` safe zones, `T` text, `A` arrow, `M` paint an area, `R` reframe, `Esc` leave the current tool.
 
 **Local-first**
 - Projects, images, people and channel details live in IndexedDB. No account, no database.
