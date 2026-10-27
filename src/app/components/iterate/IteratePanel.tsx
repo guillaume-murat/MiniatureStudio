@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { ArrowUp, BarChart3, GitBranch, Loader2, Sparkles, SquareDashedMousePointer, Wand2 } from 'lucide-react';
+import { ArrowUp, BarChart3, GitBranch, Loader2, Maximize2, ScanFace, Sparkles, SquareDashedMousePointer, Type, Wand2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { ScrollArea } from '../ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Section } from '../Section';
 import { ScorePanel } from './ScorePanel';
+import { FaceFixDialog } from './FaceFixDialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { useBlobUrl } from '../../hooks/use-blob-url';
 import { lineage, selectedGeneration, useWorkspace } from '../../stores/workspace';
 import { useT, type TKey } from '../../i18n';
@@ -26,7 +28,17 @@ function VersionRow({ gen, active, onClick }: { gen: Generation; active: boolean
       <img src={url} alt="" className="aspect-video w-20 shrink-0 rounded object-cover ring-1 ring-border" />
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1 text-xs text-muted-foreground">
-          {gen.kind === 'region' ? <SquareDashedMousePointer className="size-3" /> : gen.parentId ? <Wand2 className="size-3" /> : <Sparkles className="size-3" />}
+          {gen.kind === 'region' ? (
+            <SquareDashedMousePointer className="size-3" />
+          ) : gen.kind === 'text' ? (
+            <Type className="size-3" />
+          ) : gen.kind === 'upscale' ? (
+            <Maximize2 className="size-3" />
+          ) : gen.parentId ? (
+            <Wand2 className="size-3" />
+          ) : (
+            <Sparkles className="size-3" />
+          )}
           {gen.parentId ? t('iterate.edit') : t('iterate.original')}
         </span>
         <span className="line-clamp-2 text-xs">{gen.prompt}</span>
@@ -37,8 +49,9 @@ function VersionRow({ gen, active, onClick }: { gen: Generation; active: boolean
 
 function EditTab({ gen, onEdited }: { gen: Generation; onEdited?: () => void }) {
   const t = useT();
-  const { generations, select, edit, maskMode, hasMask, jobs } = useWorkspace();
+  const { generations, select, edit, maskMode, hasMask, jobs, personas } = useWorkspace();
   const [instruction, setInstruction] = useState('');
+  const [faceFix, setFaceFix] = useState(false);
   const versions = lineage(generations, gen.id);
   const editing = jobs.some((j) => j.status === 'running' && j.parentId === gen.id);
   const region = maskMode && hasMask;
@@ -65,6 +78,18 @@ function EditTab({ gen, onEdited }: { gen: Generation; onEdited?: () => void }) 
           )}
 
           <Section title={t('iterate.quick')}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                {/* A disabled button gets no pointer events: the wrapper keeps the tooltip working. */}
+                <span className="mb-2 block">
+                  <Button variant="outline" size="sm" className="w-full" disabled={editing || !personas.length} onClick={() => setFaceFix(true)}>
+                    <ScanFace /> {t('iterate.fixFace')}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{personas.length ? t('iterate.fixFaceHint') : t('iterate.fixFaceNoPeople')}</TooltipContent>
+            </Tooltip>
+            <FaceFixDialog open={faceFix} onOpenChange={setFaceFix} onStarted={onEdited} />
             <div className="flex flex-wrap gap-1.5">
               {QUICK_EDITS.map((key) => {
                 const text = t(`iterate.quickEdits.${key}` as TKey);

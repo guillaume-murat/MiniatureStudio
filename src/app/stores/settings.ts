@@ -29,6 +29,8 @@ interface SettingsState {
 const PROVIDERS: Provider[] = ['replicate', 'gemini', 'openrouter', 'mammouth', 'vertex'];
 const PREFS_KEY = 'nt_prefs';
 const KEY_PREFIX = 'nt_key_';
+/** No longer used (the feed videos ship with the app): erased on load. */
+const OLD_YOUTUBE_KEY = 'nt_key_youtube';
 
 function safeGet(storage: Storage | undefined, key: string): string | null {
   try {
@@ -81,7 +83,11 @@ function detectLang(): Lang {
 }
 
 function load() {
-  if (hasWindow) migrateV1();
+  if (hasWindow) {
+    migrateV1();
+    safeSet(local, OLD_YOUTUBE_KEY, null);
+    safeSet(session, OLD_YOUTUBE_KEY, null);
+  }
   const prefs = JSON.parse(safeGet(local, PREFS_KEY) || '{}');
   const keyPersistence: KeyPersistence = prefs.keyPersistence === 'session' ? 'session' : 'local';
   const store = keyPersistence === 'session' ? session : local;

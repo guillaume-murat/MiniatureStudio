@@ -248,11 +248,11 @@ export const STUDIO_TOOLS: ToolDef[] = [
   },
   {
     name: 'export_thumbnail',
-    description: 'Save a thumbnail to disk. "youtube" = 1280×720 JPEG under 2 MB, ready to upload.',
+    description: 'Save a thumbnail to disk. "youtube" = 1280×720 JPEG under 2 MB, ready to upload; "youtube-1080" = the same at 1920×1080.',
     inputSchema: obj({
       id,
       path: str('Destination file or directory (default: current directory).'),
-      format: str('Default "youtube".', { enum: ['youtube', 'original'] }),
+      format: str('Default "youtube".', { enum: ['youtube', 'youtube-1080', 'original'] }),
     }),
   },
   {

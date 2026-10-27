@@ -29,7 +29,8 @@ NanoThumbnail is a free, open-source studio to **generate, edit and test YouTube
 **Test**
 - **Feed preview**: home, search, up next, mobile and TV, light and dark, among your competitors' real thumbnails.
 - **Safe zones**: duration badge, hover icons, progress bar, Shorts UI.
-- **Compare & rank** variants side by side, then **export for YouTube Studio's Test & Compare** (1280×720, under 2 MB).
+- **Feed preview**: your thumbnail alone among 30 real popular YouTube videos (home, search, up next, mobile, TV), bundled with the app (`npm run feed:update` refreshes the snapshot).
+- **Compare & rank** variants side by side, then **export for YouTube Studio's Test & Compare** (1280×720, under 2 MB). Single thumbnails also export at 1920×1080.
 
 **AI agents (MCP)**
 - Let Claude, Cursor or any MCP-capable agent drive the studio: brief, generate, edit (whole image or a region), critique, rank, export to disk. You watch every action live and can disconnect at any time.

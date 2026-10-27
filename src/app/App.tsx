@@ -20,6 +20,7 @@ import { useAgent } from './agent/bridge';
 import { useApplyTheme } from './hooks/use-theme';
 import { useMediaQuery } from './hooks/use-media-query';
 import { useWorkspace } from './stores/workspace';
+import { useText } from './stores/text';
 import { useUI } from './stores/ui';
 import { useSettings } from './stores/settings';
 import { migrateFromV1 } from './lib/migrate';
@@ -85,6 +86,14 @@ export default function App() {
         else if (e.key === 'z') ws.setSafeZones(!ws.safeZones);
         else if (e.key === 'm' && ws.selectedId) ws.setMaskMode(!ws.maskMode);
         else if (e.key === 'Escape' && ws.maskMode) ws.setMaskMode(false);
+        else if (e.key === 't' && ws.selectedId) ws.setTextMode(!ws.textMode);
+        else if (e.key === 'Escape' && ws.textMode) ws.setTextMode(false);
+        else if (e.key === 'r' && ws.selectedId) ws.setReframeMode(!ws.reframeMode);
+        else if (e.key === 'Escape' && ws.reframeMode) ws.setReframeMode(false);
+        else if ((e.key === 'Delete' || e.key === 'Backspace') && ws.textMode) {
+          const text = useText.getState();
+          if (text.selectedId) text.remove(text.selectedId);
+        }
       }
     };
     // Paste images anywhere to add them as references

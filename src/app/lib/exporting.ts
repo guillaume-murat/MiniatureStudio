@@ -1,5 +1,5 @@
 import { zipFiles } from './backup';
-import { downloadBlob, exportForYouTube } from './images';
+import { downloadBlob, exportForYouTube, YOUTUBE_SIZE, type ExportSize } from './images';
 import type { Generation } from './types';
 
 function slug(text: string): string {
@@ -14,9 +14,10 @@ function slug(text: string): string {
   );
 }
 
-export async function downloadForYouTube(gen: Generation): Promise<void> {
-  const blob = await exportForYouTube(gen.blob);
-  downloadBlob(blob, `${slug(gen.videoTitle || gen.prompt)}-1280x720.jpg`);
+/** `nameFrom`: the generation the file is named after (an upscale is named after its source). */
+export async function downloadForYouTube(gen: Generation, size: ExportSize = YOUTUBE_SIZE, nameFrom: Generation = gen): Promise<void> {
+  const blob = await exportForYouTube(gen.blob, undefined, size);
+  downloadBlob(blob, `${slug(nameFrom.videoTitle || nameFrom.prompt)}-${size.width}x${size.height}.jpg`);
 }
 
 /** Up to 3 variants in YouTube spec, zipped as A/B/C for Studio's "Test & Compare". */

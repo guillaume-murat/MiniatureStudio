@@ -2,7 +2,18 @@ import { create } from 'zustand';
 import { toast } from 'sonner';
 import * as db from '../lib/db';
 import { generateImage, isAbort } from '../lib/providers';
-import { buildEditPrompt, buildGenerationPrompt, buildRegionEditPrompt, type ImageRole, type TextMode } from '../lib/prompt';
+import {
+  buildEditPrompt,
+  buildFaceFixPrompt,
+  buildGenerationPrompt,
+  buildOutpaintPrompt,
+  buildRegionEditPrompt,
+  buildUpscalePrompt,
+  type ImageRole,
+  type TextMode,
+} from '../lib/prompt';
+import { composeReframe, isIdentity, type Reframe } from '../lib/reframe';
+import { useReframe } from './reframe';
 import { dimensions, highlightRegion, mergeWithMask, normaliseUpload, prepareReference } from '../lib/images';
 import { explainError } from '../lib/errors';
 import { findStyle } from '../lib/styles';
@@ -10,6 +21,9 @@ import { scoreThumbnail, rankThumbnails, type Ranking } from '../lib/ai';
 import type { BrandKit, Generation, GenerationKind, GenerationParams, LibraryImage, Persona, Project, RefImage, RefSource, Score } from '../lib/types';
 import { useSettings } from './settings';
 import { t } from '../i18n';
+import { drawTextBlocks, cssFont, type TextBlock } from '../lib/textBlocks';
+import { loadGoogleFont } from '../lib/fonts';
+import { useText } from './text';
 
 export const MAX_IMAGES = 14;
 export const MAX_PERSONAS = 5;
@@ -67,6 +81,10 @@ interface WorkspaceState {
   view: ViewMode;
   safeZones: boolean;
   maskMode: boolean;
+  /** Placing text blocks over the selected image (see stores/text.ts). */
+  textMode: boolean;
+  /** Moving / zooming the selected image inside its frame (see stores/reframe.ts). */
+  reframeMode: boolean;
   hasMask: boolean;
   scoring: string | null;
   ranking: { ids: string[]; result: Ranking } | null;
@@ -92,6 +110,13 @@ interface WorkspaceState {
   previewPrompt: () => string;
   /** `mask` overrides the painted mask (the agent describes regions as rectangles). */
   edit: (instruction: string, opts?: { mask?: HTMLCanvasElement }) => Promise<Outcome<Generation>[]>;
+  /**
+   * AI upscale: a 2K version of the image with finer detail, saved as a new
+   * version. Editable text is kept as text and redrawn on the upscaled image.
+   */
+  upscale: (id: string) => Promise<Outcome<Generation> | null>;
+  /** Restores these people's faces on the selected image from their reference photos (new version). */
+  fixFaces: (personaIds: string[]) => Promise<Outcome<Generation> | null>;
   cancelJob: (id: string) => void;
   dismissJob: (id: string) => void;
   cancelAll: () => void;
@@ -113,6 +138,20 @@ interface WorkspaceState {
   setView: (view: ViewMode) => void;
   setSafeZones: (on: boolean) => void;
   setMaskMode: (on: boolean) => void;
+  setTextMode: (on: boolean) => void;
+  setReframeMode: (on: boolean) => void;
+  /**
+   * New version with the image moved / scaled in its frame. Done locally when it
+   * still covers the frame; otherwise the model fills the empty areas.
+   */
+  reframe: (frame: Reframe) => Promise<Outcome<Generation> | null>;
+  /**
+   * Draws the text blocks on the selected image. A text version is updated in
+   * place (its blocks stay editable); any other image gets a new text version.
+   */
+  applyText: (blocks: TextBlock[]) => Promise<Generation | null>;
+  /** Makes a text version's text final: keeps the image, forgets the editable blocks. */
+  mergeText: (id: string) => Promise<void>;
   setHasMask: (on: boolean) => void;
   showError: (report: ErrorReport | null) => void;
 }
@@ -180,9 +219,9 @@ function reportError(error: unknown, set: (s: Partial<WorkspaceState>) => void):
 
 export const useWorkspace = create<WorkspaceState>((set, get) => {
   /** Personas selected for this brief → their photos, in a stable order. */
-  function personaImages(): Array<{ blob: Blob; role: ImageRole }> {
-    const { personas, personaIds } = get();
-    return personaIds.flatMap((id) => {
+  function personaImages(ids = get().personaIds): Array<{ blob: Blob; role: ImageRole }> {
+    const { personas } = get();
+    return ids.flatMap((id) => {
       const p = personas.find((x) => x.id === id);
       if (!p) return [];
       const order = { front: 0, left: 1, right: 2, expression: 3 };
@@ -256,6 +295,10 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     apiKey: string;
     /** Post-process the raw model output (region edits merge it back into the original). */
     finalize?: (blob: Blob) => Promise<Blob>;
+    /** Text blocks to keep editable over the result (upscaling a text version). */
+    textBlocks?: TextBlock[];
+    /** Send the images at this size instead of the usual reference downscale. */
+    reference?: { maxSide: number; bytes: number };
     /** Shared by the jobs of one batch: the first result to arrive gets shown. */
     batch: { shown: boolean };
   }): Promise<Outcome<Generation>> {
@@ -273,7 +316,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       set({ jobs: get().jobs.map((j) => (j.id === job.id ? { ...j, ...patch } : j)) });
 
     try {
-      const images = await Promise.all(opts.images.map((b) => prepareReference(b)));
+      const images = await Promise.all(opts.images.map((b) => prepareReference(b, opts.reference?.maxSide, opts.reference?.bytes)));
       let blob = await generateImage({
         prompt: opts.fullPrompt,
         images,
@@ -283,6 +326,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         onProgress: (elapsed) => patchJob({ elapsed }),
       });
       if (opts.finalize) blob = await opts.finalize(blob);
+      const textLayer = opts.textBlocks ? { base: blob, blocks: opts.textBlocks } : undefined;
+      if (textLayer) blob = await renderText(textLayer.base, textLayer.blocks);
       const { width, height } = await dimensions(blob);
       const generation: Generation = {
         id: db.uid('g_'),
@@ -297,6 +342,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         width,
         height,
         createdAt: Date.now(),
+        ...(textLayer ? { textLayer } : {}),
       };
       await db.putGeneration(generation);
       // The user may have switched project meanwhile: only show it if still relevant.
@@ -337,6 +383,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     view: 'image',
     safeZones: false,
     maskMode: false,
+    textMode: false,
+    reframeMode: false,
     hasMask: false,
     scoring: null,
     ranking: null,
@@ -472,6 +520,52 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       );
     },
 
+    upscale: async (id) => {
+      const source = get().generations.find((g) => g.id === id);
+      if (!source) return null;
+      const apiKey = checkKey();
+      if (!apiKey) return null;
+      return runJob({
+        kind: 'upscale',
+        prompt: t('export.upscaled'),
+        fullPrompt: buildUpscalePrompt(),
+        images: [source.textLayer?.base ?? source.blob],
+        // 2K is above 1920×1080 at every aspect ratio.
+        params: { ...useSettings.getState().params(), aspectRatio: source.params.aspectRatio, resolution: '2K' },
+        parentId: source.id,
+        videoTitle: source.videoTitle,
+        apiKey,
+        textBlocks: source.textLayer?.blocks,
+        // The model needs the full detail of the image it is asked to sharpen.
+        reference: { maxSide: 2048, bytes: 3_000_000 },
+        batch: { shown: false },
+      });
+    },
+
+    fixFaces: async (personaIds) => {
+      const source = get().generations.find((g) => g.id === get().selectedId);
+      const names = personaIds.map((id) => get().personas.find((p) => p.id === id)?.name).filter((n): n is string => !!n);
+      if (!source || !names.length) return null;
+      const apiKey = checkKey();
+      if (!apiKey) return null;
+      const people = personaImages(personaIds).slice(0, MAX_IMAGES - 1);
+      return runJob({
+        kind: 'edit',
+        prompt: t('iterate.fixFaceDone', { names: names.join(', ') }),
+        fullPrompt: buildFaceFixPrompt(names, people.map((p) => p.role)),
+        // Editable text stays text: the faces are fixed on the image under it.
+        images: [source.textLayer?.base ?? source.blob, ...people.map((p) => p.blob)],
+        params: { ...useSettings.getState().params(), aspectRatio: source.params.aspectRatio },
+        parentId: source.id,
+        videoTitle: source.videoTitle,
+        apiKey,
+        textBlocks: source.textLayer?.blocks,
+        // Faces are small in a thumbnail: send the image with all its detail.
+        reference: { maxSide: 2048, bytes: 3_000_000 },
+        batch: { shown: false },
+      });
+    },
+
     edit: async (instruction, opts) => {
       const source = get().generations.find((g) => g.id === get().selectedId);
       if (!source || !instruction.trim()) return [];
@@ -533,7 +627,11 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     dismissJob: (id) => set({ jobs: get().jobs.filter((j) => j.id !== id) }),
     cancelAll: () => get().jobs.forEach((j) => j.status === 'running' && j.controller.abort()),
 
-    select: (id) => set({ selectedId: id, maskMode: false, hasMask: false }),
+    select: (id) => {
+      if (get().textMode) useText.getState().clear();
+      useReframe.getState().reset();
+      set({ selectedId: id, maskMode: false, hasMask: false, textMode: false, reframeMode: false });
+    },
 
     togglePick: (id) => {
       const picked = get().pickedIds;
@@ -632,11 +730,162 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
 
     setView: (view) => set({ view, maskMode: view === 'image' ? get().maskMode : false }),
     setSafeZones: (on) => set({ safeZones: on }),
-    setMaskMode: (on) => set({ maskMode: on, hasMask: on ? get().hasMask : false, view: on ? 'image' : get().view }),
+    setMaskMode: (on) =>
+      set({
+        maskMode: on,
+        hasMask: on ? get().hasMask : false,
+        textMode: on ? false : get().textMode,
+        reframeMode: on ? false : get().reframeMode,
+        view: on ? 'image' : get().view,
+      }),
+    setTextMode: (on) => {
+      const layer = selectedGeneration(get())?.textLayer;
+      if (on && layer) useText.getState().load(layer.blocks);
+      else useText.getState().clear();
+      set({
+        textMode: on,
+        maskMode: on ? false : get().maskMode,
+        hasMask: on ? false : get().hasMask,
+        reframeMode: on ? false : get().reframeMode,
+        view: on ? 'image' : get().view,
+      });
+    },
+    setReframeMode: (on) => {
+      useReframe.getState().reset();
+      if (on) useText.getState().clear();
+      set({
+        reframeMode: on,
+        maskMode: on ? false : get().maskMode,
+        hasMask: on ? false : get().hasMask,
+        textMode: on ? false : get().textMode,
+        view: on ? 'image' : get().view,
+      });
+    },
+
+    reframe: async (frame) => {
+      const source = selectedGeneration(get());
+      if (!source || isIdentity(frame)) return null;
+      // A text version keeps its text where it is: only the image under it moves.
+      const base = source.textLayer?.base ?? source.blob;
+      const blocks = source.textLayer?.blocks;
+      try {
+        const { composed, mask, width, height } = await composeReframe(base, frame);
+        if (!mask) {
+          // Still covers the frame (zoom in / crop): no model needed.
+          const textLayer = blocks ? { base: composed, blocks } : undefined;
+          const generation: Generation = {
+            id: db.uid('g_'),
+            projectId: source.projectId,
+            parentId: source.id,
+            kind: 'edit',
+            prompt: t('reframe.done'),
+            fullPrompt: '',
+            videoTitle: source.videoTitle,
+            params: source.params,
+            blob: textLayer ? await renderText(composed, textLayer.blocks) : composed,
+            width,
+            height,
+            createdAt: Date.now(),
+            ...(textLayer ? { textLayer } : {}),
+          };
+          await db.putGeneration(generation);
+          set({ generations: [generation, ...get().generations], selectedId: generation.id, reframeMode: false });
+          return { value: generation };
+        }
+        const apiKey = checkKey();
+        if (!apiKey) return null;
+        set({ reframeMode: false });
+        return runJob({
+          kind: 'edit',
+          prompt: t('reframe.done'),
+          fullPrompt: buildOutpaintPrompt(),
+          images: [composed],
+          params: { ...useSettings.getState().params(), aspectRatio: source.params.aspectRatio },
+          parentId: source.id,
+          videoTitle: source.videoTitle,
+          apiKey,
+          textBlocks: blocks,
+          // Only the empty areas come from the model; the moved image stays pixel-exact.
+          finalize: (generated) => mergeWithMask(composed, generated, mask),
+          reference: { maxSide: 2048, bytes: 3_000_000 },
+          batch: { shown: false },
+        });
+      } catch (error) {
+        reportError(error, set);
+        return null;
+      }
+    },
+
+    applyText: async (blocks) => {
+      const source = get().generations.find((g) => g.id === get().selectedId);
+      const used = blocks.filter((b) => b.text.trim());
+      // A text version may end up with no text (all removed); a plain image needs some.
+      if (!source || (!used.length && !source.textLayer)) return null;
+      try {
+        const base = source.textLayer?.base ?? source.blob;
+        const blob = await renderText(base, used);
+        const summary = used.map((b) => b.text.replace(/\s+/g, ' ').trim()).join(' · ');
+        const textLayer = { base, blocks: used };
+        let generation: Generation;
+        if (source.textLayer) {
+          generation = { ...source, blob, textLayer, prompt: summary || source.prompt };
+          await db.putGeneration(generation);
+          set({ generations: get().generations.map((g) => (g.id === source.id ? generation : g)) });
+        } else {
+          generation = {
+            id: db.uid('g_'),
+            projectId: source.projectId,
+            parentId: source.id,
+            kind: 'text',
+            prompt: summary,
+            fullPrompt: '',
+            videoTitle: source.videoTitle,
+            params: source.params,
+            blob,
+            width: source.width,
+            height: source.height,
+            createdAt: Date.now(),
+            textLayer,
+          };
+          await db.putGeneration(generation);
+          set({ generations: [generation, ...get().generations], selectedId: generation.id });
+        }
+        useText.getState().clear();
+        set({ textMode: false });
+        return generation;
+      } catch (error) {
+        reportError(error, set);
+        return null;
+      }
+    },
+
+    mergeText: async (id) => {
+      const gen = get().generations.find((g) => g.id === id);
+      if (!gen?.textLayer) return;
+      const merged: Generation = { ...gen };
+      delete merged.textLayer;
+      await db.putGeneration(merged);
+      set({ generations: get().generations.map((g) => (g.id === id ? merged : g)) });
+    },
     setHasMask: (on) => set({ hasMask: on }),
     showError: (report) => set({ lastError: report }),
   };
 });
+
+/** `base` with the text blocks drawn on it, at the image's own resolution. */
+async function renderText(base: Blob, blocks: TextBlock[]): Promise<Blob> {
+  // The canvas only draws with fonts the page has loaded.
+  await Promise.all([...new Set(blocks.map((b) => b.font))].map((f) => loadGoogleFont(f).catch(() => undefined)));
+  await Promise.all(blocks.map((b) => document.fonts.load(cssFont(b, 48)).catch(() => undefined)));
+  const bitmap = await createImageBitmap(base);
+  const canvas = document.createElement('canvas');
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(bitmap, 0, 0);
+  drawTextBlocks(ctx, canvas.width, canvas.height, blocks);
+  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas export failed'))), 'image/png'));
+}
 
 export function selectedGeneration(s: WorkspaceState): Generation | undefined {
   return s.generations.find((g) => g.id === s.selectedId);

@@ -36,7 +36,7 @@ Each image costs the user real API credits (more with `nano-banana-pro` and high
 6. **Critique honestly.** Check the result against the checklist in [references/craft.md](references/craft.md). `score_thumbnail` gives a structured critique with `suggestedEdits`.
 7. **Iterate by editing, not regenerating.** When the composition works, fix details with `edit_thumbnail` — one change per call ("make the text yellow", "remove the cable on the left"). Use `region` (fractions 0–1 of width/height) to confine a change to one area. Regenerate only when the concept itself is wrong.
 8. **Compare.** With 2–4 good candidates, `rank_thumbnails` (also shows them side by side to the user). `set_view` with `view: "feed"` shows the winner among other videos, as a viewer would see it — suggest the user looks.
-9. **Deliver.** `set_favorite` on the winner, then `export_thumbnail` (default `youtube` = 1280×720 JPEG under 2 MB) to the path the user wants. Report the path and one line on why this one.
+9. **Deliver.** `set_favorite` on the winner, then `export_thumbnail` (default `youtube` = 1280×720 JPEG under 2 MB; `youtube-1080` for 1920×1080) to the path the user wants. Report the path and one line on why this one.
 
 ## 3. Rules of thumb
 

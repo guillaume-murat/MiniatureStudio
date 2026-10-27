@@ -170,12 +170,47 @@ export function buildGenerationPrompt(input: BriefInput): string {
 export function buildEditPrompt(instruction: string, extraRoles: ImageRole[] = []): string {
   const lines = [
     `Using image 1 (the current thumbnail), ${lowerFirst(instruction.trim())}`,
-    'Change only what this instruction asks for. Keep everything else in the image exactly the same, preserving the original composition, framing, people and their facial features, text, colours, lighting and aspect ratio.',
+    // The instruction wins over the preservation clause: a fixed "keep the composition"
+    // made the model ignore moves, resizes and reframing requests.
+    'Apply this instruction fully and visibly, even when it changes the position, size or framing of something, or the composition. ' +
+      'Keep everything the instruction does not mention exactly the same: the other elements, people and their facial features, text, colours, lighting and the aspect ratio.',
   ];
   if (extraRoles.length) {
     lines.push(['Other attached images:', ...describeImages(extraRoles, 1)].join('\n'));
   }
   return lines.join('\n\n');
+}
+
+/**
+ * Face restoration on image 1 using the people's reference photos (the roles
+ * after image 1), changing nothing but the faces.
+ */
+export function buildFaceFixPrompt(names: string[], roles: ImageRole[]): string {
+  const who = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0];
+  return [
+    `Using image 1 (the current thumbnail), restore the face${names.length > 1 ? 's' : ''} of ${who}. Fix every glitch and artefact on ${names.length > 1 ? 'them' : 'it'} — asymmetric, melted or misaligned eyes, malformed teeth, smeared or waxy skin, broken face outlines, mismatched ears and hairline — so each face looks like a sharp, natural, high-resolution photograph of that person.`,
+    `Rebuild their exact facial features from the reference photos: face shape, eyes, nose, mouth, skin tone and texture, hair. Keep the expression, head pose, gaze direction, framing and lighting exactly as in image 1.`,
+    'Change only the faces. Keep everything else in the image exactly the same, preserving the composition, bodies, clothing, background, text, colours and aspect ratio.',
+    ['Other attached images:', ...describeImages(roles, 1)].join('\n'),
+  ].join('\n\n');
+}
+
+/** Reframing: fill the flat grey areas left around the moved or zoomed-out image. */
+export function buildOutpaintPrompt(): string {
+  return [
+    'Image 1 is a thumbnail whose picture was moved or zoomed out inside its frame: the flat, uniform mid-grey areas are empty.',
+    'Fill only those grey areas by extending the existing scene naturally: the same setting, perspective, lighting, colours, focus and style, continuing every object, surface and edge that runs into them, so the result reads as one seamless photograph.',
+    'Do not change anything outside the grey areas. Do not add text, logos, people or new focal subjects in the filled areas, and leave no grey behind.',
+  ].join('\n\n');
+}
+
+/** A sharper, higher-resolution copy of image 1 that changes nothing else. */
+export function buildUpscalePrompt(): string {
+  return [
+    'Upscale image 1 to a higher resolution.',
+    'Reproduce it exactly: the same composition and framing, the same people with exactly the same faces and expressions, the same objects, text and lettering, colours and lighting.',
+    'Only make it sharper, with finer, cleaner detail and crisp edges, and remove blur, noise and compression artefacts. Do not add, remove, move or restyle anything, and keep the aspect ratio.',
+  ].join('\n\n');
 }
 
 export function buildRegionEditPrompt(instruction: string): string {

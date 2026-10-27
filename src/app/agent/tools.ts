@@ -7,7 +7,7 @@ import { useWorkspace, MAX_PERSONAS, type Brief, type Outcome, type ViewMode } f
 import { useSettings } from '../stores/settings';
 import { STYLES, findStyle } from '../lib/styles';
 import { suggestConcepts } from '../lib/ai';
-import { blobToBase64, exportForYouTube, extensionFor, normaliseUpload, prepareReference, rectMask } from '../lib/images';
+import { blobToBase64, exportForYouTube, extensionFor, FULL_HD_SIZE, normaliseUpload, prepareReference, rectMask, YOUTUBE_SIZE } from '../lib/images';
 import { extractVideoId, fetchThumbnail, fetchVideoTitle } from '../lib/youtube';
 import { listProjects } from '../lib/db';
 import type { AspectRatio, Generation, ModelId, Resolution } from '../lib/types';
@@ -331,12 +331,12 @@ export const handlers: Record<string, Handler> = {
 
   export_thumbnail: async (args) => {
     const gen = target(args);
-    const youtube = (oneOf(args, 'format', ['youtube', 'original'] as const) ?? 'youtube') === 'youtube';
-    const blob = youtube ? await exportForYouTube(gen.blob) : gen.blob;
+    const format = oneOf(args, 'format', ['youtube', 'youtube-1080', 'original'] as const) ?? 'youtube';
+    const blob = format === 'original' ? gen.blob : await exportForYouTube(gen.blob, undefined, format === 'youtube' ? YOUTUBE_SIZE : FULL_HD_SIZE);
     const { data, mimeType } = await blobToBase64(blob);
     return {
-      content: [json({ id: gen.id, format: youtube ? 'youtube' : 'original', bytes: blob.size })],
-      file: { data, mimeType, name: `thumbnail-${gen.id}${youtube ? '-youtube' : ''}.${extensionFor(blob)}` },
+      content: [json({ id: gen.id, format, bytes: blob.size })],
+      file: { data, mimeType, name: `thumbnail-${gen.id}${format === 'original' ? '' : `-${format}`}.${extensionFor(blob)}` },
     };
   },
 

@@ -8,8 +8,23 @@ import { findBundledFont, FONT_CATEGORIES, FontNotFoundError, GOOGLE_FONTS, load
 import { cn } from '../../lib/utils';
 import { useT } from '../../i18n';
 
-/** One Google Fonts family at most: searchable list, any other family can be typed in. */
-export function FontPicker({ value, onChange, sample }: { value: string; onChange: (family: string) => void; sample: string }) {
+/**
+ * One Google Fonts family at most: searchable list, any other family can be typed in.
+ * `compact` (text tool toolbar): just the picker, no clear button nor preview.
+ */
+export function FontPicker({
+  value,
+  onChange,
+  sample = '',
+  compact = false,
+  className,
+}: {
+  value: string;
+  onChange: (family: string) => void;
+  sample?: string;
+  compact?: boolean;
+  className?: string;
+}) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -51,11 +66,18 @@ export function FontPicker({ value, onChange, sample }: { value: string; onChang
   const ready = state && state !== 'loading' && state.family === value ? state : null;
 
   return (
-    <div className="space-y-2">
+    <div className={cn('space-y-2', className)}>
       <div className="flex gap-2">
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
-            <Button variant="outline" role="combobox" aria-expanded={open} className="min-w-0 flex-1 justify-between font-normal">
+            <Button
+              variant="outline"
+              size={compact ? 'sm' : 'default'}
+              role="combobox"
+              aria-expanded={open}
+              aria-label={t('brand.font')}
+              className="min-w-0 flex-1 justify-between font-normal"
+            >
               <span className={cn('truncate', !value && 'text-muted-foreground')} style={ready ? { fontFamily: `"${value}"` } : undefined}>
                 {value || t('brand.fontPlaceholder')}
               </span>
@@ -65,7 +87,7 @@ export function FontPicker({ value, onChange, sample }: { value: string; onChang
           {/* The list is portaled outside the dialog, whose scroll lock cancels wheel and touch
               scrolling there; stopping the events here keeps them from reaching that lock. */}
           <PopoverContent
-            className="w-(--radix-popover-trigger-width) p-0"
+            className="w-(--radix-popover-trigger-width) min-w-64 p-0"
             align="start"
             onWheel={(e) => e.stopPropagation()}
             onTouchMove={(e) => e.stopPropagation()}
@@ -96,14 +118,14 @@ export function FontPicker({ value, onChange, sample }: { value: string; onChang
             </Command>
           </PopoverContent>
         </Popover>
-        {value && (
+        {value && !compact && (
           <Button variant="ghost" size="icon" onClick={() => onChange('')} aria-label={t('common.remove')}>
             <X />
           </Button>
         )}
       </div>
 
-      {ready && (
+      {ready && !compact && (
         <div className="overflow-hidden rounded-md border bg-muted/40 px-3 py-2" style={{ fontFamily: `"${value}"` }}>
           <p className="truncate text-3xl leading-tight uppercase" style={{ fontWeight: ready.heavy }}>
             {sample}

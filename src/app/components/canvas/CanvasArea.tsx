@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Brush,
   Copy,
+  Crop,
   Download,
   Eraser,
   Grid2x2,
@@ -15,6 +16,7 @@ import {
   Star,
   Trash2,
   Tv,
+  Type,
   X,
   SquarePlay,
   AlertCircle,
@@ -30,14 +32,18 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { SafeZones } from './SafeZones';
 import { MaskLayer, type MaskTool } from './MaskLayer';
+import { MergeTextButton, TextOverlay, TextToolbar } from './TextLayer';
+import { ReframeToolbar, ReframeView } from './ReframeLayer';
 import { FeedPreview } from './FeedPreview';
 import { CompareView } from './CompareView';
 import { MOD } from '../TopBar';
 import { useBlobUrl } from '../../hooks/use-blob-url';
 import { fit, useElementSize } from '../../hooks/use-element-size';
+import { usePinch } from '../../hooks/use-pinch';
+import { clampPan, NO_ZOOM, zoomAt, type ViewZoom } from '../../lib/zoom';
 import { selectedGeneration, useWorkspace, type Job, type ViewMode } from '../../stores/workspace';
 import { downloadForYouTube } from '../../lib/exporting';
-import { downloadBlob, extensionFor } from '../../lib/images';
+import { downloadBlob, extensionFor, FULL_HD_SIZE } from '../../lib/images';
 import { useT } from '../../i18n';
 import type { Generation } from '../../lib/types';
 import { cn } from '../../lib/utils';
@@ -64,7 +70,9 @@ function JobChip({ job }: { job: Job }) {
     >
       {failed ? <AlertCircle className="size-3.5" /> : <Loader2 className="size-3.5 animate-spin text-primary" />}
       <span className="max-w-64 truncate">
-        {failed ? job.error || t('canvas.failed') : `${job.kind === 'generate' ? t('brief.generating') : t('iterate.edit')} ${t('common.seconds', { n: Math.round(job.elapsed / 1000) })}`}
+        {failed
+          ? job.error || t('canvas.failed')
+          : `${job.kind === 'generate' ? t('brief.generating') : job.kind === 'upscale' ? t('export.upscaling') : t('iterate.edit')} ${t('common.seconds', { n: Math.round(job.elapsed / 1000) })}`}
       </span>
       <Button
         variant="ghost"
@@ -104,22 +112,65 @@ function EmptyState({ running }: { running: number }) {
 }
 
 function ImageView({ gen, tool, brushSize, clearSignal }: { gen: Generation; tool: MaskTool; brushSize: number; clearSignal: number }) {
-  const url = useBlobUrl(gen.blob);
-  const { safeZones, maskMode } = useWorkspace();
+  const { safeZones, maskMode, textMode } = useWorkspace();
+  // While its text is being edited, a text version shows its image without the text.
+  const url = useBlobUrl(textMode && gen.textLayer ? gen.textLayer.base : gen.blob);
   const [ref, box] = useElementSize<HTMLDivElement>();
   const size = fit(gen.width / gen.height, { width: box.width - 48, height: box.height - 48 });
+  const [zoom, setZoom] = useState<ViewZoom>(NO_ZOOM);
+  const t = useT();
+
+  useEffect(() => setZoom(NO_ZOOM), [gen.id]);
+
+  // Trackpad pinch zooms around the cursor; two-finger scroll pans once zoomed in.
+  usePinch(ref, {
+    onZoom: (factor, clientX, clientY) => {
+      const rect = ref.current!.getBoundingClientRect();
+      const d = { x: clientX - (rect.left + rect.width / 2), y: clientY - (rect.top + rect.height / 2) };
+      setZoom((v) => zoomAt(v, factor, d, size));
+    },
+    onPan: (dx, dy) => {
+      if (zoom.z <= 1) return false;
+      setZoom((v) => clampPan({ z: v.z, x: v.x - dx, y: v.y - dy }, size.width, size.height));
+      return true;
+    },
+  });
 
   return (
-    <div ref={ref} className="flex size-full items-center justify-center">
+    <div ref={ref} className="relative flex size-full items-center justify-center overflow-hidden">
+      {zoom.z > 1 && (
+        <Button variant="secondary" size="xs" className="tabular absolute right-3 bottom-3 z-10 shadow" onClick={() => setZoom(NO_ZOOM)}>
+          {Math.round(zoom.z * 100)} % · {t('canvas.resetZoom')}
+        </Button>
+      )}
       {size.width > 0 && (
-        <div className="relative overflow-hidden rounded-lg shadow-lg ring-1 ring-border" style={size}>
+        <div
+          className="relative overflow-hidden rounded-lg shadow-lg ring-1 ring-border"
+          style={{ ...size, transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.z})` }}
+        >
           <img src={url} alt={gen.prompt} className="size-full select-none" draggable={false} />
           {safeZones && <SafeZones aspectRatio={gen.params.aspectRatio} />}
           {maskMode && <MaskLayer width={gen.width} height={gen.height} tool={tool} brushSize={brushSize} clearSignal={clearSignal} />}
+          {textMode && <TextOverlay height={size.height} />}
         </div>
       )}
     </div>
   );
+}
+
+/**
+ * 1920×1080 export. Smaller images are first upscaled by the model (a new
+ * version, so it is visible and paid once), then exported from that version.
+ */
+async function exportFullHd(gen: Generation, t: ReturnType<typeof useT>) {
+  if (gen.width >= FULL_HD_SIZE.width && gen.height >= FULL_HD_SIZE.height) return downloadForYouTube(gen, FULL_HD_SIZE);
+  toast.info(t('export.upscaleStarted'));
+  const outcome = await useWorkspace.getState().upscale(gen.id);
+  if (outcome?.value) return downloadForYouTube(outcome.value, FULL_HD_SIZE, gen);
+  // No key (settings were opened) or the user cancelled: nothing to export.
+  if (!outcome?.error || outcome.error === t('agent.canceled')) return;
+  toast.warning(t('export.upscaleFailed'));
+  return downloadForYouTube(gen, FULL_HD_SIZE);
 }
 
 function ImageActions({ gen }: { gen: Generation }) {
@@ -149,6 +200,9 @@ function ImageActions({ gen }: { gen: Generation }) {
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => downloadForYouTube(gen)}>
             <SquarePlay /> {t('canvas.exportYouTube')}
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => exportFullHd(gen, t)}>
+            <SquarePlay /> {t('canvas.exportFullHd')}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => addRef(gen.blob, 'history')}>
@@ -218,6 +272,17 @@ export function CanvasArea({ onDescribeRegion }: { onDescribeRegion?: () => void
                 <Wand2 />
               </Toggle>
             </IconTip>
+            <IconTip label={`${gen.textLayer ? t('canvas.textEdit') : t('canvas.textTool')} (T)`}>
+              <Toggle size="sm" pressed={ws.textMode} onPressedChange={ws.setTextMode} aria-label={gen.textLayer ? t('canvas.textEdit') : t('canvas.textTool')}>
+                <Type />
+              </Toggle>
+            </IconTip>
+            <IconTip label={`${t('canvas.reframeTool')} (R)`}>
+              <Toggle size="sm" pressed={ws.reframeMode} onPressedChange={ws.setReframeMode} aria-label={t('canvas.reframeTool')}>
+                <Crop />
+              </Toggle>
+            </IconTip>
+            {gen.textLayer && !ws.textMode && <MergeTextButton onMerge={() => ws.mergeText(gen.id)} />}
           </>
         )}
 
@@ -259,18 +324,35 @@ export function CanvasArea({ onDescribeRegion }: { onDescribeRegion?: () => void
         </div>
       )}
 
+      {ws.textMode && ws.view === 'image' && gen && <TextToolbar />}
+      {ws.reframeMode && ws.view === 'image' && gen && <ReframeToolbar />}
+
       {/* Body */}
       <div className="relative min-h-0 flex-1">
         {ws.view === 'compare' ? (
           <CompareView />
         ) : ws.view === 'feed' && gen ? (
           <FeedPreview generation={gen} />
+        ) : gen && ws.reframeMode ? (
+          <ReframeView gen={gen} />
         ) : gen ? (
           <ImageView gen={gen} tool={tool} brushSize={brushSize} clearSignal={clearSignal} />
         ) : (
           <div className="flex size-full items-center justify-center">
             <EmptyState running={running} />
           </div>
+        )}
+
+        {ws.reframeMode && ws.view === 'image' && (
+          <p className="pointer-events-none absolute top-3 left-1/2 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-2xl bg-foreground px-3 py-1 text-xs text-background shadow sm:rounded-full">
+            {t('canvas.reframeHint')}
+          </p>
+        )}
+
+        {ws.textMode && ws.view === 'image' && (
+          <p className="pointer-events-none absolute top-3 left-1/2 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-2xl bg-foreground px-3 py-1 text-xs text-background shadow sm:rounded-full">
+            {t('canvas.textHint')}
+          </p>
         )}
 
         {ws.maskMode && ws.view === 'image' && (

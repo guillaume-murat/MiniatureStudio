@@ -1,3 +1,5 @@
+import type { TextBlock } from './textBlocks';
+
 export type Provider = 'replicate' | 'gemini' | 'openrouter' | 'mammouth' | 'vertex';
 export type ModelId = 'nano-banana-pro' | 'nano-banana-2';
 export type AspectRatio = '16:9' | '9:16' | '4:3' | '1:1' | '21:9';
@@ -15,7 +17,7 @@ export interface GenerationParams {
 }
 
 /** How an image came to exist: fresh generation, whole-image edit, masked edit, or imported. */
-export type GenerationKind = 'generate' | 'edit' | 'region' | 'import';
+export type GenerationKind = 'generate' | 'edit' | 'region' | 'import' | 'text' | 'upscale';
 
 export interface ScoreCriterion {
   key: 'legibility' | 'contrast' | 'focal' | 'emotion' | 'curiosity' | 'mobile';
@@ -43,6 +45,11 @@ export interface Generation {
   prompt: string;
   /** Exact prompt sent to the model, kept for transparency and reuse. */
   fullPrompt: string;
+  /**
+   * Editable text added with the text tool: `blob` is `base` with the blocks drawn
+   * on it. Dropped when the user merges the text into the image.
+   */
+  textLayer?: { base: Blob; blocks: TextBlock[] };
   videoTitle?: string;
   params: GenerationParams;
   blob: Blob;
@@ -98,6 +105,8 @@ export interface BrandKit {
   fontStyle: string;
   notes: string;
   logo?: Blob;
+  /** Channel profile picture for the feed preview (not sent to the image model, unlike `logo`). */
+  avatar?: Blob;
   /** Natural-language style description distilled from the channel's own thumbnails. */
   styleProfile: string;
   /** A few of the channel's own thumbnails, sent as style references. */

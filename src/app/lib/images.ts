@@ -91,18 +91,23 @@ export async function normaliseUpload(file: Blob, maxSide = 2048): Promise<Blob>
   return toBlob(c, 'image/webp', 0.92);
 }
 
+export type ExportSize = { width: number; height: number };
+export const YOUTUBE_SIZE: ExportSize = { width: 1280, height: 720 };
+export const FULL_HD_SIZE: ExportSize = { width: 1920, height: 1080 };
+
 /**
- * YouTube thumbnail spec: 1280×720, JPG/PNG, max 2 MB.
- * Cover-crops to 16:9 and lowers JPEG quality until it fits.
+ * YouTube thumbnail spec: 1280×720 (or larger 16:9, e.g. 1920×1080), JPG/PNG, max 2 MB.
+ * Cover-crops to the size and lowers JPEG quality until it fits.
  */
-export async function exportForYouTube(blob: Blob, maxBytes = 2_000_000): Promise<Blob> {
+export async function exportForYouTube(blob: Blob, maxBytes = 2_000_000, size: ExportSize = YOUTUBE_SIZE): Promise<Blob> {
   const bmp = await decode(blob);
-  const [c, ctx] = canvas(1280, 720);
-  const scale = Math.max(1280 / bmp.width, 720 / bmp.height);
+  const { width, height } = size;
+  const [c, ctx] = canvas(width, height);
+  const scale = Math.max(width / bmp.width, height / bmp.height);
   const w = bmp.width * scale;
   const h = bmp.height * scale;
   ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(bmp, (1280 - w) / 2, (720 - h) / 2, w, h);
+  ctx.drawImage(bmp, (width - w) / 2, (height - h) / 2, w, h);
   bmp.close();
 
   let quality = 0.95;

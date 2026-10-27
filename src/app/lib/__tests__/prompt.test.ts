@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildEditPrompt, buildGenerationPrompt, buildRegionEditPrompt, describeImages, quote } from '../prompt';
+import { buildEditPrompt, buildFaceFixPrompt, buildGenerationPrompt, buildOutpaintPrompt, buildRegionEditPrompt, buildUpscalePrompt, describeImages, quote } from '../prompt';
 
 const base = { brief: 'A developer on Mars', overlayText: '', textMode: 'render' as const, aspectRatio: '16:9' as const, roles: [] };
 
@@ -83,10 +83,12 @@ describe('describeImages', () => {
 });
 
 describe('edit prompts', () => {
-  it('uses the "change only / keep everything else" pattern', () => {
-    const p = buildEditPrompt('Make the face more surprised');
-    expect(p).toContain('Using image 1 (the current thumbnail), make the face more surprised');
-    expect(p).toContain('Keep everything else in the image exactly the same');
+  it('applies the instruction fully and keeps only what it does not mention', () => {
+    const p = buildEditPrompt('Move the face down');
+    expect(p).toContain('Using image 1 (the current thumbnail), move the face down');
+    expect(p).toContain('even when it changes the position, size or framing');
+    expect(p).toContain('Keep everything the instruction does not mention exactly the same');
+    expect(p).not.toContain('preserving the original composition');
   });
 
   it('describes extra images starting at index 2', () => {
@@ -104,5 +106,38 @@ describe('edit prompts', () => {
 describe('quote', () => {
   it('neutralises inner double quotes', () => {
     expect(quote('Say "hi"')).toBe('"Say \'hi\'"');
+  });
+});
+
+describe('buildUpscalePrompt', () => {
+  it('asks for the same image, only sharper', () => {
+    const p = buildUpscalePrompt();
+    expect(p).toMatch(/^Upscale image 1/);
+    expect(p).toContain('Reproduce it exactly');
+    expect(p).toContain('Do not add, remove, move or restyle anything');
+  });
+});
+
+describe('buildFaceFixPrompt', () => {
+  it('names the people, keeps the rest, and declares their photos', () => {
+    const roles = [
+      { kind: 'persona' as const, name: 'Alex' },
+      { kind: 'persona' as const, name: 'Alex' },
+      { kind: 'persona' as const, name: 'Sam' },
+    ];
+    const p = buildFaceFixPrompt(['Alex', 'Sam'], roles);
+    expect(p).toContain('restore the faces of Alex and Sam');
+    expect(p).toContain('Change only the faces');
+    expect(p).toContain('- Images 2–3: photos of Alex');
+    expect(p).toContain('- Image 4: photos of Sam');
+  });
+});
+
+describe('buildOutpaintPrompt', () => {
+  it('fills only the grey areas, without new subjects', () => {
+    const p = buildOutpaintPrompt();
+    expect(p).toContain('flat, uniform mid-grey areas are empty');
+    expect(p).toContain('Do not change anything outside the grey areas');
+    expect(p).toContain('leave no grey behind');
   });
 });
