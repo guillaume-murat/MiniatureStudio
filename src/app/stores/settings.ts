@@ -97,7 +97,7 @@ function load() {
     keyPersistence,
     model: (prefs.model === 'nano-banana-2' ? 'nano-banana-2' : 'nano-banana-pro') as ModelId,
     aspectRatio: (prefs.aspectRatio ?? '16:9') as AspectRatio,
-    resolution: (prefs.resolution ?? '2K') as Resolution,
+    resolution: (prefs.resolution ?? '1K') as Resolution,
     format: (prefs.format ?? 'png') as OutputFormat,
     safety: (prefs.safety ?? 'block_only_high') as SafetyLevel,
     count: ([1, 2, 4].includes(prefs.count) ? prefs.count : 1) as 1 | 2 | 4,

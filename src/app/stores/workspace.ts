@@ -16,9 +16,10 @@ import { useReframe } from './reframe';
 import { dimensions, highlightRegion, mergeWithMask, normaliseUpload, prepareReference } from '../lib/images';
 import { explainError } from '../lib/errors';
 import { smoothRegion } from '../lib/smooth';
+import { randomSeed } from '../lib/channel';
 import { findStyle } from '../lib/styles';
 import { rankThumbnails, type Ranking } from '../lib/ai';
-import type { BrandKit, Generation, GenerationKind, GenerationParams, LibraryImage, Persona, Project, RefImage, RefSource } from '../lib/types';
+import type { BrandKit, ChannelPage, Generation, GenerationAction, GenerationKind, GenerationParams, LibraryImage, Persona, Project, RefImage, RefSource } from '../lib/types';
 import { useSettings } from './settings';
 import { t } from '../i18n';
 import { drawTextBlocks, cssFont, isArrow, isVisible, type LayerBlock, type TextBlock } from '../lib/textBlocks';
@@ -28,7 +29,7 @@ import { useText } from './text';
 export const MAX_IMAGES = 14;
 export const MAX_PERSONAS = 5;
 
-export type ViewMode = 'image' | 'feed' | 'compare';
+export type ViewMode = 'image' | 'feed' | 'channel' | 'compare';
 
 export interface Job {
   id: string;
@@ -95,6 +96,8 @@ interface WorkspaceState {
   newProject: (name?: string) => Promise<void>;
   openProject: (id: string) => Promise<void>;
   renameProject: (name: string) => Promise<void>;
+  /** The open project's channel page preview (slots, theme, statistics). */
+  updateChannelPage: (patch: Partial<ChannelPage>) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
   // brief
   setBrief: (patch: Partial<Brief>) => void;
@@ -201,7 +204,8 @@ const EMPTY_BRAND: BrandKit = { id: 'default', channelName: '', colors: [], upda
 /** Brand kits saved before the merge into the brief panel also had a font, a style profile… and a separate feed picture. */
 function migrateBrand(saved: (BrandKit & { avatar?: Blob }) | undefined): BrandKit {
   if (!saved) return EMPTY_BRAND;
-  return { id: 'default', channelName: saved.channelName ?? '', colors: saved.colors ?? [], logo: saved.avatar ?? saved.logo, updatedAt: saved.updatedAt ?? 0 };
+  const { channelName = '', colors = [], banner, handle, subscribers, videoCount, description, verified, updatedAt = 0 } = saved;
+  return { id: 'default', channelName, colors, logo: saved.avatar ?? saved.logo, banner, handle, subscribers, videoCount, description, verified, updatedAt };
 }
 
 const BRIEF_KEY = 'nt_brief';
@@ -244,10 +248,11 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
   }
 
   /** Edits only the area of `mask` (white/opaque = edit); the rest is merged back untouched. */
-  async function regionEdit(source: Generation, mask: HTMLCanvasElement, prompt: string, fullPrompt: string, apiKey: string) {
+  async function regionEdit(source: Generation, mask: HTMLCanvasElement, prompt: string, fullPrompt: string, apiKey: string, action?: GenerationAction) {
     const highlighted = await highlightRegion(source.blob, mask);
     return runJob({
       kind: 'region',
+      action,
       prompt,
       fullPrompt,
       // Clean image first (what gets edited), marked copy second (where to edit):
@@ -297,6 +302,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
 
   async function runJob(opts: {
     kind: GenerationKind;
+    action?: GenerationAction;
     prompt: string;
     fullPrompt: string;
     images: Blob[];
@@ -347,6 +353,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         projectId: get().projectId,
         parentId: opts.parentId,
         kind: opts.kind,
+        ...(opts.action ? { action: opts.action } : {}),
         prompt: opts.prompt,
         fullPrompt: opts.fullPrompt,
         videoTitle: opts.videoTitle,
@@ -450,6 +457,15 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       set({ projects: get().projects.map((p) => (p.id === updated.id ? updated : p)) });
     },
 
+    updateChannelPage: async (patch) => {
+      const project = get().projects.find((p) => p.id === get().projectId);
+      if (!project) return;
+      const page = { ...(project.channelPage ?? { slots: [], dark: false, seed: randomSeed() }), ...patch };
+      const updated = { ...project, channelPage: page };
+      set({ projects: get().projects.map((p) => (p.id === updated.id ? updated : p)) });
+      await db.putProject(updated);
+    },
+
     removeProject: async (id) => {
       await db.deleteProject(id);
       const projects = get().projects.filter((p) => p.id !== id);
@@ -509,7 +525,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       const mask = snapshotMask(maskCanvas);
       // Filled locally first: the model then only restores texture, it has no hole to invent into.
       const patched = await smoothRegion(source.blob, mask);
-      return regionEdit({ ...source, blob: patched }, mask, t('heal.done'), buildHealPrompt(), apiKey);
+      return regionEdit({ ...source, blob: patched }, mask, t('heal.done'), buildHealPrompt(), apiKey, 'heal');
     },
 
     smooth: async () => {
@@ -522,6 +538,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
           projectId: source.projectId,
           parentId: source.id,
           kind: 'region',
+          action: 'smooth',
           prompt: t('smooth.done'),
           fullPrompt: '',
           videoTitle: source.videoTitle,
@@ -762,6 +779,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
             projectId: source.projectId,
             parentId: source.id,
             kind: 'edit',
+            action: 'reframe',
             prompt: t('reframe.done'),
             fullPrompt: '',
             videoTitle: source.videoTitle,
@@ -781,6 +799,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         set({ reframeMode: false });
         return runJob({
           kind: 'edit',
+          action: 'reframe',
           prompt: t('reframe.done'),
           fullPrompt: buildOutpaintPrompt(),
           images: [composed],
@@ -912,16 +931,3 @@ export function selectedGeneration(s: WorkspaceState): Generation | undefined {
   return s.generations.find((g) => g.id === s.selectedId);
 }
 
-/** Walk parentId links back to the root, oldest first. */
-export function lineage(generations: Generation[], id: string | null): Generation[] {
-  const byId = new Map(generations.map((g) => [g.id, g]));
-  const chain: Generation[] = [];
-  let current = id ? byId.get(id) : undefined;
-  while (current) {
-    chain.unshift(current);
-    current = current.parentId ? byId.get(current.parentId) : undefined;
-  }
-  // Also show direct children of the selected image (branches made from it).
-  const children = generations.filter((g) => g.parentId === id).sort((a, b) => a.createdAt - b.createdAt);
-  return [...chain, ...children];
-}

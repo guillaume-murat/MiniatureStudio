@@ -7,7 +7,6 @@ import {
   Copy,
   Download,
   Eraser,
-  Grid2x2,
   ImageIcon,
   ImagePlus,
   Library,
@@ -17,7 +16,6 @@ import {
   ScanLine,
   Star,
   Trash2,
-  Tv,
   X,
   SquarePlay,
   AlertCircle,
@@ -31,6 +29,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { SafeZones } from './SafeZones';
 import { MaskLayer, type MaskTool } from './MaskLayer';
+import { ViewSwitcher } from './ViewSwitcher';
+import { ChannelPreview } from './ChannelPreview';
 import { TextOverlay, TextToolbar } from './TextLayer';
 import { ReframeToolbar, ReframeView } from './ReframeLayer';
 import { blockingJob } from './BlockingJob';
@@ -41,7 +41,7 @@ import { useBlobUrl } from '../../hooks/use-blob-url';
 import { fit, useElementSize } from '../../hooks/use-element-size';
 import { usePinch } from '../../hooks/use-pinch';
 import { clampPan, NO_ZOOM, zoomAt, type ViewZoom } from '../../lib/zoom';
-import { selectedGeneration, useWorkspace, type Job, type ViewMode } from '../../stores/workspace';
+import { selectedGeneration, useWorkspace, type Job } from '../../stores/workspace';
 import { useReframe } from '../../stores/reframe';
 import { downloadForYouTube } from '../../lib/exporting';
 import { downloadBlob, extensionFor, FULL_HD_SIZE } from '../../lib/images';
@@ -141,7 +141,7 @@ function ImageView({ gen, tool, brushSize, clearSignal }: { gen: Generation; too
   return (
     <div ref={ref} className="relative flex size-full items-center justify-center overflow-hidden">
       {zoom.z !== 1 && (
-        <Button variant="secondary" size="xs" className="tabular absolute right-3 bottom-3 z-10 shadow" onClick={() => setZoom(NO_ZOOM)}>
+        <Button variant="secondary" size="xs" className="tabular absolute bottom-3 left-3 z-10 shadow" onClick={() => setZoom(NO_ZOOM)}>
           {Math.round(zoom.z * 100)} % · {t('canvas.resetZoom')}
         </Button>
       )}
@@ -258,26 +258,9 @@ export function CanvasArea({ onDescribeRegion }: { onDescribeRegion?: () => void
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col bg-canvas">
-      {/* Toolbar */}
-      <div className="flex h-11 shrink-0 items-center gap-1 border-b bg-background px-2">
-        <ToggleGroup type="single" size="sm" value={ws.view} onValueChange={(v) => v && ws.setView(v as ViewMode)}>
-          <ToggleGroupItem value="image" className="gap-1.5 px-2.5 text-xs" title={t('canvas.viewImage')} aria-label={t('canvas.viewImage')}>
-            <ImageIcon /> <span className="hidden sm:inline">{t('canvas.viewImage')}</span>
-          </ToggleGroupItem>
-          <ToggleGroupItem value="feed" className="gap-1.5 px-2.5 text-xs" title={t('canvas.viewFeed')} aria-label={t('canvas.viewFeed')} disabled={!gen}>
-            <Tv /> <span className="hidden sm:inline">{t('canvas.viewFeed')}</span>
-          </ToggleGroupItem>
-          <ToggleGroupItem value="compare" className="gap-1.5 px-2.5 text-xs" title={t('canvas.viewCompare')} aria-label={t('canvas.viewCompare')}>
-            <Grid2x2 /> <span className="hidden sm:inline">{t('canvas.viewCompare')}</span>
-            {ws.pickedIds.length > 0 && <span className="tabular text-muted-foreground">{ws.pickedIds.length}</span>}
-          </ToggleGroupItem>
-        </ToggleGroup>
-
-        {gen && ws.view !== 'compare' && (
-          <div className="ml-auto flex items-center">
-            <ImageActions gen={gen} />
-          </div>
-        )}
+      {/* Mobile only: on desktop the view switcher sits in the top bar. */}
+      <div className="flex h-11 shrink-0 items-center gap-1 border-b bg-background px-2 lg:hidden">
+        <ViewSwitcher />
       </div>
 
       {/* Mask tools get their own row: they don't fit next to the view switcher on narrow widths */}
@@ -336,6 +319,8 @@ export function CanvasArea({ onDescribeRegion }: { onDescribeRegion?: () => void
           <CompareView />
         ) : ws.view === 'feed' && gen ? (
           <FeedPreview generation={gen} />
+        ) : ws.view === 'channel' ? (
+          <ChannelPreview />
         ) : gen && ws.reframeMode ? (
           <ReframeView gen={gen} />
         ) : gen ? (
@@ -363,6 +348,13 @@ export function CanvasArea({ onDescribeRegion }: { onDescribeRegion?: () => void
             <span className="sm:truncate">{onDescribeRegion ? t('canvas.maskHintMobile') : t('canvas.maskHint')}</span>
             <Kbd className="shrink-0 [@media(pointer:coarse)]:hidden">Esc</Kbd>
           </p>
+        )}
+
+        {/* Over the image rather than in a toolbar row: the image gets the height. */}
+        {gen && ws.view === 'image' && !ws.reframeMode && (
+          <div className="absolute right-3 bottom-3 z-10 flex items-center gap-0.5 rounded-lg border bg-background/85 p-0.5 shadow-sm backdrop-blur">
+            <ImageActions gen={gen} />
+          </div>
         )}
 
         {ws.jobs.length > 0 && (

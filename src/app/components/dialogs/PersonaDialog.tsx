@@ -222,10 +222,18 @@ function PersonaCard({ persona, onEdit }: { persona: Persona; onEdit: () => void
 
 export function PersonaDialog() {
   const t = useT();
-  const open = useUI((s) => s.dialog === 'personas');
+  const dialog = useUI((s) => s.dialog);
   const close = useUI((s) => s.close);
   const personas = useWorkspace((s) => s.personas);
-  const [editing, setEditing] = useState<Persona | 'new' | null>(null);
+  const [chosen, setChosen] = useState<Persona | 'new' | null>(null);
+  // « Nouvelle personne » opens the form directly; it closes when done instead of going back to the list.
+  const direct = dialog === 'newPersona';
+  const open = dialog === 'personas' || direct;
+  const editing = chosen ?? (direct ? 'new' : null);
+  const done = () => {
+    setChosen(null);
+    if (direct) close();
+  };
 
   return (
     <Dialog
@@ -233,15 +241,15 @@ export function PersonaDialog() {
       onOpenChange={(o) => {
         if (!o) {
           close();
-          setEditing(null);
+          setChosen(null);
         }
       }}
     >
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {editing && (
-              <Button variant="ghost" size="icon-sm" onClick={() => setEditing(null)} aria-label={t('common.back')}>
+            {editing && !direct && (
+              <Button variant="ghost" size="icon-sm" onClick={() => setChosen(null)} aria-label={t('common.back')}>
                 <ArrowLeft />
               </Button>
             )}
@@ -251,14 +259,14 @@ export function PersonaDialog() {
         </DialogHeader>
 
         {editing ? (
-          <Editor key={editing === 'new' ? 'new' : editing.id} initial={editing === 'new' ? undefined : editing} onDone={() => setEditing(null)} />
+          <Editor key={editing === 'new' ? 'new' : editing.id} initial={editing === 'new' ? undefined : editing} onDone={done} />
         ) : (
           <div className="space-y-2">
             {personas.length === 0 && <p className="py-6 text-center text-sm text-muted-foreground">{t('persona.empty')}</p>}
             {personas.map((p) => (
-              <PersonaCard key={p.id} persona={p} onEdit={() => setEditing(p)} />
+              <PersonaCard key={p.id} persona={p} onEdit={() => setChosen(p)} />
             ))}
-            <Button className="w-full" variant="outline" onClick={() => setEditing('new')}>
+            <Button className="w-full" variant="outline" onClick={() => setChosen('new')}>
               <Plus /> {t('persona.new')}
             </Button>
           </div>

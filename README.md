@@ -29,6 +29,7 @@ NanoThumbnail is a free, open-source studio to **generate, edit and test YouTube
 
 **Test**
 - **Safe zones**: duration badge, hover icons, progress bar, Shorts UI.
+- **Channel preview**: your project's thumbnails on a YouTube channel page (banner, logo, name, subscribers, six videos with titles, plausible views and dates), clickable to choose each video's thumbnail and title, exported at 2560×1440. Concept from NanoChannel.
 - **Feed preview**: your thumbnail alone among 30 real popular YouTube videos (home, search, up next, mobile, TV), bundled with the app (`npm run feed:update` refreshes the snapshot).
 - **Compare & rank** variants side by side, then **export for YouTube Studio's Test & Compare** (1280×720, under 2 MB). Single thumbnails also export at 1920×1080.
 
@@ -38,7 +39,7 @@ NanoThumbnail is a free, open-source studio to **generate, edit and test YouTube
 - Companion skill with the workflow and thumbnail craft: `npx skills add yoanbernabeu/NanoThumbnail --skill nanothumbnail`.
 
 **Keyboard-first**
-- `⌘K` command palette, `⌘↵` generate, `P` feed preview, `Z` safe zones, `T` text, `A` arrow, `M` paint an area, `R` reframe, `Esc` leave the current tool.
+- `⌘K` command palette, `⌘↵` generate, `P` feed preview, `C` channel preview, `Z` safe zones, `T` text, `A` arrow, `M` paint an area, `R` reframe, `Esc` leave the current tool.
 
 **Local-first**
 - Projects, images, people and channel details live in IndexedDB. No account, no database.

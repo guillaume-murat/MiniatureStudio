@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Bot, Check, ChevronsUpDown, Command, Folder, Monitor, Moon, Pencil, Plus, Settings, Sun, Trash2, Zap } from 'lucide-react';
+import { ViewSwitcher } from './canvas/ViewSwitcher';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Kbd } from './ui/kbd';
@@ -138,7 +139,7 @@ export function TopBar() {
   const ThemeIcon = THEME_ICON[theme];
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-1 border-b bg-sidebar px-2">
+    <header className="relative flex h-12 shrink-0 items-center gap-1 border-b bg-sidebar px-2">
       <a href={import.meta.env.BASE_URL} className="flex items-center gap-2 rounded-md px-2 py-1 font-semibold tracking-tight" title={t('topbar.home')}>
         <span className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
           <Zap className="size-3.5" fill="currentColor" />
@@ -147,6 +148,7 @@ export function TopBar() {
       </a>
       <span className="mx-1 h-5 w-px bg-border" />
       <ProjectSwitcher />
+      <ViewSwitcher className="absolute left-1/2 hidden -translate-x-1/2 lg:flex" />
 
       <div className="ml-auto flex items-center gap-1">
         <Button variant="outline" size="sm" className="hidden gap-2 text-muted-foreground md:inline-flex" onClick={() => open('commands')}>

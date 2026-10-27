@@ -19,12 +19,16 @@ export interface GenerationParams {
 /** How an image came to exist: fresh generation, whole-image edit, masked edit, or imported. */
 export type GenerationKind = 'generate' | 'edit' | 'region' | 'import' | 'text' | 'upscale';
 
+/** The tool behind a version, when its kind alone doesn't say it (named in the versions panel). */
+export type GenerationAction = 'reframe' | 'smooth' | 'heal';
+
 export interface Generation {
   id: string;
   projectId: string;
   /** Image this one was derived from (edit / region edit). */
   parentId?: string;
   kind: GenerationKind;
+  action?: GenerationAction;
   /** What the user typed (brief or edit instruction). */
   prompt: string;
   /** Exact prompt sent to the model, kept for transparency and reuse. */
@@ -47,8 +51,18 @@ export interface Project {
   id: string;
   name: string;
   videoTitle?: string;
+  channelPage?: ChannelPage;
   createdAt: number;
   updatedAt: number;
+}
+
+/** The channel page preview of a project: what its six videos show. */
+export interface ChannelPage {
+  /** Per video: the version placed there (else filled from the project) and its title (else the video title). */
+  slots: Array<{ id?: string; title?: string }>;
+  dark: boolean;
+  /** Seed of the random views, durations and upload ages. */
+  seed: number;
 }
 
 export type PersonaPhotoSlot = 'front' | 'left' | 'right' | 'expression';
@@ -75,13 +89,20 @@ export interface LibraryImage {
   createdAt: number;
 }
 
-/** The channel: shown in the feed preview; its colours also go into the prompt. */
+/** The channel: shown in the feed and channel previews; its colours also go into the prompt. */
 export interface BrandKit {
   id: 'default';
   channelName: string;
-  /** Channel profile picture (feed preview only, never sent to the image model). */
+  /** Channel profile picture (previews only, never sent to the image model). */
   logo?: Blob;
   colors: string[];
+  /** Channel page preview details. */
+  banner?: Blob;
+  handle?: string;
+  subscribers?: number;
+  videoCount?: number;
+  description?: string;
+  verified?: boolean;
   updatedAt: number;
 }
 

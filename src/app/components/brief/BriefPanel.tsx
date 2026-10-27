@@ -64,7 +64,7 @@ function PeopleSection() {
       {personas.length === 0 ? (
         <button
           type="button"
-          onClick={() => open('personas')}
+          onClick={() => open('newPersona')}
           className="flex w-full items-center gap-2 rounded-lg border border-dashed px-3 py-2.5 text-sm text-muted-foreground hover:bg-accent/50"
         >
           <Plus className="size-4" /> {t('persona.new')}

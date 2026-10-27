@@ -7,12 +7,16 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { useBlobUrl } from '../hooks/use-blob-url';
 import { useWorkspace } from '../stores/workspace';
 import { exportTestCompare } from '../lib/exporting';
+import { thumbnails } from '../lib/versions';
 import { useT } from '../i18n';
 import type { Generation } from '../lib/types';
 import { cn } from '../lib/utils';
 
+/** One thumbnail: its video title, then the version being worked on (or its latest), with how many versions it has. */
 function Tile({
   gen,
+  title,
+  count,
   selected,
   picked,
   onSelect,
@@ -20,44 +24,61 @@ function Tile({
   pickLabel,
 }: {
   gen: Generation;
+  /** The video title, or '' when there is none. */
+  title: string;
+  count: number;
   selected: boolean;
   picked: boolean;
   onSelect: (e: React.MouseEvent | React.KeyboardEvent) => void;
   onPick: () => void;
   pickLabel: string;
 }) {
+  const t = useT();
   const url = useBlobUrl(gen.blob);
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={onSelect}
-      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(e)}
-      title={gen.prompt}
-      className={cn(
-        'group relative h-full shrink-0 cursor-pointer overflow-hidden rounded-md border bg-muted transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring',
-        selected ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : 'opacity-80 hover:opacity-100',
-      )}
-      style={{ aspectRatio: `${gen.width} / ${gen.height}` }}
-    >
-      <img src={url} alt="" className="size-full object-cover" loading="lazy" draggable={false} />
-      {gen.favorite && <Star className="absolute top-1 left-1 size-3 fill-amber-400 text-amber-400 drop-shadow" />}
-      {gen.parentId && <GitBranch className="absolute bottom-1 left-1 size-3 text-white drop-shadow" />}
-      <button
-        type="button"
-        aria-label={pickLabel}
-        aria-pressed={picked}
-        onClick={(e) => {
-          e.stopPropagation();
-          onPick();
-        }}
-        className={cn(
-          'absolute top-1 right-1 flex size-4 items-center justify-center rounded-full border border-white/80 bg-black/40 text-white transition-opacity',
-          picked ? 'border-primary bg-primary text-primary-foreground opacity-100' : 'opacity-0 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100',
-        )}
+    <div className="flex h-full shrink-0 flex-col gap-1">
+      {/* w-0 min-w-full: the title takes the thumbnail's width instead of setting it. */}
+      <p
+        className={cn('w-0 min-w-full truncate text-[10px] leading-3', title ? 'text-foreground/80' : 'text-muted-foreground italic')}
+        title={title || undefined}
       >
-        {picked && <Check className="size-3" />}
-      </button>
+        {title || t('filmstrip.untitled')}
+      </p>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onSelect}
+        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(e)}
+        title={gen.prompt}
+        className={cn(
+          'group relative h-[calc(100%-1rem)] shrink-0 cursor-pointer overflow-hidden rounded-md border bg-muted transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          selected ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : 'opacity-80 hover:opacity-100',
+        )}
+        style={{ aspectRatio: `${gen.width} / ${gen.height}` }}
+      >
+        <img src={url} alt="" className="size-full object-cover" loading="lazy" draggable={false} />
+        {gen.favorite && <Star className="absolute top-1 left-1 size-3 fill-amber-400 text-amber-400 drop-shadow" />}
+        {count > 1 && (
+          <span className="tabular absolute bottom-1 left-1 flex items-center gap-0.5 rounded bg-black/70 px-1 text-[10px] leading-4 font-medium text-white">
+            <GitBranch className="size-2.5" /> {count}
+          </span>
+        )}
+        <button
+          type="button"
+          aria-label={pickLabel}
+          aria-pressed={picked}
+          onClick={(e) => {
+            e.stopPropagation();
+            onPick();
+          }}
+          className={cn(
+            'absolute top-1 right-1 flex size-4 items-center justify-center rounded-full border border-white/80 bg-black/40 text-white transition-opacity',
+            picked ? 'border-primary bg-primary text-primary-foreground opacity-100' : 'opacity-0 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100',
+          )}
+        >
+          {picked && <Check className="size-3" />}
+        </button>
+      </div>
     </div>
   );
 }
@@ -66,14 +87,15 @@ export function Filmstrip() {
   const t = useT();
   const { generations, selectedId, pickedIds, jobs, select, togglePick, clearPicks, setView } = useWorkspace();
   const [favoritesOnly, setFavoritesOnly] = useState(false);
-  const shown = favoritesOnly ? generations.filter((g) => g.favorite) : generations;
+  const all = thumbnails(generations);
+  const shown = favoritesOnly ? all.filter((th) => th.versions.some((g) => g.favorite)) : all;
   const pending = jobs.filter((j) => j.status === 'running' && j.kind === 'generate').length;
 
   return (
     <div className="shrink-0 border-t bg-background">
       <div className="flex h-9 items-center gap-2 px-3 text-xs">
         <span className="font-medium text-muted-foreground">
-          {t('filmstrip.title')} <span className="tabular">· {generations.length}</span>
+          {t('filmstrip.title')} <span className="tabular">· {all.length}</span>
         </span>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -103,27 +125,38 @@ export function Filmstrip() {
             </Button>
           </div>
         ) : (
-          generations.length > 1 && <span className="ml-auto hidden text-muted-foreground lg:inline">{t('filmstrip.exportHint')} · {t('filmstrip.shiftClick')}</span>
+          all.length > 1 && (
+            <span className="ml-auto hidden text-muted-foreground lg:inline">
+              {t('filmstrip.exportHint')} · {t('filmstrip.shiftClick')}
+            </span>
+          )
         )}
       </div>
-      <div className="flex h-[6.5rem] gap-2 overflow-x-auto px-3 pt-1 pb-3">
+      <div className="flex h-[7.25rem] gap-2 overflow-x-auto px-3 pt-1 pb-3">
         {Array.from({ length: pending }).map((_, i) => (
-          <div key={`p${i}`} className="aspect-video h-full shrink-0 animate-pulse rounded-md bg-muted" />
+          <div key={`p${i}`} className="mt-4 aspect-video h-[calc(100%-1rem)] shrink-0 animate-pulse rounded-md bg-muted" />
         ))}
-        {shown.length === 0 && pending === 0 && (
-          <p className="flex h-full items-center text-xs text-muted-foreground">{t('filmstrip.empty')}</p>
-        )}
-        {shown.map((g) => (
-          <Tile
-            key={g.id}
-            gen={g}
-            selected={g.id === selectedId}
-            picked={pickedIds.includes(g.id)}
-            onSelect={(e) => (e.shiftKey || e.metaKey || e.ctrlKey ? togglePick(g.id) : select(g.id))}
-            onPick={() => togglePick(g.id)}
-            pickLabel={t('filmstrip.selectForExport')}
-          />
-        ))}
+        {shown.length === 0 && pending === 0 && <p className="flex h-full items-center text-xs text-muted-foreground">{t('filmstrip.empty')}</p>}
+        {shown.map((th) => {
+          const current = th.versions.find((g) => g.id === selectedId);
+          const shownVersion = current ?? th.latest;
+          const picked = th.versions.filter((g) => pickedIds.includes(g.id));
+          // Picking works per thumbnail: one of its versions at most.
+          const pick = () => (picked.length ? picked.forEach((g) => togglePick(g.id)) : togglePick(shownVersion.id));
+          return (
+            <Tile
+              key={th.root.id}
+              gen={shownVersion}
+              title={shownVersion.videoTitle?.trim() ?? ''}
+              count={th.versions.length}
+              selected={!!current}
+              picked={picked.length > 0}
+              onSelect={(e) => (e.shiftKey || e.metaKey || e.ctrlKey ? pick() : select(shownVersion.id))}
+              onPick={pick}
+              pickLabel={t('filmstrip.selectForExport')}
+            />
+          );
+        })}
       </div>
     </div>
   );

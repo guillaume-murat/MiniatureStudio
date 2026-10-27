@@ -88,6 +88,7 @@ export default function App() {
         // Letters work with caps lock on too. Each letter has one action (see the command palette).
         const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
         if (key === 'p') ws.setView(ws.view === 'feed' ? 'image' : 'feed');
+        else if (key === 'c') ws.setView(ws.view === 'channel' ? 'image' : 'channel');
         else if (key === 'z') ws.setSafeZones(!ws.safeZones);
         else if (key === 'm' && ws.selectedId) ws.setMaskMode(!ws.maskMode);
         else if (key === 'Escape' && ws.maskMode) ws.setMaskMode(false);

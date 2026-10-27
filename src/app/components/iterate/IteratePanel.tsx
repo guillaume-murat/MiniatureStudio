@@ -1,5 +1,21 @@
 import { useState } from 'react';
-import { ArrowUp, ArrowUpRight, Crop, GitBranch, Loader2, Maximize2, Paintbrush, Sparkles, SquareDashedMousePointer, Type, Wand2 } from 'lucide-react';
+import {
+  ArrowUp,
+  ArrowUpRight,
+  Bandage,
+  Blend,
+  CornerDownRight,
+  Crop,
+  GitBranch,
+  ImageUp,
+  Loader2,
+  Maximize2,
+  Paintbrush,
+  Sparkles,
+  SquareDashedMousePointer,
+  Type,
+  Wand2,
+} from 'lucide-react';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { ScrollArea } from '../ui/scroll-area';
@@ -9,39 +25,49 @@ import { Kbd } from '../ui/kbd';
 import { toggleReframe } from '../canvas/ReframeTextDialog';
 import { MergeTextButton } from '../canvas/TextLayer';
 import { useBlobUrl } from '../../hooks/use-blob-url';
-import { lineage, selectedGeneration, useWorkspace } from '../../stores/workspace';
+import { selectedGeneration, useWorkspace } from '../../stores/workspace';
+import { rootOf, versionTree } from '../../lib/versions';
 import { useT, type TKey } from '../../i18n';
 import type { Generation } from '../../lib/types';
 import { cn } from '../../lib/utils';
 
 const QUICK_EDITS = ['emotion', 'contrast', 'background', 'zoom', 'text', 'noText'] as const;
 
-function VersionRow({ gen, active, onClick }: { gen: Generation; active: boolean; onClick: () => void }) {
+const STEP_ICONS = {
+  generate: Sparkles,
+  import: ImageUp,
+  edit: Wand2,
+  region: SquareDashedMousePointer,
+  text: Type,
+  upscale: Maximize2,
+  reframe: Crop,
+  smooth: Blend,
+  heal: Bandage,
+} as const;
+
+/** One step of the thumbnail's history, indented under the version it was made from. */
+function VersionRow({ gen, depth, active, onClick }: { gen: Generation; depth: number; active: boolean; onClick: () => void }) {
   const t = useT();
   const url = useBlobUrl(gen.blob);
+  const step = gen.action ?? gen.kind;
+  const Icon = STEP_ICONS[step];
+  const label = gen.parentId ? t(`versions.steps.${step}`) : t('iterate.original');
+  // Tools name their versions after themselves: only an instruction or a brief adds something.
+  const detail = gen.prompt && gen.prompt !== t(`versions.steps.${step}`) && !gen.action ? gen.prompt : '';
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn('flex w-full items-center gap-3 rounded-md p-1.5 text-left transition-colors hover:bg-accent', active && 'bg-accent')}
+      style={{ paddingLeft: 6 + Math.min(depth, 4) * 14 }}
     >
-      <img src={url} alt="" className="aspect-video w-20 shrink-0 rounded object-cover ring-1 ring-border" />
+      {depth > 0 && <CornerDownRight className="size-3 shrink-0 text-muted-foreground" />}
+      <img src={url} alt="" className="aspect-video w-16 shrink-0 rounded object-cover ring-1 ring-border" />
       <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-          {gen.kind === 'region' ? (
-            <SquareDashedMousePointer className="size-3" />
-          ) : gen.kind === 'text' ? (
-            <Type className="size-3" />
-          ) : gen.kind === 'upscale' ? (
-            <Maximize2 className="size-3" />
-          ) : gen.parentId ? (
-            <Wand2 className="size-3" />
-          ) : (
-            <Sparkles className="size-3" />
-          )}
-          {gen.parentId ? t('iterate.edit') : t('iterate.original')}
+        <span className="flex items-center gap-1 text-xs font-medium">
+          <Icon className="size-3 shrink-0 text-muted-foreground" /> {label}
         </span>
-        <span className="line-clamp-2 text-xs">{gen.prompt}</span>
+        {detail && <span className="line-clamp-2 text-xs text-muted-foreground">{detail}</span>}
       </span>
     </button>
   );
@@ -114,7 +140,8 @@ function EditTab({ gen, onEdited }: { gen: Generation; onEdited?: () => void }) 
   const t = useT();
   const { generations, select, edit, maskMode, hasMask, jobs } = useWorkspace();
   const [instruction, setInstruction] = useState('');
-  const versions = lineage(generations, gen.id);
+  const root = rootOf(generations, gen.id) ?? gen;
+  const versions = versionTree(generations, root.id);
   const editing = jobs.some((j) => j.status === 'running' && j.parentId === gen.id);
   const region = maskMode && hasMask;
 
@@ -133,13 +160,14 @@ function EditTab({ gen, onEdited }: { gen: Generation; onEdited?: () => void }) 
             <Section
               title={
                 <span className="flex items-center gap-1.5">
-                  <GitBranch className="size-3.5" /> {t('iterate.versions')}
+                  <GitBranch className="size-3.5" /> {t('iterate.versions')} <span className="tabular font-normal">· {versions.length}</span>
                 </span>
               }
             >
+              <p className="-mt-1 text-xs text-muted-foreground">{t('versions.hint')}</p>
               <div className="space-y-0.5">
-                {versions.map((v) => (
-                  <VersionRow key={v.id} gen={v} active={v.id === gen.id} onClick={() => select(v.id)} />
+                {versions.map(({ item, depth }) => (
+                  <VersionRow key={item.id} gen={item} depth={depth} active={item.id === gen.id} onClick={() => select(item.id)} />
                 ))}
               </div>
             </Section>

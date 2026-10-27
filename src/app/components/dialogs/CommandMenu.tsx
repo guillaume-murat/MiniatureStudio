@@ -1,4 +1,4 @@
-import { ArrowUpRight, Bot, Crop, Folder, Paintbrush, Plus, ScanLine, Settings, Sparkles, SunMoon, Tv, Type, Users, Wand2 } from 'lucide-react';
+import { ArrowUpRight, Bot, Crop, Folder, PanelsTopLeft, Paintbrush, Plus, ScanLine, Settings, Sparkles, SunMoon, Tv, Type, Users, Wand2 } from 'lucide-react';
 import {
   CommandDialog,
   CommandEmpty,
@@ -46,6 +46,10 @@ export function CommandMenu() {
           <CommandItem onSelect={run(() => ws.setView(ws.view === 'feed' ? 'image' : 'feed'))} disabled={!ws.selectedId}>
             <Tv /> {t('commands.feed')}
             <CommandShortcut>P</CommandShortcut>
+          </CommandItem>
+          <CommandItem onSelect={run(() => ws.setView(ws.view === 'channel' ? 'image' : 'channel'))}>
+            <PanelsTopLeft /> {t('canvas.viewChannel')}
+            <CommandShortcut>C</CommandShortcut>
           </CommandItem>
           <CommandItem onSelect={run(() => ws.setSafeZones(!ws.safeZones))}>
             <ScanLine /> {t('commands.safeZones')}
