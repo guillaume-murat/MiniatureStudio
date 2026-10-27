@@ -2,6 +2,7 @@
 # Rebuilds and reinstalls the macOS app when its sources changed since the last
 # install. Run by a Claude Code Stop hook (.claude/settings.local.json); also
 # fine to run by hand. Prints a hook JSON message only when it did something.
+# `--mark-installed` records the current sources as installed without building.
 set -u
 cd "$(dirname "$0")/.."
 
@@ -10,20 +11,23 @@ STAMP=macos/build/.installed
 LOG=macos/build/auto-install.log
 LOCK=macos/build/.auto-install.lock
 
+# The content of every source file, tracked or new: a commit alone changes
+# nothing, so it doesn't trigger a rebuild.
 # shellcheck disable=SC2086
 fingerprint() {
-  {
-    git rev-parse HEAD
-    git diff HEAD -- $PATHS
-    git ls-files --others --exclude-standard -- $PATHS | while IFS= read -r f; do
-      echo "$f"
-      cat "$f"
-    done
-  } | shasum | cut -d' ' -f1
+  git ls-files --cached --others --exclude-standard -- $PATHS | sort -u | while IFS= read -r f; do
+    [ -f "$f" ] || continue
+    echo "$f"
+    cat "$f"
+  done | shasum | cut -d' ' -f1
 }
 
 mkdir -p macos/build
 current=$(fingerprint)
+if [ "${1:-}" = "--mark-installed" ]; then
+  echo "$current" >"$STAMP"
+  exit 0
+fi
 [ "$current" = "$(cat "$STAMP" 2>/dev/null)" ] && exit 0
 mkdir "$LOCK" 2>/dev/null || exit 0 # another install is running
 trap 'rmdir "$LOCK"' EXIT
