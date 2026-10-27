@@ -1,23 +1,22 @@
-import { Eye, Loader2, Plus, Sparkles, Square, Users, Wand2 } from 'lucide-react';
+import { Check, Eye, Loader2, Plus, Sparkles, Square, Users, Wand2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
-import { Switch } from '../ui/switch';
 import { Kbd } from '../ui/kbd';
 import { ScrollArea } from '../ui/scroll-area';
-import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { Field, Section } from '../Section';
 import { ReferencesSection } from './ReferencesSection';
 import { StylePicker } from './StylePicker';
 import { OutputSection } from './OutputSection';
+import { ChannelSection } from './ChannelSection';
+import { BrandColors } from './BrandColors';
 import { MOD } from '../TopBar';
 import { useBlobUrl } from '../../hooks/use-blob-url';
 import { MAX_PERSONAS, useWorkspace } from '../../stores/workspace';
 import { useUI } from '../../stores/ui';
 import { useT } from '../../i18n';
 import type { Persona } from '../../lib/types';
-import type { TextMode } from '../../lib/prompt';
 import { cn } from '../../lib/utils';
 
 function PersonaChip({ persona, active, onToggle }: { persona: Persona; active: boolean; onToggle: () => void }) {
@@ -35,6 +34,11 @@ function PersonaChip({ persona, active, onToggle }: { persona: Persona; active: 
     >
       {url ? <img src={url} alt="" className="size-6 rounded-full object-cover" /> : <span className="size-6 rounded-full bg-muted" />}
       <span className="max-w-28 truncate">{persona.name}</span>
+      {active && (
+        <span className="flex size-4 items-center justify-center rounded-full bg-success text-white">
+          <Check className="size-3" strokeWidth={3} />
+        </span>
+      )}
     </button>
   );
 }
@@ -76,37 +80,6 @@ function PeopleSection() {
   );
 }
 
-function BrandSection() {
-  const t = useT();
-  const { brand, saveBrand } = useWorkspace();
-  const open = useUI((s) => s.open);
-  const configured = !!(brand.styleProfile || brand.colors.length || brand.fontStyle || brand.logo);
-  return (
-    <Section
-      title={t('brief.brand')}
-      action={
-        <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={() => open('brand')}>
-          {configured ? t('brief.brandEdit') : t('brief.brandEmpty')}
-        </Button>
-      }
-    >
-      {configured && (
-        <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
-          <span className="flex min-w-0 items-center gap-2 text-sm">
-            <span className="flex -space-x-1">
-              {brand.colors.slice(0, 4).map((c) => (
-                <span key={c} className="size-4 rounded-full border-2 border-sidebar" style={{ background: c }} />
-              ))}
-            </span>
-            <span className="truncate">{brand.channelName || t('brief.brandOn')}</span>
-          </span>
-          <Switch checked={brand.enabled} onCheckedChange={(enabled) => saveBrand({ ...brand, enabled })} aria-label={t('brief.brandOn')} />
-        </label>
-      )}
-    </Section>
-  );
-}
-
 export function BriefPanel({ onGenerated }: { onGenerated?: () => void }) {
   const t = useT();
   const { brief, setBrief, generate, jobs, cancelAll } = useWorkspace();
@@ -117,6 +90,7 @@ export function BriefPanel({ onGenerated }: { onGenerated?: () => void }) {
     <div className="flex h-full flex-col">
       <ScrollArea className="min-h-0 flex-1">
         <div className="space-y-6 p-4">
+          <ChannelSection />
           <Section
             title={t('brief.title')}
             action={
@@ -147,43 +121,14 @@ export function BriefPanel({ onGenerated }: { onGenerated?: () => void }) {
                 className="min-h-28 resize-y"
               />
             </Field>
-            <Field
-              label={t('brief.overlayText')}
-              htmlFor="overlayText"
-              hint={brief.overlayText.trim() ? (brief.textMode === 'space' ? t('brief.textSpaceHint') : undefined) : t('brief.overlayHint')}
-            >
-              <Input
-                id="overlayText"
-                value={brief.overlayText}
-                onChange={(e) => setBrief({ overlayText: e.target.value })}
-                placeholder={t('brief.overlayTextPlaceholder')}
-              />
-              {brief.overlayText.trim() && (
-                <ToggleGroup
-                  type="single"
-                  variant="outline"
-                  size="sm"
-                  className="mt-2 w-full"
-                  value={brief.textMode}
-                  onValueChange={(v) => v && setBrief({ textMode: v as TextMode })}
-                >
-                  <ToggleGroupItem value="render" className="flex-1 text-xs">
-                    {t('brief.textRender')}
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="space" className="flex-1 text-xs">
-                    {t('brief.textSpace')}
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              )}
-            </Field>
             <Field label={t('brief.style')}>
               <StylePicker />
             </Field>
           </Section>
 
+          <BrandColors />
           <PeopleSection />
           <ReferencesSection />
-          <BrandSection />
           <OutputSection />
         </div>
       </ScrollArea>

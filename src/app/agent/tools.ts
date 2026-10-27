@@ -73,7 +73,6 @@ function summary(g: Generation) {
     model: g.params.model,
     createdAt: new Date(g.createdAt).toISOString(),
     favorite: !!g.favorite,
-    score: g.score?.overall,
   };
 }
 
@@ -98,12 +97,12 @@ function requireKey(): string {
   return key;
 }
 
-const BRIEF_KEYS = ['videoTitle', 'brief', 'overlayText', 'textMode', 'styleId'] as const;
+const BRIEF_KEYS = ['videoTitle', 'brief', 'styleId'] as const;
 
 function applyBrief(args: Args): void {
   const patch: Partial<Brief> = {};
   for (const key of BRIEF_KEYS) {
-    const value = key === 'textMode' ? oneOf(args, key, ['render', 'space'] as const) : str(args, key);
+    const value = str(args, key);
     if (value !== undefined) (patch as Record<string, string>)[key] = value;
   }
   if (patch.styleId && !findStyle(patch.styleId)) throw new ToolError(`Unknown styleId "${patch.styleId}" (see list_styles).`);
@@ -137,7 +136,8 @@ export const handlers: Record<string, Handler> = {
         photos: p.photos.length,
         selected: s.personaIds.includes(p.id),
       })),
-      brandKit: { enabled: s.brand.enabled, channelName: s.brand.channelName || undefined },
+      channel: s.brand.channelName || undefined,
+      brandColors: s.brand.colors,
       jobs: s.jobs.map((j) => ({ id: j.id, kind: j.kind, status: j.status, seconds: Math.round(j.elapsed / 1000), error: j.error })),
       view: s.view,
       selectedId: s.selectedId,
@@ -245,7 +245,7 @@ export const handlers: Record<string, Handler> = {
         styles: STYLES.map((st) => ({ id: st.id, name: st.name.en })),
       },
     );
-    return ok({ concepts, hint: 'Apply one with generate({ brief, overlayText, styleId }).' });
+    return ok({ concepts, hint: 'Apply one with generate({ brief, styleId }).' });
   },
 
   generate: async (args) => {
@@ -286,7 +286,6 @@ export const handlers: Record<string, Handler> = {
         videoTitle: gen.videoTitle,
         lineage: ancestors,
         children: ws().generations.filter((g) => g.parentId === gen.id).map((g) => g.id),
-        score: gen.score,
       },
       [await preview(gen.blob, full)],
     );
@@ -304,14 +303,6 @@ export const handlers: Record<string, Handler> = {
     const favorite = bool(args, 'favorite') ?? true;
     if (!!gen.favorite !== favorite) await ws().toggleFavorite(gen.id);
     return ok({ id: gen.id, favorite });
-  },
-
-  score_thumbnail: async (args) => {
-    const gen = target(args);
-    requireKey();
-    const { value, error } = await ws().score(gen.id);
-    if (!value) throw new ToolError(error ?? 'Scoring failed.');
-    return ok({ id: gen.id, ...value, createdAt: undefined });
   },
 
   rank_thumbnails: async (args) => {

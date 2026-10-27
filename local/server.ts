@@ -5,11 +5,12 @@ import { extname, join, normalize, resolve, sep } from 'node:path';
 import type { Handler, HandlerEvent } from '@netlify/functions';
 import { handler as replicateProxy } from '../netlify/functions/replicate-proxy';
 import { handler as youtubeProxy } from '../netlify/functions/youtube-thumbnail-proxy';
+import { handler as youtubeChannel } from '../netlify/functions/youtube-channel';
 import { createVertexHandler, isLocalRequest } from './vertex';
 
 /**
  * Serves the built site (dist/) on 127.0.0.1 with everything the studio needs
- * locally: the Vertex AI helper and the two Netlify functions. Used by the macOS
+ * locally: the Vertex AI helper and the Netlify functions. Used by the macOS
  * app and by `npm run local`.
  *
  *   NT_DIST   build directory (default: ./dist)
@@ -43,6 +44,7 @@ const TYPES: Record<string, string> = {
 const FUNCTIONS: Record<string, Handler> = {
   '/.netlify/functions/replicate-proxy': replicateProxy,
   '/.netlify/functions/youtube-thumbnail-proxy': youtubeProxy,
+  '/.netlify/functions/youtube-channel': youtubeChannel,
 };
 
 const vertex = createVertexHandler();

@@ -148,6 +148,8 @@ export async function mergeWithMask(
   edited: Blob,
   mask: HTMLCanvasElement,
   feather = 12,
+  /** Keep the mask fully opaque and feather only outwards: for areas the original leaves empty (reframing). */
+  solid = false,
 ): Promise<Blob> {
   const [orig, edit] = await Promise.all([decode(original), decode(edited)]);
   const [c, ctx] = canvas(orig.width, orig.height);
@@ -157,9 +159,19 @@ export async function mergeWithMask(
   const [layer, lctx] = canvas(c.width, c.height);
   lctx.drawImage(edit, 0, 0, c.width, c.height);
   lctx.globalCompositeOperation = 'destination-in';
-  lctx.filter = `blur(${feather}px)`;
-  lctx.drawImage(mask, 0, 0, c.width, c.height);
-  lctx.filter = 'none';
+  if (solid) {
+    // A blurred mask fades along the canvas sides and the empty areas' edges, letting them show through.
+    const [m, mctx] = canvas(c.width, c.height);
+    mctx.filter = `blur(${feather}px)`;
+    mctx.drawImage(mask, 0, 0, c.width, c.height);
+    mctx.filter = 'none';
+    mctx.drawImage(mask, 0, 0, c.width, c.height);
+    lctx.drawImage(m, 0, 0);
+  } else {
+    lctx.filter = `blur(${feather}px)`;
+    lctx.drawImage(mask, 0, 0, c.width, c.height);
+    lctx.filter = 'none';
+  }
 
   ctx.drawImage(layer, 0, 0);
   orig.close();

@@ -4,13 +4,14 @@ import { Toaster } from './components/ui/sonner';
 import { TooltipProvider } from './components/ui/tooltip';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from './components/ui/resizable';
 import { TopBar } from './components/TopBar';
+import { ReframeTextDialog, toggleReframe } from './components/canvas/ReframeTextDialog';
+import { BlockingJobOverlay, blockingJob } from './components/canvas/BlockingJob';
 import { BriefPanel } from './components/brief/BriefPanel';
 import { CanvasArea } from './components/canvas/CanvasArea';
 import { Filmstrip } from './components/Filmstrip';
 import { IteratePanel } from './components/iterate/IteratePanel';
 import { SettingsDialog } from './components/dialogs/SettingsDialog';
 import { PersonaDialog } from './components/dialogs/PersonaDialog';
-import { BrandKitDialog } from './components/dialogs/BrandKitDialog';
 import { AssistantDialog } from './components/dialogs/AssistantDialog';
 import { ErrorDialog } from './components/dialogs/ErrorDialog';
 import { CommandMenu } from './components/dialogs/CommandMenu';
@@ -71,6 +72,8 @@ export default function App() {
   // Global shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // A reframe is running: shortcuts would act on the image it is replacing.
+      if (blockingJob(useWorkspace.getState().jobs)) return;
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key === 'Enter') {
         e.preventDefault();
@@ -88,7 +91,7 @@ export default function App() {
         else if (e.key === 'Escape' && ws.maskMode) ws.setMaskMode(false);
         else if (e.key === 't' && ws.selectedId) ws.setTextMode(!ws.textMode);
         else if (e.key === 'Escape' && ws.textMode) ws.setTextMode(false);
-        else if (e.key === 'r' && ws.selectedId) ws.setReframeMode(!ws.reframeMode);
+        else if (e.key === 'r' && ws.selectedId) toggleReframe();
         else if (e.key === 'Escape' && ws.reframeMode) ws.setReframeMode(false);
         else if ((e.key === 'Delete' || e.key === 'Backspace') && ws.textMode) {
           const text = useText.getState();
@@ -171,12 +174,13 @@ export default function App() {
 
       <SettingsDialog />
       <PersonaDialog />
-      <BrandKitDialog />
       <AssistantDialog />
       <ErrorDialog />
       <CommandMenu />
       <AgentDialog />
       <PromptDialog />
+      <ReframeTextDialog />
+      <BlockingJobOverlay />
       {/* Bottom-right would cover the mobile tab bar */}
       <Toaster position={isDesktop ? 'bottom-right' : 'top-center'} />
     </TooltipProvider>

@@ -1,4 +1,4 @@
-import type { TextBlock } from './textBlocks';
+import type { LayerBlock } from './textBlocks';
 
 export type Provider = 'replicate' | 'gemini' | 'openrouter' | 'mammouth' | 'vertex';
 export type ModelId = 'nano-banana-pro' | 'nano-banana-2';
@@ -19,22 +19,6 @@ export interface GenerationParams {
 /** How an image came to exist: fresh generation, whole-image edit, masked edit, or imported. */
 export type GenerationKind = 'generate' | 'edit' | 'region' | 'import' | 'text' | 'upscale';
 
-export interface ScoreCriterion {
-  key: 'legibility' | 'contrast' | 'focal' | 'emotion' | 'curiosity' | 'mobile';
-  score: number; // 0-10
-  comment: string;
-}
-
-export interface Score {
-  overall: number; // 0-100
-  criteria: ScoreCriterion[];
-  strengths: string[];
-  improvements: string[];
-  /** Ready-to-use edit instructions the user can apply in one click. */
-  suggestedEdits: string[];
-  createdAt: number;
-}
-
 export interface Generation {
   id: string;
   projectId: string;
@@ -49,7 +33,7 @@ export interface Generation {
    * Editable text added with the text tool: `blob` is `base` with the blocks drawn
    * on it. Dropped when the user merges the text into the image.
    */
-  textLayer?: { base: Blob; blocks: TextBlock[] };
+  textLayer?: { base: Blob; blocks: LayerBlock[] };
   videoTitle?: string;
   params: GenerationParams;
   blob: Blob;
@@ -57,7 +41,6 @@ export interface Generation {
   height: number;
   createdAt: number;
   favorite?: boolean;
-  score?: Score;
 }
 
 export interface Project {
@@ -92,26 +75,13 @@ export interface LibraryImage {
   createdAt: number;
 }
 
+/** The channel: shown in the feed preview; its colours also go into the prompt. */
 export interface BrandKit {
   id: 'default';
-  enabled: boolean;
   channelName: string;
-  colors: string[];
-  /** Google Fonts family for the thumbnail text ('' = none). */
-  font: string;
-  /** Specimen of `font`, rendered in the studio and sent as a typography reference. */
-  fontSpecimen?: Blob;
-  /** Free description of the type treatment (weight, case, stroke…). */
-  fontStyle: string;
-  notes: string;
+  /** Channel profile picture (feed preview only, never sent to the image model). */
   logo?: Blob;
-  /** Channel profile picture for the feed preview (not sent to the image model, unlike `logo`). */
-  avatar?: Blob;
-  /** Natural-language style description distilled from the channel's own thumbnails. */
-  styleProfile: string;
-  /** A few of the channel's own thumbnails, sent as style references. */
-  styleRefs: Blob[];
-  sendStyleRefs: boolean;
+  colors: string[];
   updatedAt: number;
 }
 

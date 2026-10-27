@@ -14,26 +14,26 @@ NanoThumbnail is a free, open-source studio to **generate, edit and test YouTube
 ## Features
 
 **Create**
-- **Brief-driven generation**: video title, scene, on-thumbnail text (rendered by the AI, or clean space left to add it yourself), 1–4 variants, 1K/2K/4K, 16:9, 9:16, 4:3 or 1:1.
+- **Brief-driven generation**: video title and scene (the AI leaves clean space for the text you add afterwards), 1–4 variants, 1K/2K/4K, 16:9, 9:16, 4:3 or 1:1.
 - **14 proven styles**: reaction + object, versus, before/after, tech tutorial, cinematic documentary, hyper-saturated, 3D clay…
 - **Concept assistant**: three genuinely different angles from your title, written in your language.
 - **People**: save up to 5 people (front/profile photos plus expressions); their identity is preserved.
-- **Brand kit**: colours, typography, logo, and a style profile distilled from your own best thumbnails.
+- **Channel & brand colours**: channel name and logo (paste a channel or video URL to fetch both) for the feed preview, and brand colours sent as the dominant accents.
 - **References & YouTube remix**: up to 14 reference images, or paste a YouTube URL to pull its thumbnail and title.
 
 **Iterate**
 - **Conversational edits**: “make the face more surprised” changes only that. Every version is kept, with its lineage.
-- **Area edits**: paint a mask, describe the change; the model gets the clean image plus a marked copy as a location guide, and pixels outside the mask are merged back untouched.
-- **AI critique**: small-size legibility, contrast, focal point, emotion, curiosity, mobile readability, with one-click suggested edits. (A critique based on best practices — not a CTR prediction.)
+- **Area edits**: paint a mask, describe the change; the model gets the clean image plus a marked copy as a location guide, and pixels outside the mask are merged back untouched. **Heal** repaints the painted area to erase seams and hard edges (like Photoshop's healing brush).
+- **Text & arrows** (`T`): editable text blocks and curved arrows (solid, open or double head, thickness, bend, colour, border, dashes, shadow) drawn over the image; they stay editable until you merge them.
+- **Reframe** (`R`): move or zoom the whole image, or circle one part freehand (a person, an object) and move only that part; the AI fills only what's left empty and repaints the cut so no seam shows, everything else stays pixel-exact. The studio is locked, image blurred, while the AI works.
 
 **Test**
-- **Feed preview**: home, search, up next, mobile and TV, light and dark, among your competitors' real thumbnails.
 - **Safe zones**: duration badge, hover icons, progress bar, Shorts UI.
 - **Feed preview**: your thumbnail alone among 30 real popular YouTube videos (home, search, up next, mobile, TV), bundled with the app (`npm run feed:update` refreshes the snapshot).
 - **Compare & rank** variants side by side, then **export for YouTube Studio's Test & Compare** (1280×720, under 2 MB). Single thumbnails also export at 1920×1080.
 
 **AI agents (MCP)**
-- Let Claude, Cursor or any MCP-capable agent drive the studio: brief, generate, edit (whole image or a region), critique, rank, export to disk. You watch every action live and can disconnect at any time.
+- Let Claude, Cursor or any MCP-capable agent drive the studio: brief, generate, edit (whole image or a region), rank, export to disk. You watch every action live and can disconnect at any time.
 - `claude mcp add nanothumbnail -- npx -y nanothumbnail-mcp`, then ask the agent to “open the NanoThumbnail studio” and click **Allow** once.
 - Companion skill with the workflow and thumbnail craft: `npx skills add yoanbernabeu/NanoThumbnail --skill nanothumbnail`.
 
@@ -41,7 +41,7 @@ NanoThumbnail is a free, open-source studio to **generate, edit and test YouTube
 - `⌘K` command palette, `⌘↵` generate, `F` feed preview, `Z` safe zones, `M` mask, `Esc` leave mask.
 
 **Local-first**
-- Projects, images, people and brand kit live in IndexedDB. No account, no database.
+- Projects, images, people and channel details live in IndexedDB. No account, no database.
 - Installable PWA; the library works offline.
 - One-click zip backup and restore.
 - API key stored in the browser, or for the current session only.
@@ -52,11 +52,12 @@ NanoThumbnail is a free, open-source studio to **generate, edit and test YouTube
 - **OpenRouter** is called directly from the browser too (`google/gemini-3-pro-image`, `google/gemini-3.1-flash-image`), with the key in the `Authorization` header.
 - **Mammouth** is called directly from the browser as well, through the same OpenAI-style chat completions (`gemini-3-pro-image-preview`, `gemini-3.1-flash-image-preview`, key in the `Authorization` header).
 - **Vertex AI** (local only) bills your own Google Cloud project. The browser can't run gcloud, so the studio calls `/vertex/*` on its own origin and a small helper (`local/vertex.ts`) adds a token from `gcloud auth print-access-token` and your gcloud project. It's mounted by `npm run dev` and by the macOS app, only answers requests from the local studio, and also accepts a Vertex express-mode key instead of gcloud. `VERTEX_LOCATION` (default `global`) and `VERTEX_PROJECT` override the defaults.
+- **Channel details**: youtube.com has no CORS either, so `netlify/functions/youtube-channel.ts` reads the channel page's Open Graph tags (name, picture) for a channel or video URL; it only accepts YouTube URLs and the site's own origin.
 - **Replicate** has no browser CORS support, so calls go through a small Netlify function (`netlify/functions/replicate-proxy.ts`). It only accepts requests from the site's own origin, only relays the three Replicate routes the app needs (create, poll, cancel), and never stores or logs anything.
 - Reference images are downscaled client-side before upload, so requests stay small.
 - Prompts are built as structured natural language following Google's Nano Banana prompting guidance (declared image roles, identity locks, “change only X, keep everything else” edits), see `src/app/lib/prompt.ts`.
 - **AI agents**: the MCP server (`mcp/`, published as `nanothumbnail-mcp`) only relays tool calls over a WebSocket on `127.0.0.1` to the open studio tab, which runs them as store actions. Keys, projects and images never leave the browser. The socket accepts only the studio's origin and a pairing token; see [`mcp/README.md`](mcp/README.md).
-- Critique, ranking, concepts and style analysis use Gemini Flash: `gemini-3.8-flash` with a Gemini key or on Vertex AI, `google/gemini-3-flash` on Replicate, `google/gemini-3.8-flash` on OpenRouter, or `gemini-3.8-flash` on Mammouth.
+- Ranking and concepts use Gemini Flash: `gemini-3.8-flash` with a Gemini key or on Vertex AI, `google/gemini-3-flash` on Replicate, `google/gemini-3.8-flash` on OpenRouter, or `gemini-3.8-flash` on Mammouth.
 
 ## Landing, SEO & GEO
 

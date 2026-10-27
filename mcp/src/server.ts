@@ -16,7 +16,7 @@ const OPEN_STUDIO: ToolDef = {
 };
 
 const INSTRUCTIONS = `NanoThumbnail is a YouTube thumbnail studio running in the user's browser (Google Nano Banana models, the user's own API key). These tools drive it live: the user watches every change.
-Typical flow: get_state → (new_project) → set_brief / suggest_concepts → generate → view/score_thumbnail → edit_thumbnail (one change at a time) → rank_thumbnails → export_thumbnail.
+Typical flow: get_state → (new_project) → set_brief / suggest_concepts → generate → view_thumbnail → edit_thumbnail (one change at a time) → rank_thumbnails → export_thumbnail.
 Generations cost the user API credits: prefer count 1-2 while exploring and ask before large batches. If a tool says the studio is not connected, call open_studio.`;
 
 function text(value: string, isError = false): CallToolResult {

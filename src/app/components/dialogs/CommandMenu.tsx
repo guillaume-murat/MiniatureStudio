@@ -1,4 +1,4 @@
-import { Bot, Folder, Palette, Plus, ScanLine, Settings, Sparkles, SunMoon, Tv, Users, Wand2 } from 'lucide-react';
+import { Bot, Folder, Plus, ScanLine, Settings, Sparkles, SunMoon, Tv, Users, Wand2 } from 'lucide-react';
 import {
   CommandDialog,
   CommandEmpty,
@@ -55,9 +55,6 @@ export function CommandMenu() {
         <CommandGroup>
           <CommandItem onSelect={run(() => openDialog('personas'))}>
             <Users /> {t('commands.personas')}
-          </CommandItem>
-          <CommandItem onSelect={run(() => openDialog('brand'))}>
-            <Palette /> {t('commands.brand')}
           </CommandItem>
           <CommandItem onSelect={run(() => openDialog('settings'))}>
             <Settings /> {t('commands.openSettings')}

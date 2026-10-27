@@ -1,4 +1,4 @@
-import type { AspectRatio, BrandKit } from './types';
+import type { AspectRatio } from './types';
 
 /**
  * Prompt construction for Nano Banana Pro / Nano Banana 2.
@@ -16,30 +16,17 @@ import type { AspectRatio, BrandKit } from './types';
 
 export type ImageRole =
   | { kind: 'persona'; name: string; description?: string; expression?: string }
-  | { kind: 'style' }
-  | { kind: 'logo' }
-  | { kind: 'font'; family: string }
   | { kind: 'reference'; label?: string };
-
-/**
- * - `render`: the model draws `overlayText` in the image.
- * - `space`: the model leaves clean negative space for a headline added later
- *   (in Canva, Photoshop…). Text from the model is the least reliable part of
- *   the image, so many creators prefer this.
- */
-export type TextMode = 'render' | 'space';
 
 export interface BriefInput {
   brief: string;
-  /** Text for the thumbnail. Empty = purely visual thumbnail. */
-  overlayText: string;
-  textMode: TextMode;
   videoTitle?: string;
   aspectRatio: AspectRatio;
   /** Art-direction fragment from a style preset. */
   style?: string;
   roles: ImageRole[];
-  brand?: Pick<BrandKit, 'enabled' | 'channelName' | 'colors' | 'font' | 'fontStyle' | 'notes' | 'styleProfile'>;
+  /** Brand colours. */
+  colors?: string[];
 }
 
 const FORMAT_HINT: Record<AspectRatio, string> = {
@@ -87,17 +74,6 @@ export function describeImages(roles: ImageRole[], offset = 0): string[] {
         );
         break;
       }
-      case 'style':
-        lines.push(`- ${label}: one of the channel's existing thumbnails. Use it for the art style only — colour grading, typography treatment, graphic devices, energy — with a new subject and new text.`);
-        break;
-      case 'logo':
-        lines.push(`- ${label}: the channel logo. Reproduce it faithfully and small, only where it fits naturally.`);
-        break;
-      case 'font':
-        lines.push(
-          `- ${label}: a specimen of the ${role.family} typeface. Set the thumbnail text in this exact typeface — same letter shapes, proportions and weight contrast — but do not copy the specimen's words or its plain black-on-white look.`,
-        );
-        break;
       case 'reference':
         lines.push(`- ${label}: reference image${role.label ? ` (${role.label})` : ''}, to use as the brief describes.`);
         break;
@@ -107,27 +83,8 @@ export function describeImages(roles: ImageRole[], offset = 0): string[] {
   return lines;
 }
 
-/** `brandType`: the brand kit sets the typography, so the default type treatment would contradict it. */
-function textSection(overlayText: string, textMode: TextMode, aspectRatio: AspectRatio, brandType = false): string {
-  const text = overlayText.trim();
-  if (!text) {
-    return 'Text: a purely visual thumbnail — the image tells the story on its own, with clean surfaces free of lettering, captions and watermarks.';
-  }
-  if (textMode === 'space') {
-    const side = aspectRatio === '9:16' ? 'upper third' : 'left or right third (whichever the composition favours)';
-    return `Text: leave clean, uncluttered negative space in the ${side} for a short headline that will be added afterwards. The image itself stays free of lettering.`;
-  }
-  return (
-    `Text: render the exact text ${quote(text)}, spelled exactly as written including accents and punctuation. ` +
-    (brandType
-      ? `Typeset it huge in the brand typography described below, high-contrast against the background so it reads instantly on a phone, on at most two lines. `
-      : `Typeset it huge in a heavy, bold sans-serif with a thick dark outline or drop shadow so it reads instantly on a phone, on at most two lines. `) +
-    `Place it in the upper part or to one side, clear of the bottom-right corner where YouTube shows the video duration.`
-  );
-}
-
 export function buildGenerationPrompt(input: BriefInput): string {
-  const { brief, overlayText, textMode, videoTitle, aspectRatio, style, roles, brand } = input;
+  const { brief, videoTitle, aspectRatio, style, roles, colors = [] } = input;
   const sections: string[] = [];
 
   sections.push(
@@ -141,22 +98,16 @@ export function buildGenerationPrompt(input: BriefInput): string {
 
   if (style?.trim()) sections.push(`Art direction: ${style.trim()}`);
 
-  const brandType = !!brand?.enabled && !!(brand.font || brand.fontStyle.trim());
-  sections.push(textSection(overlayText, textMode, aspectRatio, brandType));
+  // Text is added afterwards with the studio's text tool, where it stays editable and exact.
+  const side = aspectRatio === '9:16' ? 'upper third' : 'upper part or one side';
+  sections.push(
+    `Text: no lettering, captions or watermarks in the image. A short headline will be added afterwards, so keep a clean, uncluttered area in the ${side} where it can sit.`,
+  );
 
   const imageLines = describeImages(roles);
   if (imageLines.length) sections.push(['Attached images, in order:', ...imageLines].join('\n'));
 
-  if (brand?.enabled) {
-    const lines: string[] = [];
-    if (brand.styleProfile.trim()) lines.push(`Channel visual identity: ${brand.styleProfile.trim()}`);
-    if (brand.colors.length) lines.push(`Brand colours: ${brand.colors.join(', ')} — use them as the dominant accent colours.`);
-    const fontStyle = brand.fontStyle.trim();
-    if (brand.font) lines.push(`Typography: set all text in the ${brand.font} typeface (Google Fonts)${fontStyle ? `, ${fontStyle}` : ''}.`);
-    else if (fontStyle) lines.push(`Typography: ${fontStyle}.`);
-    if (brand.notes.trim()) lines.push(brand.notes.trim());
-    if (lines.length) sections.push(lines.join('\n'));
-  }
+  if (colors.length) sections.push(`Brand colours: ${colors.join(', ')} — use them as the dominant accent colours.`);
 
   sections.push(
     'Make it work as a thumbnail: one clear focal point that reads in a split second at phone-feed size, ' +
@@ -198,8 +149,8 @@ export function buildFaceFixPrompt(names: string[], roles: ImageRole[]): string 
 /** Reframing: fill the flat grey areas left around the moved or zoomed-out image. */
 export function buildOutpaintPrompt(): string {
   return [
-    'Image 1 is a thumbnail whose picture was moved or zoomed out inside its frame: the flat, uniform mid-grey areas are empty.',
-    'Fill only those grey areas by extending the existing scene naturally: the same setting, perspective, lighting, colours, focus and style, continuing every object, surface and edge that runs into them, so the result reads as one seamless photograph.',
+    'Image 1 is a thumbnail whose picture, or a cut-out part of it, was moved or zoomed out inside its frame: the flat, uniform mid-grey areas are empty.',
+    'Fill only those grey areas by extending the existing scene naturally: the same setting, perspective, lighting, colours, focus and style, continuing every object, surface and edge that runs into them, so the result reads as one seamless photograph. Blend away any hard edge around a moved part so it sits naturally in the scene.',
     'Do not change anything outside the grey areas. Do not add text, logos, people or new focal subjects in the filled areas, and leave no grey behind.',
   ].join('\n\n');
 }
@@ -211,6 +162,13 @@ export function buildUpscalePrompt(): string {
     'Reproduce it exactly: the same composition and framing, the same people with exactly the same faces and expressions, the same objects, text and lettering, colours and lighting.',
     'Only make it sharper, with finer, cleaner detail and crisp edges, and remove blur, noise and compression artefacts. Do not add, remove, move or restyle anything, and keep the aspect ratio.',
   ].join('\n\n');
+}
+
+/** Healing brush: erase seams and hard edges in the marked area, adding nothing. */
+export function buildHealPrompt(): string {
+  return buildRegionEditPrompt(
+    'remove every visible seam, hard line, cut edge or discontinuity. Blend both sides together seamlessly by continuing the surrounding textures, colours, lighting, focus and grain, the way a retoucher’s healing brush would. Add nothing new: no objects, text or details that were not already there.',
+  );
 }
 
 export function buildRegionEditPrompt(instruction: string): string {

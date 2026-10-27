@@ -43,9 +43,6 @@ function Tile({
       <img src={url} alt="" className="size-full object-cover" loading="lazy" draggable={false} />
       {gen.favorite && <Star className="absolute top-1 left-1 size-3 fill-amber-400 text-amber-400 drop-shadow" />}
       {gen.parentId && <GitBranch className="absolute bottom-1 left-1 size-3 text-white drop-shadow" />}
-      {gen.score && (
-        <span className="tabular absolute right-1 bottom-1 rounded bg-black/70 px-1 text-[10px] font-medium text-white">{gen.score.overall}</span>
-      )}
       <button
         type="button"
         aria-label={pickLabel}

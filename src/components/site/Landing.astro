@@ -71,7 +71,7 @@ const feedCards = [
   { src: img('step-3.webp'), title: c.feed.yourTitle, ch: c.feed.channel, meta: c.feed.meta, duration: '16:20', mine: true },
   ...feedIds.slice(1).map((id, i) => ({ src: g(id).src, title: g(id).title, ch: c.feed.others[i + 1].channel, meta: c.feed.others[i + 1].meta, duration: durations[i + 1] })),
 ];
-const rowImages: Record<string, ImageMetadata> = { mask: shot('mask'), score: shot('score'), compare: shot('compare') };
+const rowImages: Record<string, ImageMetadata> = { mask: shot('mask'), compare: shot('compare') };
 
 const btn =
   'inline-flex items-center justify-center gap-2 rounded-xl text-sm font-medium transition-all outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50';
@@ -81,7 +81,6 @@ const featured = ['gaming', 'cinematic'];
 const chip = 'rounded-2xl border bg-card/85 p-3 shadow-2xl shadow-black/20 backdrop-blur-md';
 const eyebrow = 'text-sm font-medium text-primary';
 const h2 = 'text-3xl font-semibold tracking-tight text-balance sm:text-5xl';
-const circumference = 2 * Math.PI * 16;
 ---
 
 <!-- Nav -->
@@ -184,27 +183,6 @@ const circumference = 2 * Math.PI * 16;
             fetchpriority="high"
             class="absolute inset-0 aspect-video w-full object-cover motion-safe:animate-hero-step-3"
           />
-        </div>
-
-        <!-- Score -->
-        <div class={`${chip} absolute -top-6 -left-4 hidden items-center gap-3 sm:flex lg:-left-20 motion-safe:animate-float`}>
-          <svg viewBox="0 0 40 40" class="size-11 -rotate-90">
-            <circle cx="20" cy="20" r="16" fill="none" stroke-width="4" class="stroke-muted"></circle>
-            <circle
-              cx="20"
-              cy="20"
-              r="16"
-              fill="none"
-              stroke-width="4"
-              stroke-linecap="round"
-              class="stroke-success"
-              stroke-dasharray={circumference}
-              stroke-dashoffset={circumference * (1 - c.hero.chips.scoreValue / 100)}></circle>
-          </svg>
-          <div class="text-left">
-            <p class="text-xs text-muted-foreground">{c.hero.chips.score}</p>
-            <p class="tabular text-lg leading-none font-semibold">{c.hero.chips.scoreValue}<span class="text-sm text-muted-foreground">/100</span></p>
-          </div>
         </div>
 
         <!-- Style -->
@@ -388,14 +366,7 @@ const circumference = 2 * Math.PI * 16;
             </div>
             <div class="relative">
               <div aria-hidden="true" class="absolute -inset-6 rounded-[2rem] bg-primary/15 blur-3xl" />
-              {row.key === 'score' ? (
-                <div class="relative flex items-center">
-                  <Image src={img('step-3.webp')} alt="" widths={[400, 800]} sizes="(min-width: 1024px) 400px, 72vw" class="aspect-video w-[72%] rounded-xl object-cover shadow-2xl ring-1 ring-border" />
-                  <Image src={rowImages.score} alt={c.alts.score} widths={[340]} sizes="280px" class="-ml-[22%] w-[50%] rounded-xl border bg-card shadow-2xl ring-1 ring-black/10 [mask-image:linear-gradient(to_bottom,black_80%,transparent)]" />
-                </div>
-              ) : (
-                <Image src={rowImages[row.key]} alt={row.key === 'mask' ? c.alts.mask : c.alts.compare} quality={70} widths={[560, 1120]} sizes="(min-width: 1024px) 544px, 100vw" class="relative w-full rounded-xl border shadow-2xl ring-1 ring-black/10" />
-              )}
+              <Image src={rowImages[row.key]} alt={row.key === 'mask' ? c.alts.mask : c.alts.compare} quality={70} widths={[560, 1120]} sizes="(min-width: 1024px) 544px, 100vw" class="relative w-full rounded-xl border shadow-2xl ring-1 ring-black/10" />
             </div>
           </div>
         ))

@@ -14,13 +14,11 @@ const fr = {
     title: 'La miniature parfaite,',
     titleAccent: 'retouche après retouche.',
     subtitle:
-      'Générez avec Nano Banana, corrigez d’une phrase, vérifiez dans le fil YouTube, faites noter par l’IA. Le studio open source qui tourne dans votre navigateur, avec votre propre clé.',
+      'Générez avec Nano Banana, corrigez d’une phrase, ajoutez texte et flèches, vérifiez dans le fil YouTube. Le studio open source qui tourne dans votre navigateur, avec votre propre clé.',
     cta: 'Ouvrir le studio — gratuit',
     secondary: 'Voir comment ça marche',
     trust: ['Gratuit & open source', 'Pas d’inscription chez nous', 'Vos images restent chez vous'],
     chips: {
-      score: 'Score IA',
-      scoreValue: 81,
       style: 'Style',
       styleValue: 'Réaction + objet',
       edits: ['Ajoute une flèche rouge vers le téléphone', 'Passe le texte en jaune vif'],
@@ -76,13 +74,6 @@ const fr = {
       points: ['Pinceau et gomme', 'Fusion adoucie avec l’original', 'Chaque retouche devient une version'],
     },
     {
-      key: 'score',
-      eyebrow: 'Score & critique IA',
-      title: 'Un œil expert avant de publier',
-      text: 'Lisibilité en petit, contraste, point focal, émotion, curiosité, lisibilité mobile : chaque critère est noté et justifié, avec des retouches suggérées applicables en un clic.',
-      points: ['6 critères notés sur 10', 'Retouches suggérées en un clic', 'En français ou en anglais'],
-    },
-    {
       key: 'compare',
       eyebrow: 'Comparer & Test & Compare',
       title: 'Choisissez la gagnante, puis laissez YouTube trancher',
@@ -119,8 +110,8 @@ const fr = {
     title: 'Pensé pour aller vite, avec tout ce qu’il faut autour',
     items: {
       people: { title: 'Vos visages, fidèles', text: 'Même visage d’une image à l’autre. Jusqu’à 5 personnes par miniature, avec leurs angles et leurs expressions.' },
-      brand: { title: 'Brand kit', text: 'Couleurs, typo, logo, et un profil de style extrait de vos meilleures miniatures.' },
-      text: { title: 'Texte net ou espace libre', text: 'L’IA écrit le texte, ou laisse la place propre pour l’ajouter vous-même.' },
+      brand: { title: 'Votre chaîne', text: 'Nom, logo et couleurs de marque, récupérés depuis une URL YouTube.' },
+      text: { title: 'Texte et flèches', text: 'L’IA laisse la place, vous posez texte et flèches courbées, modifiables jusqu’à la fusion.' },
       local: { title: '100 % local', text: 'Projets, versions et visages restent dans votre navigateur. Sauvegarde zip en un clic.' },
       pwa: { title: 'Installable', text: 'Une vraie app, même hors ligne pour consulter votre bibliothèque.' },
       keys: { title: 'Votre clé, vos règles', text: 'Replicate, Gemini ou OpenRouter, mémorisée ou juste pour la session.' },
@@ -131,7 +122,7 @@ const fr = {
     title: 'Laissez Claude faire vos miniatures.',
     text: 'Branchez Claude Code, Claude Desktop, Cursor ou tout agent compatible MCP : il pilote le studio ouvert dans votre navigateur, du brief à l’export, pendant que vous regardez.',
     points: [
-      'Brief, génération, retouches par zone, score, classement, export',
+      'Brief, génération, retouches par zone, classement, export',
       'Chaque action s’affiche en direct dans le studio : vous gardez la main',
       'Vos clés et vos images ne quittent pas votre navigateur',
       'Une skill lui apprend les règles d’une miniature qui se clique',
@@ -145,7 +136,7 @@ const fr = {
         'new_project  « Apprendre Rust en 10 minutes »',
         'set_people   1 personne',
         'generate     style tech · nano-banana-2',
-        'score_thumbnail  → 71/100',
+        'view_thumbnail   aperçu 768 px',
         'edit_thumbnail   « titre plus gros » · zone du haut',
         'export_thumbnail → miniature-youtube.jpg',
       ],
@@ -195,7 +186,7 @@ const fr = {
     items: [
       {
         q: 'YouTube Studio génère déjà des miniatures. Pourquoi NanoThumbnail ?',
-        a: 'L’assistant de YouTube Studio peut vous proposer une miniature. NanoThumbnail est un atelier dédié : retouche phrase par phrase qui garde le visage intact, retouche par zone, aperçu dans le fil avec les zones de sécurité, critique notée, 14 styles, vos visages et votre brand kit, et le choix du modèle. Les deux se complètent : vos meilleures variantes s’exportent vers «\u00a0Tester et comparer\u00a0».',
+        a: 'L’assistant de YouTube Studio peut vous proposer une miniature. NanoThumbnail est un atelier dédié : retouche phrase par phrase qui garde le visage intact, retouche par zone, aperçu dans le fil avec les zones de sécurité, texte et flèches modifiables, 14 styles, vos visages et vos couleurs de marque, et le choix du modèle. Les deux se complètent : vos meilleures variantes s’exportent vers «\u00a0Tester et comparer\u00a0».',
       },
       {
         q: 'C’est vraiment gratuit ?',
@@ -203,7 +194,7 @@ const fr = {
       },
       {
         q: 'Un agent IA comme Claude peut-il utiliser NanoThumbnail ?',
-        a: 'Oui. Ajoutez le serveur MCP à votre agent (claude mcp add nanothumbnail -- npx -y nanothumbnail-mcp) : il pilote le studio ouvert dans votre navigateur — brief, génération, retouches, score, export — via une connexion locale. Vos clés et vos images ne quittent pas le navigateur, et chaque action s’affiche en direct.',
+        a: 'Oui. Ajoutez le serveur MCP à votre agent (claude mcp add nanothumbnail -- npx -y nanothumbnail-mcp) : il pilote le studio ouvert dans votre navigateur — brief, génération, retouches, classement, export — via une connexion locale. Vos clés et vos images ne quittent pas le navigateur, et chaque action s’affiche en direct.',
       },
       {
         q: 'Ma clé API est-elle en sécurité ?',
@@ -230,10 +221,6 @@ const fr = {
         a: 'Pro pour la qualité maximale et le rendu de texte. Nano Banana 2 pour itérer vite et moins cher. Vous pouvez changer à tout moment, même en cours de retouche.',
       },
       {
-        q: 'Le score prédit-il mon CTR ?',
-        a: 'Non. C’est une critique fondée sur les bonnes pratiques (lisibilité, contraste, émotion…). Pour une vraie mesure, exportez vos variantes vers Test & Compare dans YouTube Studio.',
-      },
-      {
         q: 'Puis-je utiliser les images commercialement ?',
         a: 'En général oui, mais les conditions dépendent du fournisseur (Replicate, Google, OpenRouter). Vérifiez leurs CGU.',
       },
@@ -246,7 +233,6 @@ const fr = {
     studio: 'Capture du studio NanoThumbnail : brief à gauche, miniature au centre, historique des versions et retouches rapides à droite',
     steps: ['Version générée : texte « MINI ?! » sombre, sans flèche', 'Première retouche : une flèche rouge pointe vers le téléphone', 'Deuxième retouche : le texte passe en jaune vif avec un contour noir'],
     mask: 'Retouche par zone : le téléphone est peint en magenta pour être transformé',
-    score: 'Panneau de score IA : note globale et six critères détaillés, notés sur 10',
     safezones: 'Zones de sécurité affichées sur la miniature : durée, icônes au survol, barre de progression',
     concepts: 'Assistant de concepts : trois propositions différentes pour la même vidéo',
     commands: 'Palette de commandes ⌘K',
@@ -270,13 +256,11 @@ const en: Dict = {
     title: 'The perfect thumbnail,',
     titleAccent: 'one edit at a time.',
     subtitle:
-      'Generate with Nano Banana, fix it in one sentence, check it in the YouTube feed, get an AI critique. The open-source studio that runs in your browser, with your own key.',
+      'Generate with Nano Banana, fix it in one sentence, add text and arrows, check it in the YouTube feed. The open-source studio that runs in your browser, with your own key.',
     cta: 'Open the studio — free',
     secondary: 'See how it works',
     trust: ['Free & open source', 'No sign-up with us', 'Your images stay with you'],
     chips: {
-      score: 'AI score',
-      scoreValue: 81,
       style: 'Style',
       styleValue: 'Reaction + object',
       edits: ['Add a red arrow pointing at the phone', 'Make the text bright yellow'],
@@ -331,13 +315,6 @@ const en: Dict = {
       points: ['Brush and eraser', 'Feathered blend with the original', 'Every edit becomes a version'],
     },
     {
-      key: 'score',
-      eyebrow: 'AI score & critique',
-      title: 'An expert eye before you publish',
-      text: 'Small-size legibility, contrast, focal point, emotion, curiosity, mobile readability: each criterion scored and explained, with suggested edits you apply in one click.',
-      points: ['6 criteria scored out of 10', 'One-click suggested edits', 'In English or French'],
-    },
-    {
       key: 'compare',
       eyebrow: 'Compare & Test & Compare',
       title: 'Pick the winner, then let YouTube decide',
@@ -374,8 +351,8 @@ const en: Dict = {
     title: 'Built for speed, with everything around it',
     items: {
       people: { title: 'Faithful faces', text: 'The same face from one image to the next. Up to 5 people per thumbnail, with their angles and expressions.' },
-      brand: { title: 'Brand kit', text: 'Colours, type, logo, and a style profile distilled from your best thumbnails.' },
-      text: { title: 'Crisp text or clean space', text: 'The AI writes the text, or leaves clean space for you to add it.' },
+      brand: { title: 'Your channel', text: 'Name, logo and brand colours, fetched from a YouTube URL.' },
+      text: { title: 'Text and arrows', text: 'The AI leaves room; you add text and curved arrows, editable until you merge them.' },
       local: { title: '100% local', text: 'Projects, versions and faces stay in your browser. One-click zip backup.' },
       pwa: { title: 'Installable', text: 'A real app, even offline to browse your library.' },
       keys: { title: 'Your key, your rules', text: 'Replicate, Gemini or OpenRouter, remembered or just for the session.' },
@@ -400,7 +377,7 @@ const en: Dict = {
         'new_project  “Learn Rust in 10 minutes”',
         'set_people   1 person',
         'generate     style tech · nano-banana-2',
-        'score_thumbnail  → 71/100',
+        'view_thumbnail   aperçu 768 px',
         'edit_thumbnail   “bigger title” · top area',
         'export_thumbnail → youtube-thumbnail.jpg',
       ],
@@ -450,7 +427,7 @@ const en: Dict = {
     items: [
       {
         q: 'YouTube Studio already generates thumbnails. Why NanoThumbnail?',
-        a: 'YouTube Studio’s assistant can suggest a thumbnail. NanoThumbnail is a dedicated workshop: sentence-by-sentence edits that keep the face intact, area edits, feed preview with safe zones, a scored critique, 14 styles, your faces and brand kit, and your choice of model. The two work together: your best variants export straight to Test & Compare.',
+        a: 'YouTube Studio’s assistant can suggest a thumbnail. NanoThumbnail is a dedicated workshop: sentence-by-sentence edits that keep the face intact, area edits, feed preview with safe zones, editable text and arrows, 14 styles, your faces and brand colours, and your choice of model. The two work together: your best variants export straight to Test & Compare.',
       },
       {
         q: 'Is it really free?',
@@ -458,7 +435,7 @@ const en: Dict = {
       },
       {
         q: 'Can an AI agent like Claude use NanoThumbnail?',
-        a: 'Yes. Add the MCP server to your agent (claude mcp add nanothumbnail -- npx -y nanothumbnail-mcp): it drives the studio open in your browser — brief, generation, edits, scoring, export — over a local connection. Your keys and images never leave the browser, and every action shows up live.',
+        a: 'Yes. Add the MCP server to your agent (claude mcp add nanothumbnail -- npx -y nanothumbnail-mcp): it drives the studio open in your browser — brief, generation, edits, ranking, export — over a local connection. Your keys and images never leave the browser, and every action shows up live.',
       },
       {
         q: 'Is my API key safe?',
@@ -485,10 +462,6 @@ const en: Dict = {
         a: 'Pro for maximum quality and text rendering. Nano Banana 2 to iterate fast and cheaper. Switch anytime, even mid-edit.',
       },
       {
-        q: 'Does the score predict my CTR?',
-        a: 'No. It’s a critique based on best practices (legibility, contrast, emotion…). For a real measurement, export your variants to Test & Compare in YouTube Studio.',
-      },
-      {
         q: 'Can I use the images commercially?',
         a: 'Generally yes, but terms depend on the provider (Replicate, Google, OpenRouter). Check their terms.',
       },
@@ -501,7 +474,6 @@ const en: Dict = {
     studio: 'NanoThumbnail studio screenshot: brief on the left, thumbnail in the middle, version history and quick edits on the right',
     steps: ['Generated version: dark “MINI ?!” text, no arrow', 'First edit: a red arrow points at the phone', 'Second edit: the text turns bright yellow with a black outline'],
     mask: 'Area edit: the phone is painted in magenta to be transformed',
-    score: 'AI score panel: overall score and six detailed criteria, each out of 10',
     safezones: 'Safe zones shown on the thumbnail: duration badge, hover icons, progress bar',
     concepts: 'Concept assistant: three different proposals for the same video',
     commands: '⌘K command palette',

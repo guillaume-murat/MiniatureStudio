@@ -2,7 +2,7 @@
 
 ## Writing the brief
 
-The studio wraps your brief in a full prompt (format, image roles, identity lock, style, brand kit). Your job is the scene.
+The studio wraps your brief in a full prompt (format, image roles, identity lock, style, brand colours). Your job is the scene.
 
 Nano Banana follows **natural-language descriptions**, not keyword lists. Write 2–4 sentences covering:
 
@@ -18,11 +18,11 @@ Good: `Close-up of the creator on the left third, eyes wide and mouth open in di
 
 Reference images: say what each one is for in its `label` ("the product — keep its exact shape and logo", "colour palette to imitate").
 
-## Overlay text
+## Text to suggest
 
+- The studio generates images without text and leaves room for it; the user adds it with the text tool. Suggest it:
 - 0–4 words, the video's language, complementary to the title (title "I tried every AI coding tool" → text "ONLY 1 WORKS").
 - Numbers, stakes and contrasts work; full sentences don't.
-- `textMode: "render"` asks the model to draw it; `"space"` leaves clean room for the user to add it.
 
 ## Choosing a style (`list_styles` for the full list)
 

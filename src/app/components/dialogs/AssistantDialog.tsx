@@ -94,17 +94,13 @@ export function AssistantDialog() {
                   <p className="font-medium">{c.name}</p>
                   {style && <Badge variant="secondary" className="w-fit">{style.name[lang]}</Badge>}
                   <p className="text-sm text-muted-foreground">{c.brief}</p>
-                  <p className="text-xs">
-                    <span className="text-muted-foreground">{t('assistant.textOnThumb')} : </span>
-                    <span className="font-medium">{c.overlayText || t('assistant.noText')}</span>
-                  </p>
                   <p className="text-xs text-muted-foreground italic">{c.why}</p>
                   <Button
                     size="sm"
                     variant="secondary"
                     className="mt-auto"
                     onClick={() => {
-                      setBrief({ brief: c.brief, overlayText: c.overlayText, styleId: style?.id ?? brief.styleId });
+                      setBrief({ brief: c.brief, styleId: style?.id ?? brief.styleId });
                       close();
                     }}
                   >

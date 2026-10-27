@@ -15,15 +15,14 @@ export function llmsTxt(): string {
 
 > ${c.meta.description}
 
-NanoThumbnail is a free, MIT-licensed web app (a "studio") to create YouTube thumbnails with Google's Nano Banana image models (Nano Banana Pro and Nano Banana 2). It is bring-your-own-key: users paste a Replicate, Google Gemini or OpenRouter API key and pay the provider directly. There is no account and no server-side storage: projects, images, people and brand kit are stored in the browser (IndexedDB). The interface is available in English and French.
+NanoThumbnail is a free, MIT-licensed web app (a "studio") to create YouTube thumbnails with Google's Nano Banana image models (Nano Banana Pro and Nano Banana 2). It is bring-your-own-key: users paste a Replicate, Google Gemini or OpenRouter API key and pay the provider directly. There is no account and no server-side storage: projects, images, people and channel details are stored in the browser (IndexedDB). The interface is available in English and French.
 
 Key facts:
 - Price: the studio is free. Image generation costs roughly $0.07 (Nano Banana 2, 1K) to $0.15 (Nano Banana Pro) per image at the provider.
 - Providers: Replicate (\`google/nano-banana-pro\`, \`google/nano-banana-2\`) or Google Gemini API (\`gemini-3-pro-image\`, \`gemini-3.1-flash-image\`).
 - Output: 16:9, 9:16, 4:3 or 1:1; 1K, 2K or 4K; 1 to 4 variants per generation.
 - Main workflow: brief → generate → iterate (conversational edits, masked area edits) → test (feed preview, AI critique, side-by-side ranking, export for YouTube Studio "Test & Compare").
-- The AI score is a best-practice critique, not a CTR prediction.
-- AI agents (Claude Code, Claude Desktop, Cursor, any MCP client) can drive the studio through the \`nanothumbnail-mcp\` MCP server (\`claude mcp add nanothumbnail -- npx -y nanothumbnail-mcp\`): brief, generate, edit, score, rank, export. It relays over a local WebSocket to the studio open in the browser; keys and images stay there. Companion skill: \`npx skills add yoanbernabeu/NanoThumbnail --skill nanothumbnail\`.
+- AI agents (Claude Code, Claude Desktop, Cursor, any MCP client) can drive the studio through the \`nanothumbnail-mcp\` MCP server (\`claude mcp add nanothumbnail -- npx -y nanothumbnail-mcp\`): brief, generate, edit, rank, export. It relays over a local WebSocket to the studio open in the browser; keys and images stay there. Companion skill: \`npx skills add yoanbernabeu/NanoThumbnail --skill nanothumbnail\`.
 
 ## Pages
 

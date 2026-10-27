@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
+  Bandage,
   Brush,
   Copy,
   Crop,
@@ -17,10 +18,11 @@ import {
   Trash2,
   Tv,
   Type,
+  ArrowUpRight,
   X,
   SquarePlay,
   AlertCircle,
-  Wand2,
+  Paintbrush,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
@@ -34,6 +36,8 @@ import { SafeZones } from './SafeZones';
 import { MaskLayer, type MaskTool } from './MaskLayer';
 import { MergeTextButton, TextOverlay, TextToolbar } from './TextLayer';
 import { ReframeToolbar, ReframeView } from './ReframeLayer';
+import { toggleReframe } from './ReframeTextDialog';
+import { blockingJob } from './BlockingJob';
 import { FeedPreview } from './FeedPreview';
 import { CompareView } from './CompareView';
 import { MOD } from '../TopBar';
@@ -42,6 +46,8 @@ import { fit, useElementSize } from '../../hooks/use-element-size';
 import { usePinch } from '../../hooks/use-pinch';
 import { clampPan, NO_ZOOM, zoomAt, type ViewZoom } from '../../lib/zoom';
 import { selectedGeneration, useWorkspace, type Job, type ViewMode } from '../../stores/workspace';
+import { useReframe } from '../../stores/reframe';
+import { useText } from '../../stores/text';
 import { downloadForYouTube } from '../../lib/exporting';
 import { downloadBlob, extensionFor, FULL_HD_SIZE } from '../../lib/images';
 import { useT } from '../../i18n';
@@ -113,6 +119,7 @@ function EmptyState({ running }: { running: number }) {
 
 function ImageView({ gen, tool, brushSize, clearSignal }: { gen: Generation; tool: MaskTool; brushSize: number; clearSignal: number }) {
   const { safeZones, maskMode, textMode } = useWorkspace();
+  const reframing = useWorkspace((s) => blockingJob(s.jobs)?.parentId === gen.id);
   // While its text is being edited, a text version shows its image without the text.
   const url = useBlobUrl(textMode && gen.textLayer ? gen.textLayer.base : gen.blob);
   const [ref, box] = useElementSize<HTMLDivElement>();
@@ -148,10 +155,10 @@ function ImageView({ gen, tool, brushSize, clearSignal }: { gen: Generation; too
           className="relative overflow-hidden rounded-lg shadow-lg ring-1 ring-border"
           style={{ ...size, transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.z})` }}
         >
-          <img src={url} alt={gen.prompt} className="size-full select-none" draggable={false} />
+          <img src={url} alt={gen.prompt} className={cn('size-full select-none transition-[filter] duration-300', reframing && 'blur-md')} draggable={false} />
           {safeZones && <SafeZones aspectRatio={gen.params.aspectRatio} />}
           {maskMode && <MaskLayer width={gen.width} height={gen.height} tool={tool} brushSize={brushSize} clearSignal={clearSignal} />}
-          {textMode && <TextOverlay height={size.height} />}
+          {textMode && <TextOverlay width={size.width} height={size.height} />}
         </div>
       )}
     </div>
@@ -185,7 +192,7 @@ function ImageActions({ gen }: { gen: Generation }) {
       </IconTip>
       <IconTip label={t('canvas.exportYouTube')}>
         <Button variant="ghost" size="icon-sm" onClick={() => downloadForYouTube(gen)}>
-          <SquarePlay />
+          <Download />
         </Button>
       </IconTip>
       <DropdownMenu>
@@ -236,6 +243,8 @@ function ImageActions({ gen }: { gen: Generation }) {
 export function CanvasArea({ onDescribeRegion }: { onDescribeRegion?: () => void }) {
   const t = useT();
   const ws = useWorkspace();
+  const reframeTarget = useReframe((s) => s.target);
+  const reframeZone = useReframe((s) => s.zone);
   const gen = useWorkspace(selectedGeneration);
   const [tool, setTool] = useState<MaskTool>('brush');
   const [brushSize, setBrushSize] = useState(0.05);
@@ -269,7 +278,7 @@ export function CanvasArea({ onDescribeRegion }: { onDescribeRegion?: () => void
             </IconTip>
             <IconTip label={`${t('canvas.maskTool')} (M)`}>
               <Toggle size="sm" pressed={ws.maskMode} onPressedChange={ws.setMaskMode} aria-label={t('canvas.maskTool')}>
-                <Wand2 />
+                <Paintbrush />
               </Toggle>
             </IconTip>
             <IconTip label={`${gen.textLayer ? t('canvas.textEdit') : t('canvas.textTool')} (T)`}>
@@ -277,8 +286,21 @@ export function CanvasArea({ onDescribeRegion }: { onDescribeRegion?: () => void
                 <Type />
               </Toggle>
             </IconTip>
+            <IconTip label={t('arrow.addTool')}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => {
+                  if (!ws.textMode) ws.setTextMode(true);
+                  useText.getState().addArrow();
+                }}
+                aria-label={t('arrow.addTool')}
+              >
+                <ArrowUpRight />
+              </Button>
+            </IconTip>
             <IconTip label={`${t('canvas.reframeTool')} (R)`}>
-              <Toggle size="sm" pressed={ws.reframeMode} onPressedChange={ws.setReframeMode} aria-label={t('canvas.reframeTool')}>
+              <Toggle size="sm" pressed={ws.reframeMode} onPressedChange={toggleReframe} aria-label={t('canvas.reframeTool')}>
                 <Crop />
               </Toggle>
             </IconTip>
@@ -316,8 +338,16 @@ export function CanvasArea({ onDescribeRegion }: { onDescribeRegion?: () => void
           <Button variant="ghost" size="xs" onClick={() => setClearSignal((n) => n + 1)} aria-label={t('canvas.clearMask')}>
             <X /> <span className="hidden sm:inline">{t('canvas.clearMask')}</span>
           </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="xs" className="ml-auto" disabled={!ws.hasMask} onClick={() => ws.heal()}>
+                <Bandage /> {t('heal.button')}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-64">{t('heal.hint')}</TooltipContent>
+          </Tooltip>
           {onDescribeRegion && ws.hasMask && (
-            <Button size="xs" className="ml-auto" onClick={onDescribeRegion}>
+            <Button size="xs" onClick={onDescribeRegion}>
               {t('canvas.describeRegion')}
             </Button>
           )}
@@ -345,7 +375,7 @@ export function CanvasArea({ onDescribeRegion }: { onDescribeRegion?: () => void
 
         {ws.reframeMode && ws.view === 'image' && (
           <p className="pointer-events-none absolute top-3 left-1/2 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-2xl bg-foreground px-3 py-1 text-xs text-background shadow sm:rounded-full">
-            {t('canvas.reframeHint')}
+            {reframeTarget === 'zone' && !reframeZone ? t('reframe.zoneHint') : t('canvas.reframeHint')}
           </p>
         )}
 

@@ -1,11 +1,10 @@
 import { useMemo, useState } from 'react';
-import { ImagePlus, Moon, Shuffle, Sun, X } from 'lucide-react';
+import { Moon, Shuffle, Sun } from 'lucide-react';
 import { Button } from '../ui/button';
 import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { useBlobUrl } from '../../hooks/use-blob-url';
 import { useWorkspace } from '../../stores/workspace';
-import { normaliseUpload } from '../../lib/images';
 import { useSettings } from '../../stores/settings';
 import { FEED, feedAsset, formatAgo, formatCount, formatDuration, shuffled, type FeedVideo } from '../../lib/feedVideos';
 import { useT } from '../../i18n';
@@ -107,54 +106,6 @@ function SearchResult({ card, dark }: { card: Card; dark: boolean }) {
   );
 }
 
-/** Upload / remove the channel picture shown next to your video. */
-function ChannelLogoButton() {
-  const t = useT();
-  const { brand, saveBrand } = useWorkspace();
-  const url = useBlobUrl(brand.avatar);
-
-  function pick() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      // A profile picture is shown tiny: 512 px is plenty.
-      await saveBrand({ ...useWorkspace.getState().brand, avatar: await normaliseUpload(file, 512) });
-    };
-    input.click();
-  }
-
-  return (
-    <div className="flex items-center">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button variant="outline" size="sm" className={cn('gap-1.5', url && 'rounded-r-none')} onClick={pick}>
-            {url ? <img src={url} alt="" className="size-5 rounded-full object-cover" /> : <ImagePlus />}
-            {t('feed.channelLogo')}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{t('feed.channelLogoHint')}</TooltipContent>
-      </Tooltip>
-      {url && (
-        <Button
-          variant="outline"
-          size="icon-sm"
-          className="rounded-l-none border-l-0"
-          onClick={() => {
-            const { avatar: _removed, ...rest } = useWorkspace.getState().brand;
-            saveBrand(rest);
-          }}
-          aria-label={t('common.remove')}
-        >
-          <X />
-        </Button>
-      )}
-    </div>
-  );
-}
-
 /**
  * The selected thumbnail alone among real YouTube videos bundled with the app
  * (`npm run feed:update`), drawn at random for each layout.
@@ -167,8 +118,7 @@ export function FeedPreview({ generation }: { generation: Generation }) {
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 1e9));
   const { brief, brand } = useWorkspace();
   const mineSrc = useBlobUrl(generation.blob);
-  // The channel picture, else the brand logo.
-  const logo = useBlobUrl(brand.avatar ?? brand.logo);
+  const logo = useBlobUrl(brand.logo);
 
   const cards = useMemo<Card[]>(() => {
     const count = COUNTS[mode];
@@ -217,7 +167,6 @@ export function FeedPreview({ generation }: { generation: Generation }) {
           {dark ? <Moon /> : <Sun />}
         </Button>
         <div className="ml-auto" />
-        <ChannelLogoButton />
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="outline" size="sm" onClick={() => setSeed(Math.floor(Math.random() * 1e9))}>

@@ -1,11 +1,9 @@
 import { useState } from 'react';
-import { ArrowUp, BarChart3, GitBranch, Loader2, Maximize2, ScanFace, Sparkles, SquareDashedMousePointer, Type, Wand2 } from 'lucide-react';
+import { ArrowUp, GitBranch, Loader2, Maximize2, ScanFace, Sparkles, SquareDashedMousePointer, Type, Wand2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { ScrollArea } from '../ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Section } from '../Section';
-import { ScorePanel } from './ScorePanel';
 import { FaceFixDialog } from './FaceFixDialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { useBlobUrl } from '../../hooks/use-blob-url';
@@ -150,37 +148,10 @@ function EditTab({ gen, onEdited }: { gen: Generation; onEdited?: () => void }) 
 export function IteratePanel({ onEdited }: { onEdited?: () => void }) {
   const t = useT();
   const gen = useWorkspace(selectedGeneration);
-  const [tab, setTab] = useState('edit');
 
   if (!gen) {
     return <div className="flex h-full items-center justify-center p-8 text-center text-sm text-muted-foreground">{t('iterate.noImage')}</div>;
   }
 
-  return (
-    <Tabs value={tab} onValueChange={setTab} className="flex h-full flex-col gap-0">
-      <div className="border-b px-3 py-2">
-        <TabsList className="w-full">
-          <TabsTrigger value="edit" className="gap-1.5">
-            <Wand2 /> {t('iterate.edit')}
-          </TabsTrigger>
-          <TabsTrigger value="score" className="gap-1.5">
-            <BarChart3 /> {t('iterate.score')}
-            {gen.score && <span className="tabular text-xs text-muted-foreground">{gen.score.overall}</span>}
-          </TabsTrigger>
-        </TabsList>
-      </div>
-      <TabsContent value="edit" className="min-h-0 flex-1">
-        <EditTab gen={gen} onEdited={onEdited} />
-      </TabsContent>
-      <TabsContent value="score" className="min-h-0 flex-1">
-        <ScorePanel
-          gen={gen}
-          onApplyEdit={() => {
-            setTab('edit');
-            onEdited?.();
-          }}
-        />
-      </TabsContent>
-    </Tabs>
-  );
+  return <EditTab gen={gen} onEdited={onEdited} />;
 }

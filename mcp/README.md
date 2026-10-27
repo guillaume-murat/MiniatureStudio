@@ -1,6 +1,6 @@
 # nanothumbnail-mcp
 
-MCP server that lets an AI agent (Claude Code, Claude Desktop, Cursor…) drive the [NanoThumbnail](https://nanothumbnail.com) studio open in your browser: brief, generate, edit, score, rank, export.
+MCP server that lets an AI agent (Claude Code, Claude Desktop, Cursor…) drive the [NanoThumbnail](https://nanothumbnail.com) studio open in your browser: brief, generate, edit, rank, export.
 
 ```
 agent ──MCP (stdio)──▶ nanothumbnail-mcp ──WebSocket 127.0.0.1──▶ studio tab ──▶ Nano Banana (your key)

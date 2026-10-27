@@ -60,7 +60,7 @@ export function CompareView() {
         <div className="flex flex-wrap items-center gap-2">
           <Button onClick={rankPicked} disabled={ranking_busy} className="gap-2">
             {ranking_busy ? <Loader2 className="animate-spin" /> : <Trophy />}
-            {ranking_busy ? t('score.compareRunning') : t('score.compare')}
+            {ranking_busy ? t('ranking.compareRunning') : t('ranking.compare')}
           </Button>
           <Button
             variant="outline"
@@ -72,12 +72,12 @@ export function CompareView() {
           >
             <Download /> {t('filmstrip.exportTestCompare', { n: Math.min(picked.length, 3) })}
           </Button>
-          <p className="text-xs text-muted-foreground">{t('score.disclaimer')}</p>
+          <p className="text-xs text-muted-foreground">{t('ranking.disclaimer')}</p>
         </div>
 
         {ranking?.result.winnerWhy && (
           <p className="rounded-lg border bg-card p-3 text-sm">
-            <span className="font-medium text-primary">{t('score.winner')} · </span>
+            <span className="font-medium text-primary">{t('ranking.winner')} · </span>
             {ranking.result.winnerWhy}
           </p>
         )}

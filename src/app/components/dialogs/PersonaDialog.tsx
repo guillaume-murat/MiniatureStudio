@@ -94,14 +94,17 @@ function Editor({ initial, onDone }: { initial?: Persona; onDone: () => void }) 
   async function save() {
     if (!name.trim()) return void toast.error(t('persona.needName'));
     if (!angle('front')) return void toast.error(t('persona.needFront'));
+    const id = initial?.id ?? uid('pe_');
     await putPersona({
-      id: initial?.id ?? uid('pe_'),
+      id,
       name: name.trim(),
       description: description.trim() || undefined,
       photos,
       createdAt: initial?.createdAt ?? Date.now(),
     });
     await reload();
+    // A new person is usually added to be in the next thumbnail.
+    if (!initial && !useWorkspace.getState().personaIds.includes(id)) useWorkspace.getState().togglePersona(id);
     onDone();
   }
 
@@ -205,7 +208,7 @@ function PersonaCard({ persona, onEdit }: { persona: Persona; onEdit: () => void
         </>
       ) : (
         <>
-          <Button size="icon-sm" variant="ghost" onClick={onEdit} aria-label={t('brief.brandEdit')}>
+          <Button size="icon-sm" variant="ghost" onClick={onEdit} aria-label={t('persona.edit')}>
             <Pencil />
           </Button>
           <Button size="icon-sm" variant="ghost" onClick={() => setConfirming(true)} aria-label={t('common.delete')}>

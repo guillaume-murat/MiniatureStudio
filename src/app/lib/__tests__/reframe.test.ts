@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hasGaps, imageRect, isIdentity, MAX_REFRAME_SCALE, NO_REFRAME, zoomReframeAt } from '../reframe';
+import { hasGaps, imageRect, isIdentity, isZone, MAX_REFRAME_SCALE, movedZone, NO_REFRAME, polygonArea, seamEdges, zoomReframeAt } from '../reframe';
 
 describe('reframe layout', () => {
   it('places the image in the frame', () => {
@@ -27,5 +27,41 @@ describe('reframe layout', () => {
   it('knows when nothing changed', () => {
     expect(isIdentity(NO_REFRAME)).toBe(true);
     expect(isIdentity({ scale: 1, x: 0.01, y: 0 })).toBe(false);
+  });
+});
+
+describe('freehand zone', () => {
+  const square = [
+    { x: 0, y: 0 },
+    { x: 0.5, y: 0 },
+    { x: 0.5, y: 0.5 },
+    { x: 0, y: 0.5 },
+  ];
+
+  it('needs an actual area', () => {
+    expect(Math.abs(polygonArea(square))).toBeCloseTo(0.25);
+    expect(isZone(square)).toBe(true);
+    expect(isZone(null)).toBe(false);
+    expect(isZone(square.slice(0, 2))).toBe(false);
+    // A scribble along a line encloses nothing.
+    expect(isZone([{ x: 0, y: 0 }, { x: 0.5, y: 0.5 }, { x: 1, y: 1 }])).toBe(false);
+  });
+
+  it('moves with the reframe', () => {
+    expect(movedZone(square, NO_REFRAME, 1000, 500)[2]).toEqual({ x: 500, y: 250 });
+    // Moved down by 20 % of the height.
+    expect(movedZone(square, { scale: 1, x: 0, y: 0.2 }, 1000, 500)[0]).toEqual({ x: 0, y: 100 });
+    // Zoomed out around the centre.
+    expect(movedZone(square, { scale: 0.5, x: 0, y: 0 }, 1000, 500)[0]).toEqual({ x: 250, y: 125 });
+  });
+
+  it('blends only the cut edges, not those on the frame sides', () => {
+    // The top-left quarter, moved down: its top and right edges are cuts; its left edge stays on the frame side.
+    const moved = movedZone(square, { scale: 1, x: 0, y: 0.2 }, 1000, 500);
+    const edges = seamEdges(moved, 1000, 500);
+    expect(edges).toHaveLength(3);
+    expect(edges.some(([a, b]) => a.x === 0 && b.x === 0)).toBe(false);
+    // Moved down to the bottom: the bottom edge sits on the frame side.
+    expect(seamEdges(movedZone(square, { scale: 1, x: 0, y: 0.5 }, 1000, 500), 1000, 500)).toHaveLength(2);
   });
 });

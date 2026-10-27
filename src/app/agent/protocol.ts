@@ -93,10 +93,6 @@ const id = str('Thumbnail (generation) id, e.g. "g_…". Defaults to the image s
 const BRIEF_FIELDS: Record<string, JSONSchema> = {
   videoTitle: str('Title of the YouTube video (context for the model, not drawn on the image).'),
   brief: str('The thumbnail idea: who, what, emotion, composition, setting. Any language.'),
-  overlayText: str('Text to show on the thumbnail. Keep it to 3-4 words; empty for no text.'),
-  textMode: str('"render": the model draws overlayText. "space": leave clean space for text added later.', {
-    enum: ['render', 'space'],
-  }),
   styleId: str('Style preset id from list_styles, or "" for none.'),
 };
 
@@ -106,7 +102,7 @@ export const STUDIO_TOOLS: ToolDef[] = [
   {
     name: 'get_state',
     description:
-      'Snapshot of the studio: current project, brief, output settings, attached references, people (personas), running jobs and the most recent thumbnails with their ids, lineage and scores. Call this first.',
+      'Snapshot of the studio: current project, brief, output settings, attached references, people (personas), running jobs and the most recent thumbnails with their ids and lineage. Call this first.',
     inputSchema: obj({ limit: { type: 'integer', minimum: 1, maximum: 100, description: 'Max thumbnails listed (default 20).' } }),
   },
   {
@@ -219,7 +215,7 @@ export const STUDIO_TOOLS: ToolDef[] = [
   },
   {
     name: 'view_thumbnail',
-    description: 'Look at a thumbnail, with its prompt, lineage and score.',
+    description: 'Look at a thumbnail, with its prompt and lineage.',
     inputSchema: obj({
       id,
       size: str('"preview" (768 px, default) or "full".', { enum: ['preview', 'full'] }),
@@ -234,12 +230,6 @@ export const STUDIO_TOOLS: ToolDef[] = [
     name: 'set_favorite',
     description: 'Star or unstar a thumbnail.',
     inputSchema: obj({ id, favorite: { type: 'boolean' } }, ['favorite']),
-  },
-  {
-    name: 'score_thumbnail',
-    description:
-      'Critique a thumbnail as a YouTube packaging expert: 0-100 score, 6 criteria, strengths, improvements and ready-to-apply edit instructions.',
-    inputSchema: obj({ id }),
   },
   {
     name: 'rank_thumbnails',

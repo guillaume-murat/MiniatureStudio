@@ -8,20 +8,20 @@ import {
   buildGenerationPrompt,
   buildOutpaintPrompt,
   buildRegionEditPrompt,
+  buildHealPrompt,
   buildUpscalePrompt,
   type ImageRole,
-  type TextMode,
 } from '../lib/prompt';
-import { composeReframe, isIdentity, type Reframe } from '../lib/reframe';
+import { composeReframe, composeZoneReframe, isIdentity, isZone, type Point, type Reframe } from '../lib/reframe';
 import { useReframe } from './reframe';
 import { dimensions, highlightRegion, mergeWithMask, normaliseUpload, prepareReference } from '../lib/images';
 import { explainError } from '../lib/errors';
 import { findStyle } from '../lib/styles';
-import { scoreThumbnail, rankThumbnails, type Ranking } from '../lib/ai';
-import type { BrandKit, Generation, GenerationKind, GenerationParams, LibraryImage, Persona, Project, RefImage, RefSource, Score } from '../lib/types';
+import { rankThumbnails, type Ranking } from '../lib/ai';
+import type { BrandKit, Generation, GenerationKind, GenerationParams, LibraryImage, Persona, Project, RefImage, RefSource } from '../lib/types';
 import { useSettings } from './settings';
 import { t } from '../i18n';
-import { drawTextBlocks, cssFont, type TextBlock } from '../lib/textBlocks';
+import { drawTextBlocks, cssFont, isArrow, isVisible, type LayerBlock, type TextBlock } from '../lib/textBlocks';
 import { loadGoogleFont } from '../lib/fonts';
 import { useText } from './text';
 
@@ -39,13 +39,13 @@ export interface Job {
   parentId?: string;
   error?: string;
   controller: AbortController;
+  /** The studio is locked while it runs (reframing: the image being worked on is about to be replaced). */
+  blocking?: boolean;
 }
 
 export interface Brief {
   videoTitle: string;
   brief: string;
-  overlayText: string;
-  textMode: TextMode;
   styleId: string;
 }
 
@@ -86,7 +86,6 @@ interface WorkspaceState {
   /** Moving / zooming the selected image inside its frame (see stores/reframe.ts). */
   reframeMode: boolean;
   hasMask: boolean;
-  scoring: string | null;
   ranking: { ids: string[]; result: Ranking } | null;
   ranking_busy: boolean;
   lastError: ErrorReport | null;
@@ -110,6 +109,8 @@ interface WorkspaceState {
   previewPrompt: () => string;
   /** `mask` overrides the painted mask (the agent describes regions as rectangles). */
   edit: (instruction: string, opts?: { mask?: HTMLCanvasElement }) => Promise<Outcome<Generation>[]>;
+  /** Healing brush: the painted area is repainted to erase seams and hard edges. */
+  heal: () => Promise<Outcome<Generation> | null>;
   /**
    * AI upscale: a 2K version of the image with finer detail, saved as a new
    * version. Editable text is kept as text and redrawn on the upscaled image.
@@ -127,7 +128,6 @@ interface WorkspaceState {
   toggleFavorite: (id: string) => Promise<void>;
   removeGeneration: (id: string) => Promise<void>;
   reuse: (gen: Generation) => void;
-  score: (id: string) => Promise<Outcome<Score>>;
   rankPicked: () => Promise<Outcome<Ranking>>;
   // assets
   reloadPersonas: () => Promise<void>;
@@ -144,12 +144,15 @@ interface WorkspaceState {
    * New version with the image moved / scaled in its frame. Done locally when it
    * still covers the frame; otherwise the model fills the empty areas.
    */
-  reframe: (frame: Reframe) => Promise<Outcome<Generation> | null>;
+  /** Moves the whole image, or only `zone` (fractions of the image) when given. */
+  reframe: (frame: Reframe, zone?: Point[] | null) => Promise<Outcome<Generation> | null>;
   /**
    * Draws the text blocks on the selected image. A text version is updated in
    * place (its blocks stay editable); any other image gets a new text version.
    */
-  applyText: (blocks: TextBlock[]) => Promise<Generation | null>;
+  applyText: (blocks: LayerBlock[]) => Promise<Generation | null>;
+  /** Before reframing: draws the chosen kinds of blocks into the image (they move with it); the others stay editable. */
+  bakeText: (blocks: LayerBlock[], merge: { text: boolean; arrows: boolean }) => Promise<Generation | null>;
   /** Makes a text version's text final: keeps the image, forgets the editable blocks. */
   mergeText: (id: string) => Promise<void>;
   setHasMask: (on: boolean) => void;
@@ -182,25 +185,29 @@ export function registerMaskCanvas(canvas: HTMLCanvasElement | null) {
   maskCanvas = canvas;
 }
 
-const EMPTY_BRAND: BrandKit = {
-  id: 'default',
-  enabled: false,
-  channelName: '',
-  colors: [],
-  font: '',
-  fontStyle: '',
-  notes: '',
-  styleProfile: '',
-  styleRefs: [],
-  sendStyleRefs: false,
-  updatedAt: 0,
-};
+/** A copy of the painted mask: the user may keep painting while the edit runs. */
+function snapshotMask(painted: HTMLCanvasElement): HTMLCanvasElement {
+  const mask = document.createElement('canvas');
+  mask.width = painted.width;
+  mask.height = painted.height;
+  mask.getContext('2d')?.drawImage(painted, 0, 0);
+  return mask;
+}
+
+const EMPTY_BRAND: BrandKit = { id: 'default', channelName: '', colors: [], updatedAt: 0 };
+
+/** Brand kits saved before the merge into the brief panel also had a font, a style profile… and a separate feed picture. */
+function migrateBrand(saved: (BrandKit & { avatar?: Blob }) | undefined): BrandKit {
+  if (!saved) return EMPTY_BRAND;
+  return { id: 'default', channelName: saved.channelName ?? '', colors: saved.colors ?? [], logo: saved.avatar ?? saved.logo, updatedAt: saved.updatedAt ?? 0 };
+}
 
 const BRIEF_KEY = 'nt_brief';
-const EMPTY_BRIEF: Brief = { videoTitle: '', brief: '', overlayText: '', textMode: 'render', styleId: '' };
+const EMPTY_BRIEF: Brief = { videoTitle: '', brief: '', styleId: '' };
 function loadBrief(): Brief {
   try {
-    return { ...EMPTY_BRIEF, ...JSON.parse(localStorage.getItem(BRIEF_KEY) || '{}') };
+    const saved = JSON.parse(localStorage.getItem(BRIEF_KEY) || '{}');
+    return { videoTitle: saved.videoTitle ?? '', brief: saved.brief ?? '', styleId: saved.styleId ?? '' };
   } catch {
     return EMPTY_BRIEF;
   }
@@ -234,18 +241,23 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     });
   }
 
-  function brandImages(): Array<{ blob: Blob; role: ImageRole }> {
-    const { brand } = get();
-    if (!brand.enabled) return [];
-    const out: Array<{ blob: Blob; role: ImageRole }> = [];
-    if (brand.sendStyleRefs) out.push(...brand.styleRefs.slice(0, 3).map((blob) => ({ blob, role: { kind: 'style' } as ImageRole })));
-    if (brand.logo) out.push({ blob: brand.logo, role: { kind: 'logo' } });
-    // The specimen only helps when the model has text to draw.
-    const { overlayText, textMode } = get().brief;
-    if (brand.font && brand.fontSpecimen && overlayText.trim() && textMode === 'render') {
-      out.push({ blob: brand.fontSpecimen, role: { kind: 'font', family: brand.font } });
-    }
-    return out;
+  /** Edits only the area of `mask` (white/opaque = edit); the rest is merged back untouched. */
+  async function regionEdit(source: Generation, mask: HTMLCanvasElement, prompt: string, fullPrompt: string, apiKey: string) {
+    const highlighted = await highlightRegion(source.blob, mask);
+    return runJob({
+      kind: 'region',
+      prompt,
+      fullPrompt,
+      // Clean image first (what gets edited), marked copy second (where to edit):
+      // sending only the marked copy lets the magenta tint bleed into the result.
+      images: [source.blob, highlighted],
+      params: { ...useSettings.getState().params(), aspectRatio: source.params.aspectRatio },
+      parentId: source.id,
+      videoTitle: source.videoTitle,
+      apiKey,
+      finalize: (edited) => mergeWithMask(source.blob, edited, mask),
+      batch: { shown: false },
+    });
   }
 
   /** Images and full prompt for the current brief, shared by `generate` and `previewPrompt`. */
@@ -253,18 +265,15 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     const { brief, refs } = get();
     const attached = [
       ...personaImages(),
-      ...brandImages(),
       ...refs.map((r) => ({ blob: r.blob, role: { kind: 'reference', label: r.label } as ImageRole })),
     ];
     const fullPrompt = buildGenerationPrompt({
       brief: brief.brief,
-      overlayText: brief.overlayText,
-      textMode: brief.textMode,
       videoTitle: brief.videoTitle,
       aspectRatio: useSettings.getState().aspectRatio,
       style: findStyle(brief.styleId)?.prompt,
       roles: attached.map((a) => a.role),
-      brand: get().brand,
+      colors: get().brand.colors,
     });
     return { attached, fullPrompt };
   }
@@ -296,15 +305,17 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     /** Post-process the raw model output (region edits merge it back into the original). */
     finalize?: (blob: Blob) => Promise<Blob>;
     /** Text blocks to keep editable over the result (upscaling a text version). */
-    textBlocks?: TextBlock[];
+    textBlocks?: LayerBlock[];
     /** Send the images at this size instead of the usual reference downscale. */
     reference?: { maxSide: number; bytes: number };
     /** Shared by the jobs of one batch: the first result to arrive gets shown. */
     batch: { shown: boolean };
+    blocking?: boolean;
   }): Promise<Outcome<Generation>> {
     const job: Job = {
       id: db.uid('j_'),
       kind: opts.kind,
+      blocking: opts.blocking,
       status: 'running',
       startedAt: Date.now(),
       elapsed: 0,
@@ -386,7 +397,6 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     textMode: false,
     reframeMode: false,
     hasMask: false,
-    scoring: null,
     ranking: null,
     ranking_busy: false,
     lastError: null,
@@ -398,7 +408,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         db.listLibrary(),
         db.getBrandKit(),
       ]);
-      set({ projects, personas, library, brand: { ...EMPTY_BRAND, ...brand } });
+      set({ projects, personas, library, brand: migrateBrand(brand) });
       let lastId: string | null = null;
       try {
         lastId = localStorage.getItem('nt_project');
@@ -489,6 +499,14 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       set({ personaIds: [...ids, id] });
     },
 
+    heal: async () => {
+      const source = selectedGeneration(get());
+      if (!source || !get().hasMask || !maskCanvas) return null;
+      const apiKey = checkKey();
+      if (!apiKey) return null;
+      return regionEdit(source, snapshotMask(maskCanvas), t('heal.done'), buildHealPrompt(), apiKey);
+    },
+
     previewPrompt: () => generationRequest().fullPrompt,
 
     generate: async () => {
@@ -576,34 +594,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       const params: GenerationParams = { ...settings.params(), aspectRatio: source.params.aspectRatio };
       const painted = get().maskMode && get().hasMask ? maskCanvas : null;
 
-      if (opts?.mask || painted) {
-        let mask = opts?.mask;
-        if (!mask && painted) {
-          // Snapshot the mask: the user may keep painting while this runs.
-          mask = document.createElement('canvas');
-          mask.width = painted.width;
-          mask.height = painted.height;
-          mask.getContext('2d')?.drawImage(painted, 0, 0);
-        }
-        if (!mask) return [];
-        const regionMask = mask;
-        const highlighted = await highlightRegion(source.blob, regionMask);
-        const outcome = await runJob({
-          kind: 'region',
-          prompt: instruction,
-          fullPrompt: buildRegionEditPrompt(instruction),
-          // Clean image first (what gets edited), marked copy second (where to edit):
-          // sending only the marked copy lets the magenta tint bleed into the result.
-          images: [source.blob, highlighted],
-          params,
-          parentId: source.id,
-          videoTitle: source.videoTitle,
-          apiKey,
-          finalize: (edited) => mergeWithMask(source.blob, edited, regionMask),
-          batch: { shown: false },
-        });
-        return [outcome];
-      }
+      const mask = opts?.mask ?? (painted ? snapshotMask(painted) : null);
+      if (mask) return [await regionEdit(source, mask, instruction, buildRegionEditPrompt(instruction), apiKey)];
 
       // Re-send selected people so their identity doesn't drift over successive edits.
       const people = personaImages().slice(0, MAX_IMAGES - 1);
@@ -663,30 +655,6 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       const s = useSettings.getState();
       s.set({ model: gen.params.model, aspectRatio: gen.params.aspectRatio, resolution: gen.params.resolution });
       if (gen.kind === 'generate' || gen.kind === 'import') get().setBrief({ brief: gen.prompt, videoTitle: gen.videoTitle ?? get().brief.videoTitle });
-    },
-
-    score: async (id) => {
-      const gen = get().generations.find((g) => g.id === id);
-      if (!gen) return { error: t('agent.unknownImage', { id }) };
-      const apiKey = checkKey();
-      if (!apiKey) return { error: t('brief.needKey') };
-      set({ scoring: id });
-      try {
-        const settings = useSettings.getState();
-        const score = await scoreThumbnail(
-          { provider: settings.provider, apiKey },
-          gen.blob,
-          { videoTitle: gen.videoTitle || get().brief.videoTitle, lang: settings.lang },
-        );
-        const updated = { ...gen, score };
-        await db.putGeneration(updated);
-        set({ generations: get().generations.map((g) => (g.id === id ? updated : g)) });
-        return { value: score };
-      } catch (error) {
-        return { error: reportError(error, set) };
-      } finally {
-        set({ scoring: null });
-      }
     },
 
     rankPicked: async () => {
@@ -762,14 +730,14 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       });
     },
 
-    reframe: async (frame) => {
+    reframe: async (frame, zone) => {
       const source = selectedGeneration(get());
       if (!source || isIdentity(frame)) return null;
       // A text version keeps its text where it is: only the image under it moves.
       const base = source.textLayer?.base ?? source.blob;
       const blocks = source.textLayer?.blocks;
       try {
-        const { composed, mask, width, height } = await composeReframe(base, frame);
+        const { composed, mask, width, height } = isZone(zone) ? await composeZoneReframe(base, frame, zone) : await composeReframe(base, frame);
         if (!mask) {
           // Still covers the frame (zoom in / crop): no model needed.
           const textLayer = blocks ? { base: composed, blocks } : undefined;
@@ -806,9 +774,10 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
           apiKey,
           textBlocks: blocks,
           // Only the empty areas come from the model; the moved image stays pixel-exact.
-          finalize: (generated) => mergeWithMask(composed, generated, mask),
+          finalize: (generated) => mergeWithMask(composed, generated, mask, 16, true),
           reference: { maxSide: 2048, bytes: 3_000_000 },
           batch: { shown: false },
+          blocking: true,
         });
       } catch (error) {
         reportError(error, set);
@@ -818,13 +787,13 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
 
     applyText: async (blocks) => {
       const source = get().generations.find((g) => g.id === get().selectedId);
-      const used = blocks.filter((b) => b.text.trim());
+      const used = blocks.filter(isVisible);
       // A text version may end up with no text (all removed); a plain image needs some.
       if (!source || (!used.length && !source.textLayer)) return null;
       try {
         const base = source.textLayer?.base ?? source.blob;
         const blob = await renderText(base, used);
-        const summary = used.map((b) => b.text.replace(/\s+/g, ' ').trim()).join(' · ');
+        const summary = used.map((b) => (isArrow(b) ? '➜' : b.text.replace(/\s+/g, ' ').trim())).join(' · ');
         const textLayer = { base, blocks: used };
         let generation: Generation;
         if (source.textLayer) {
@@ -859,6 +828,41 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       }
     },
 
+    bakeText: async (blocks, merge) => {
+      const source = selectedGeneration(get());
+      const used = blocks.filter(isVisible);
+      const baked = used.filter((b) => (isArrow(b) ? merge.arrows : merge.text));
+      if (!source) return null;
+      // Nothing to draw into the image: keep the blocks as an editable layer.
+      if (!baked.length) return used.length || source.textLayer ? get().applyText(used) : source;
+      try {
+        const kept = used.filter((b) => !baked.includes(b));
+        const base = await renderText(source.textLayer?.base ?? source.blob, baked);
+        const generation: Generation = {
+          id: db.uid('g_'),
+          projectId: source.projectId,
+          parentId: source.id,
+          kind: 'text',
+          prompt: used.map((b) => (isArrow(b) ? '➜' : b.text.replace(/\s+/g, ' ').trim())).join(' · '),
+          fullPrompt: '',
+          videoTitle: source.videoTitle,
+          params: source.params,
+          blob: kept.length ? await renderText(base, kept) : base,
+          width: source.width,
+          height: source.height,
+          createdAt: Date.now(),
+          ...(kept.length ? { textLayer: { base, blocks: kept } } : {}),
+        };
+        await db.putGeneration(generation);
+        useText.getState().clear();
+        set({ generations: [generation, ...get().generations], selectedId: generation.id, textMode: false });
+        return generation;
+      } catch (error) {
+        reportError(error, set);
+        return null;
+      }
+    },
+
     mergeText: async (id) => {
       const gen = get().generations.find((g) => g.id === id);
       if (!gen?.textLayer) return;
@@ -873,10 +877,11 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
 });
 
 /** `base` with the text blocks drawn on it, at the image's own resolution. */
-async function renderText(base: Blob, blocks: TextBlock[]): Promise<Blob> {
+async function renderText(base: Blob, blocks: LayerBlock[]): Promise<Blob> {
   // The canvas only draws with fonts the page has loaded.
-  await Promise.all([...new Set(blocks.map((b) => b.font))].map((f) => loadGoogleFont(f).catch(() => undefined)));
-  await Promise.all(blocks.map((b) => document.fonts.load(cssFont(b, 48)).catch(() => undefined)));
+  const texts = blocks.filter((b): b is TextBlock => !isArrow(b));
+  await Promise.all([...new Set(texts.map((b) => b.font))].map((f) => loadGoogleFont(f).catch(() => undefined)));
+  await Promise.all(texts.map((b) => document.fonts.load(cssFont(b, 48)).catch(() => undefined)));
   const bitmap = await createImageBitmap(base);
   const canvas = document.createElement('canvas');
   canvas.width = bitmap.width;

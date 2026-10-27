@@ -1,17 +1,20 @@
 import { create } from 'zustand';
-import { newTextBlock, type TextBlock } from '../lib/textBlocks';
+import { newArrowBlock, newTextBlock, type ArrowBlock, type LayerBlock, type TextBlock } from '../lib/textBlocks';
 
-/** Text blocks being placed over the selected image, before they are applied. */
+type Patch = Partial<Omit<TextBlock, 'id' | 'kind'>> | Partial<Omit<ArrowBlock, 'id' | 'kind'>>;
+
+/** Text blocks and arrows being placed over the selected image, before they are applied. */
 interface TextState {
-  blocks: TextBlock[];
+  blocks: LayerBlock[];
   selectedId: string | null;
   add: (font: string, partial?: Partial<TextBlock>) => void;
-  update: (id: string, patch: Partial<TextBlock>) => void;
+  addArrow: (partial?: Partial<ArrowBlock>) => void;
+  update: (id: string, patch: Patch) => void;
   remove: (id: string) => void;
   select: (id: string | null) => void;
   clear: () => void;
   /** Reopens the blocks saved on a text version. */
-  load: (blocks: TextBlock[]) => void;
+  load: (blocks: LayerBlock[]) => void;
 }
 
 export const useText = create<TextState>((set, get) => ({
@@ -23,7 +26,13 @@ export const useText = create<TextState>((set, get) => ({
     const block = newTextBlock(font, { y: 0.5 + offset, ...partial });
     set({ blocks: [...get().blocks, block], selectedId: block.id });
   },
-  update: (id, patch) => set({ blocks: get().blocks.map((b) => (b.id === id ? { ...b, ...patch } : b)) }),
+  addArrow: (partial) => {
+    const offset = (get().blocks.length % 5) * 0.06;
+    const block = newArrowBlock({ ...partial });
+    const moved = { ...block, x1: block.x1 + offset, x2: block.x2 + offset, y1: block.y1 + offset, y2: block.y2 + offset };
+    set({ blocks: [...get().blocks, moved], selectedId: moved.id });
+  },
+  update: (id, patch) => set({ blocks: get().blocks.map((b) => (b.id === id ? ({ ...b, ...patch } as LayerBlock) : b)) }),
   remove: (id) => set({ blocks: get().blocks.filter((b) => b.id !== id), selectedId: get().selectedId === id ? null : get().selectedId }),
   select: (id) => set({ selectedId: id }),
   clear: () => set({ blocks: [], selectedId: null }),
