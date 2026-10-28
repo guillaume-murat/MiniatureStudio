@@ -108,11 +108,9 @@ export async function deleteLibraryImage(id: string): Promise<void> {
   await (await getDB()).delete('library', id);
 }
 
+/** The brand kit shared by all projects before each project had its own (read once per older project). */
 export async function getBrandKit(): Promise<BrandKit | undefined> {
   return (await getDB()).get('brand', 'default');
-}
-export async function putBrandKit(kit: BrandKit): Promise<void> {
-  await (await getDB()).put('brand', kit);
 }
 
 /** Ask the browser not to evict our data under storage pressure. */

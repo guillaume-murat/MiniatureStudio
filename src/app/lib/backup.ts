@@ -77,7 +77,8 @@ export async function exportBackup(): Promise<Blob> {
     format: FORMAT,
     version: VERSION,
     exportedAt: new Date().toISOString(),
-    projects,
+    // Projects hold Blobs too (references, logo, banner).
+    projects: await Promise.all(projects.map((p) => dehydrate(p, files, p.id))) as Project[],
     generations: await Promise.all(generations.map((g) => dehydrate(g, files, g.id))),
     personas: await Promise.all(personas.map((p) => dehydrate(p, files, p.id))),
     library: await Promise.all(library.map((l) => dehydrate(l, files, l.id))),
@@ -99,7 +100,7 @@ export async function importBackup(file: Blob): Promise<number> {
   const tx = db.transaction(['projects', 'generations', 'personas', 'library', 'brand'], 'readwrite');
   let count = 0;
   for (const p of manifest.projects) {
-    await tx.objectStore('projects').put(p);
+    await tx.objectStore('projects').put(hydrate(p, files) as Project);
     count++;
   }
   for (const g of manifest.generations) {

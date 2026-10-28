@@ -18,6 +18,7 @@ import { ErrorDialog } from './components/dialogs/ErrorDialog';
 import { CommandMenu } from './components/dialogs/CommandMenu';
 import { AgentDialog } from './components/dialogs/AgentDialog';
 import { PromptDialog } from './components/dialogs/PromptDialog';
+import { NewProjectDialog } from './components/dialogs/NewProjectDialog';
 import { useAgent } from './agent/bridge';
 import { useApplyTheme } from './hooks/use-theme';
 import { useMediaQuery } from './hooks/use-media-query';
@@ -176,6 +177,7 @@ export default function App() {
       <AgentDialog />
       <PromptDialog />
       <ReframeTextDialog />
+      <NewProjectDialog />
       <BlockingJobOverlay />
       {/* Bottom-right would cover the mobile tab bar */}
       <Toaster position={isDesktop ? 'bottom-right' : 'top-center'} />

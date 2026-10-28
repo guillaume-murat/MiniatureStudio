@@ -1,4 +1,10 @@
 export const en = {
+  newProject: {
+    title: 'New project',
+    description: 'It starts empty: brief, references, channel, colours, people and output belong to each project.',
+    name: 'Project name',
+    create: 'Create project',
+  },
   common: {
     cancel: 'Cancel',
     save: 'Save',

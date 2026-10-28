@@ -37,7 +37,7 @@ export const MOD = isMac ? '⌘' : 'Ctrl';
 
 function ProjectSwitcher() {
   const t = useT();
-  const { projects, projectId, openProject, newProject, renameProject, removeProject } = useWorkspace();
+  const { projects, projectId, openProject, renameProject, removeProject } = useWorkspace();
   const current = projects.find((p) => p.id === projectId);
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState('');
@@ -64,7 +64,7 @@ function ProjectSwitcher() {
               ))}
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => newProject()}>
+            <DropdownMenuItem onSelect={() => useUI.getState().open('newProject')}>
               <Plus /> {t('topbar.newProject')}
             </DropdownMenuItem>
             <DropdownMenuItem

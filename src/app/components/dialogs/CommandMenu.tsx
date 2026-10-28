@@ -72,7 +72,7 @@ export function CommandMenu() {
         </CommandGroup>
         <CommandSeparator />
         <CommandGroup heading={t('commands.switchProject')}>
-          <CommandItem onSelect={run(() => ws.newProject())}>
+          <CommandItem onSelect={run(() => openDialog('newProject'))}>
             <Plus /> {t('commands.newProject')}
           </CommandItem>
           {ws.projects.map((p) => (

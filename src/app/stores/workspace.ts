@@ -20,7 +20,23 @@ import { randomSeed } from '../lib/channel';
 import { newGeneration, type VersionInput } from '../lib/versions';
 import { findStyle } from '../lib/styles';
 import { rankThumbnails, type Ranking } from '../lib/ai';
-import type { AspectRatio, BrandKit, ChannelPage, Generation, GenerationAction, GenerationKind, GenerationParams, LibraryImage, ModelId, Persona, Project, RefImage, RefSource } from '../lib/types';
+import type {
+  AspectRatio,
+  BrandKit,
+  ChannelPage,
+  Generation,
+  GenerationAction,
+  GenerationKind,
+  GenerationParams,
+  LibraryImage,
+  ModelId,
+  Persona,
+  Project,
+  ProjectInputs,
+  ProjectOutput,
+  RefImage,
+  RefSource,
+} from '../lib/types';
 import { useSettings } from './settings';
 import { t, translate } from '../i18n';
 import { isArrow, isVisible, type LayerBlock } from '../lib/textBlocks';
@@ -45,11 +61,7 @@ export interface Job {
   blocking?: boolean;
 }
 
-export interface Brief {
-  videoTitle: string;
-  brief: string;
-  styleId: string;
-}
+export type Brief = ProjectInputs['brief'];
 
 /** What an action produced, for callers that need it (the agent bridge); the UI ignores it. */
 export interface Outcome<T> {
@@ -229,11 +241,55 @@ const BLANK_SIZES: Record<AspectRatio, { width: number; height: number }> = {
 /** The name a new project gets, in either language: a project still named so was never renamed. */
 const DEFAULT_PROJECT_NAMES = new Set([translate('fr', 'topbar.untitled'), translate('en', 'topbar.untitled')]);
 
-const BRIEF_KEY = 'nt_brief';
 const EMPTY_BRIEF: Brief = { videoTitle: '', brief: '', styleId: '' };
+
+/** A new project's output settings. */
+const DEFAULT_OUTPUT: ProjectOutput = { model: 'nano-banana-pro', aspectRatio: '16:9', resolution: '1K', format: 'png', safety: 'block_only_high', count: 1 };
+const OUTPUT_KEYS = ['model', 'aspectRatio', 'resolution', 'format', 'safety', 'count'] as const;
+
+function currentOutput(): ProjectOutput {
+  const s = useSettings.getState();
+  return { model: s.model, aspectRatio: s.aspectRatio, resolution: s.resolution, format: s.format, safety: s.safety, count: s.count };
+}
+
+// ─── Per-project brief panel ─────────────────────────────
+// The brief panel (brief, references, channel, people, output) is saved in its
+// project, shortly after each change. Projects made before that take the values
+// that were shared then (the last brief, brand kit, people and output settings).
+
+/** The project whose inputs are on screen; null while switching (nothing gets saved then). */
+let loadedProjectId: string | null = null;
+let saveTimer: ReturnType<typeof setTimeout> | undefined;
+/** Output settings at launch, for projects made before they were per project. */
+let legacyOutput: ProjectOutput = DEFAULT_OUTPUT;
+/** Every person record known, to spot the one just created (it joins the open project). */
+let knownPersonaIds = new Set<string>();
+
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => void flushSave(), 300);
+}
+
+function cancelSave() {
+  clearTimeout(saveTimer);
+  saveTimer = undefined;
+}
+
+async function flushSave() {
+  cancelSave();
+  const ws = useWorkspace.getState();
+  const project = ws.projects.find((p) => p.id === ws.projectId);
+  if (!project || loadedProjectId !== project.id) return;
+  const inputs: ProjectInputs = { brief: ws.brief, refs: ws.refs, brand: ws.brand, people: ws.personas.map((p) => p.id), output: currentOutput() };
+  const updated = { ...project, inputs };
+  useWorkspace.setState({ projects: useWorkspace.getState().projects.map((p) => (p.id === updated.id ? updated : p)) });
+  await db.putProject(updated);
+}
+
+/** The brief that was shared by all projects (kept in localStorage before projects had their own). */
 function loadBrief(): Brief {
   try {
-    const saved = JSON.parse(localStorage.getItem(BRIEF_KEY) || '{}');
+    const saved = JSON.parse(localStorage.getItem('nt_brief') || '{}');
     return { videoTitle: saved.videoTitle ?? '', brief: saved.brief ?? '', styleId: saved.styleId ?? '' };
   } catch {
     return EMPTY_BRIEF;
@@ -442,7 +498,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     selectedId: null,
     pickedIds: [],
     jobs: [],
-    brief: loadBrief(),
+    brief: EMPTY_BRIEF,
     refs: [],
     personaIds: [],
     personas: [],
@@ -457,14 +513,9 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     lastError: null,
 
     init: async () => {
-      const [projects, personas, library, brand] = await Promise.all([
-        db.listProjects(),
-        db.listPersonas(),
-        db.listLibrary(),
-        db.getBrandKit(),
-      ]);
-      // Every registered person is in the thumbnails by default (up to the limit); unticking one lasts until the next launch.
-      set({ projects, personas, library, brand: migrateBrand(brand), personaIds: personas.slice(0, MAX_PERSONAS).map((p) => p.id) });
+      const [projects, library] = await Promise.all([db.listProjects(), db.listLibrary()]);
+      legacyOutput = currentOutput();
+      set({ projects, library });
       let lastId: string | null = null;
       try {
         lastId = localStorage.getItem('nt_project');
@@ -479,17 +530,52 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
 
     newProject: async (name) => {
       const now = Date.now();
-      const project: Project = { id: db.uid('p_'), name: name ?? t('topbar.untitled'), createdAt: now, updatedAt: now };
+      // A new project starts with an empty brief panel.
+      const project: Project = {
+        id: db.uid('p_'),
+        name: name ?? t('topbar.untitled'),
+        createdAt: now,
+        updatedAt: now,
+        inputs: { brief: EMPTY_BRIEF, refs: [], brand: { ...EMPTY_BRAND, updatedAt: now }, people: [], output: DEFAULT_OUTPUT },
+      };
       await db.putProject(project);
       set({ projects: [project, ...get().projects] });
       await get().openProject(project.id);
     },
 
     openProject: async (id) => {
+      await flushSave();
+      loadedProjectId = null;
       get().generations.forEach((g) => revoke(g.blob));
-      const generations = await db.listGenerations(id);
+      const [generations, everyone] = await Promise.all([db.listGenerations(id), db.listPersonas()]);
+      knownPersonaIds = new Set(everyone.map((p) => p.id));
+      const project = get().projects.find((p) => p.id === id);
+      const inputs: ProjectInputs = project?.inputs ?? {
+        brief: loadBrief(),
+        refs: [],
+        brand: migrateBrand(await db.getBrandKit()),
+        people: everyone.map((p) => p.id),
+        output: legacyOutput,
+      };
+      const personas = inputs.people.map((pid) => everyone.find((p) => p.id === pid)).filter((p): p is Persona => !!p);
       get().setTool(null);
-      set({ projectId: id, generations, selectedId: generations[0]?.id ?? null, pickedIds: [], ranking: null });
+      useSettings.getState().set(inputs.output);
+      set({
+        projectId: id,
+        generations,
+        selectedId: generations[0]?.id ?? null,
+        pickedIds: [],
+        ranking: null,
+        brief: inputs.brief,
+        refs: inputs.refs,
+        brand: inputs.brand,
+        personas,
+        // Every person of the project is in the thumbnails by default (up to the limit); unticking one lasts until the project is reopened.
+        personaIds: personas.slice(0, MAX_PERSONAS).map((p) => p.id),
+      });
+      loadedProjectId = id;
+      // An older project gets its own copy of what was shared.
+      if (!project?.inputs) scheduleSave();
       try {
         localStorage.setItem('nt_project', id);
       } catch {
@@ -515,6 +601,10 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     },
 
     removeProject: async (id) => {
+      if (id === loadedProjectId) {
+        cancelSave();
+        loadedProjectId = null;
+      }
       await db.deleteProject(id);
       const projects = get().projects.filter((p) => p.id !== id);
       set({ projects });
@@ -525,13 +615,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     },
 
     setBrief: (patch) => {
-      const brief = { ...get().brief, ...patch };
-      set({ brief });
-      try {
-        localStorage.setItem(BRIEF_KEY, JSON.stringify(brief));
-      } catch {
-        /* ignore */
-      }
+      set({ brief: { ...get().brief, ...patch } });
+      scheduleSave();
     },
 
     addFiles: async (files, source = 'upload') => {
@@ -552,11 +637,18 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         return false;
       }
       set({ refs: [...get().refs, { id: db.uid('r_'), blob, source, label }] });
+      scheduleSave();
       return true;
     },
 
-    removeRef: (id) => set({ refs: get().refs.filter((r) => r.id !== id) }),
-    clearRefs: () => set({ refs: [] }),
+    removeRef: (id) => {
+      set({ refs: get().refs.filter((r) => r.id !== id) });
+      scheduleSave();
+    },
+    clearRefs: () => {
+      set({ refs: [] });
+      scheduleSave();
+    },
 
     togglePersona: (id) => {
       const ids = get().personaIds;
@@ -765,19 +857,23 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     },
 
     reloadPersonas: async () => {
-      const known = new Set(get().personas.map((p) => p.id));
-      const personas = await db.listPersonas();
-      // Deleted people leave the selection; people just added join it, while there is room.
+      const everyone = await db.listPersonas();
+      // A person just created joins the open project (and the selection, while there is room); deleted ones leave.
+      const created = everyone.filter((p) => !knownPersonaIds.has(p.id));
+      knownPersonaIds = new Set(everyone.map((p) => p.id));
+      const people = [...get().personas.map((p) => p.id), ...created.map((p) => p.id)];
+      const personas = people.map((id) => everyone.find((p) => p.id === id)).filter((p): p is Persona => !!p);
       const ids = get().personaIds.filter((id) => personas.some((p) => p.id === id));
-      for (const p of personas) if (!known.has(p.id) && !ids.includes(p.id) && ids.length < MAX_PERSONAS) ids.push(p.id);
+      for (const p of created) if (ids.length < MAX_PERSONAS) ids.push(p.id);
       set({ personas, personaIds: ids });
+      scheduleSave();
     },
     reloadLibrary: async () => set({ library: await db.listLibrary() }),
     saveBrand: async (kit) => {
       const previous = get().brand.channelName;
       const updated = { ...kit, updatedAt: Date.now() };
-      await db.putBrandKit(updated);
       set({ brand: updated });
+      scheduleSave();
       // A project still under its default name takes the channel's name; a name the user chose is kept.
       const project = get().projects.find((p) => p.id === get().projectId);
       const name = updated.channelName.trim();
@@ -917,3 +1013,7 @@ export function selectedGeneration(s: WorkspaceState): Generation | undefined {
   return s.generations.find((g) => g.id === s.selectedId);
 }
 
+// Output settings live in the settings store (shared with the request code) but belong to the open project.
+useSettings.subscribe((state, previous) => {
+  if (OUTPUT_KEYS.some((k) => state[k] !== previous[k])) scheduleSave();
+});

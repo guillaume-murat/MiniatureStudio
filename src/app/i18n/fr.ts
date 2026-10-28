@@ -1,6 +1,12 @@
 import type { Dict } from './en';
 
 export const fr: Dict = {
+  newProject: {
+    title: 'Nouveau projet',
+    description: 'Il part vide : brief, références, chaîne, couleurs, personnes et sortie sont propres à chaque projet.',
+    name: 'Nom du projet',
+    create: 'Créer le projet',
+  },
   common: {
     cancel: 'Annuler',
     save: 'Enregistrer',

@@ -52,9 +52,23 @@ export interface Project {
   name: string;
   videoTitle?: string;
   channelPage?: ChannelPage;
+  /** Everything in the brief panel, as left in this project (older projects get it on first open). */
+  inputs?: ProjectInputs;
   createdAt: number;
   updatedAt: number;
 }
+
+/** The brief panel of a project: each project starts empty and keeps its own. Only app settings (provider, keys, theme, language) are shared. */
+export interface ProjectInputs {
+  brief: { videoTitle: string; brief: string; styleId: string };
+  refs: RefImage[];
+  brand: BrandKit;
+  /** The people added to this project (records in the `personas` store). */
+  people: string[];
+  output: ProjectOutput;
+}
+
+export type ProjectOutput = Pick<GenerationParams, 'model' | 'aspectRatio' | 'resolution' | 'format' | 'safety'> & { count: 1 | 2 | 4 };
 
 /** The channel page preview of a project: what its six videos show. */
 export interface ChannelPage {
