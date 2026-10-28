@@ -71,7 +71,7 @@ export interface Channel {
   videos: Array<{ title: string }>;
 }
 
-export interface ChannelPageInput {
+interface ChannelPageInput {
   channel: Channel;
   /** Thumbnail per video, in `channel.videos` order. */
   thumbnails: Array<Blob | undefined>;
@@ -152,7 +152,7 @@ type Palette = ReturnType<typeof palette>;
 let fontsReady: Promise<void> | null = null;
 
 /** Roboto is bundled: system fonts would make the export depend on the machine. */
-export function loadPageFonts(): Promise<void> {
+function loadPageFonts(): Promise<void> {
   fontsReady ??= (async () => {
     const faces = [
       new FontFace('Roboto', `url(${roboto400})`, { weight: '400' }),

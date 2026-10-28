@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowBigRight, Bold, Check, CircleDashed, Layers, Loader2, Merge, MoveHorizontal, MoveRight, PaintBucket, Plus, ArrowUpRight, RotateCw, Square, Trash2, X } from 'lucide-react';
+import { ArrowBigRight, Bold, Check, CircleDashed, Layers, Loader2, Merge, MoveHorizontal, MoveRight, PaintBucket, Plus, RotateCw, Square, Trash2, X } from 'lucide-react';
 import { Button } from '../ui/button';
 import {
   AlertDialog,
@@ -23,6 +23,7 @@ import { selectedGeneration, useWorkspace } from '../../stores/workspace';
 import { loadGoogleFont } from '../../lib/fonts';
 import {
   arrowGeometry,
+  arrowShadowOpacity,
   bendThrough,
   clamp01,
   dashPattern,
@@ -50,7 +51,7 @@ type Drag =
   | { kind: 'arrow-start' | 'arrow-tip' | 'arrow-bend'; id: string };
 
 /** The arrow as SVG, drawn like the canvas render (lib/textBlocks.ts): shadow, border, then colour. */
-function ArrowShape({ block, width, height, selected, onGrab }: { block: ArrowBlock; width: number; height: number; selected: boolean; onGrab: (e: React.PointerEvent) => void }) {
+function ArrowShape({ block, width, height, selected, onGrab }: { block: ArrowBlock; width: number; height: number; selected: boolean; onGrab?: (e: React.PointerEvent) => void }) {
   const g = arrowGeometry(block, width, height);
   const dash = block.dashed ? dashPattern(g.stroke).join(' ') : undefined;
   const layer = (color: string, extra: number) => (
@@ -61,18 +62,28 @@ function ArrowShape({ block, width, height, selected, onGrab }: { block: ArrowBl
   );
   return (
     <svg className="pointer-events-none absolute inset-0 size-full overflow-visible" viewBox={`0 0 ${width} ${height}`}>
-      <g style={block.shadow ? { filter: `drop-shadow(0 ${g.stroke * 0.4}px ${g.stroke * 0.75}px rgba(0, 0, 0, 0.55))` } : undefined}>
+      {/* An SVG filter, not CSS drop-shadow: WebKit (the macOS app) ignores CSS filters on SVG children. Same offset and blur as the canvas render. */}
+      {block.shadow && (
+        <defs>
+          <filter id={`shadow-${block.id}`} filterUnits="userSpaceOnUse" x={-width} y={-height} width={3 * width} height={3 * height}>
+            <feDropShadow dx={0} dy={g.stroke * 0.4} stdDeviation={g.stroke * 0.75} floodColor="#000" floodOpacity={arrowShadowOpacity(block)} />
+          </filter>
+        </defs>
+      )}
+      <g filter={block.shadow ? `url(#shadow-${block.id})` : undefined}>
         {block.outline && layer(block.outline, 2 * g.border)}
         {layer(block.color, 0)}
       </g>
       {selected && <path d={g.shaft} fill="none" stroke="var(--primary)" strokeWidth={1.5} strokeDasharray="4 3" />}
       {/* Wider invisible hit area along the line and the heads */}
-      <g className="pointer-events-auto cursor-move" onPointerDown={onGrab} stroke="transparent" fill="transparent" strokeWidth={Math.max(18, g.stroke + 2 * g.border + 8)} strokeLinecap="round">
-        <path d={g.shaft} fill="none" />
-        {g.heads.map((d) => (
-          <path key={d} d={d} />
-        ))}
-      </g>
+      {onGrab && (
+        <g className="pointer-events-auto cursor-move" onPointerDown={onGrab} stroke="transparent" fill="transparent" strokeWidth={Math.max(18, g.stroke + 2 * g.border + 8)} strokeLinecap="round">
+          <path d={g.shaft} fill="none" />
+          {g.heads.map((d) => (
+            <path key={d} d={d} />
+          ))}
+        </g>
+      )}
     </svg>
   );
 }
@@ -94,7 +105,7 @@ function Handle({ x, y, onGrab, label, round = true }: { x: number; y: number; o
  * rotate (Shift snaps to 15°). Arrows: drag the line to move, the ends to
  * place them, the diamond in the middle to bend it.
  */
-export function TextOverlay({ width, height }: { width: number; height: number }) {
+export function TextOverlay({ width, height, kind }: { width: number; height: number; kind: 'text' | 'arrow' }) {
   const t = useT();
   const { blocks, selectedId, select, update } = useText();
   const ref = useRef<HTMLDivElement>(null);
@@ -157,12 +168,14 @@ export function TextOverlay({ width, height }: { width: number; height: number }
     >
       {blocks.map((block) => {
         const selected = block.id === selectedId;
+        // The other tool's blocks stay visible for context, faded and out of reach.
+        const editable = isArrow(block) === (kind === 'arrow');
         if (isArrow(block)) {
           const g = arrowGeometry(block, width, height);
           return (
-            <div key={block.id} className="pointer-events-none absolute inset-0">
-              <ArrowShape block={block} width={width} height={height} selected={selected} onGrab={(e) => start(e, block, 'arrow-move')} />
-              {selected && (
+            <div key={block.id} className={cn('pointer-events-none absolute inset-0', !editable && 'opacity-40')}>
+              <ArrowShape block={block} width={width} height={height} selected={selected} onGrab={editable ? (e) => start(e, block, 'arrow-move') : undefined} />
+              {selected && editable && (
                 <div className="pointer-events-auto">
                   <Handle x={g.start.x} y={g.start.y} onGrab={(e) => start(e, block, 'arrow-start')} label={t('arrow.start')} />
                   <Handle x={g.tip.x} y={g.tip.y} onGrab={(e) => start(e, block, 'arrow-tip')} label={t('arrow.tip')} />
@@ -176,7 +189,7 @@ export function TextOverlay({ width, height }: { width: number; height: number }
         return (
           <div
             key={block.id}
-            className="absolute"
+            className={cn('absolute', !editable && 'pointer-events-none opacity-40')}
             style={{ left: `${block.x * 100}%`, top: `${block.y * 100}%`, transform: `translate(-50%, -50%) rotate(${block.rotation}deg)` }}
           >
             <div
@@ -196,7 +209,7 @@ export function TextOverlay({ width, height }: { width: number; height: number }
             >
               {block.text || ' '}
             </div>
-            {selected && (
+            {selected && editable && (
               <>
                 <span className="pointer-events-none absolute bottom-full left-1/2 h-4 w-px -translate-x-1/2 bg-primary" />
                 <button
@@ -306,6 +319,17 @@ function ArrowControls({ block }: { block: ArrowBlock }) {
       <IconToggle pressed={block.shadow} onPressedChange={(shadow) => patch({ shadow })} label={t('arrow.shadow')}>
         <Layers />
       </IconToggle>
+      {block.shadow && (
+        <Slider
+          className="w-16"
+          min={0.1}
+          max={0.9}
+          step={0.05}
+          value={[arrowShadowOpacity(block)]}
+          onValueChange={([shadowOpacity]) => patch({ shadowOpacity })}
+          aria-label={t('arrow.shadowOpacity')}
+        />
+      )}
     </>
   );
 }
@@ -314,11 +338,10 @@ function ArrowControls({ block }: { block: ArrowBlock }) {
  * Add text blocks and arrows, style the selected one, then apply them. On a
  * text version the blocks are its saved ones, and applying updates it in place.
  */
-export function TextToolbar() {
+export function TextToolbar({ kind }: { kind: 'text' | 'arrow' }) {
   const t = useT();
-  const { blocks, selectedId, add, addArrow, update, remove } = useText();
-  const brand = useWorkspace((s) => s.brand);
-  const { applyText, mergeText, setTextMode } = useWorkspace();
+  const { blocks, selectedId, update, remove } = useText();
+  const { applyText, setTool, addBlock } = useWorkspace();
   const gen = useWorkspace(selectedGeneration);
   const editing = !!gen?.textLayer;
   const [applying, setApplying] = useState(false);
@@ -328,17 +351,16 @@ export function TextToolbar() {
   const patch = (p: Partial<Omit<TextBlock, 'id' | 'kind'>>) => block && update(block.id, p);
 
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-b bg-background px-2 py-1.5">
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={() => add('Anton', brand.colors[0] ? { background: brand.colors[0] } : {})}
-      >
-        <Plus /> {t('text.add')}
-      </Button>
-      <Button size="sm" variant="outline" onClick={() => addArrow()}>
-        <ArrowUpRight /> {t('arrow.add')}
-      </Button>
+    <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-t bg-background px-2 py-1.5">
+      {kind === 'text' ? (
+        <Button size="sm" variant="outline" onClick={() => addBlock('text')}>
+          <Plus /> {t('text.add')}
+        </Button>
+      ) : (
+        <Button size="sm" variant="outline" onClick={() => addBlock('arrow')}>
+          <Plus /> {t('arrow.add')}
+        </Button>
+      )}
 
       {arrow && (
         <>
@@ -410,7 +432,7 @@ export function TextToolbar() {
       )}
 
       <div className="ml-auto flex flex-wrap justify-end gap-1.5">
-        <Button variant="ghost" size="sm" onClick={() => setTextMode(false)}>
+        <Button variant="ghost" size="sm" onClick={() => setTool(null)}>
           <X /> {t('common.cancel')}
         </Button>
         {editing && (
@@ -419,8 +441,7 @@ export function TextToolbar() {
             onMerge={async () => {
               setApplying(true);
               // Merge what is on screen, including unapplied changes.
-              const applied = await applyText(blocks);
-              if (applied) await mergeText(applied.id);
+              await applyText(blocks, { merge: true });
               setApplying(false);
             }}
           />

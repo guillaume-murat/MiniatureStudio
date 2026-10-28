@@ -6,7 +6,7 @@
  * the point is to give the model a coherent, recognisable visual grammar.
  * "The featured person" refers to whoever is attached as a persona, if anyone.
  */
-export interface StylePreset {
+interface StylePreset {
   id: string;
   name: { en: string; fr: string };
   hint: { en: string; fr: string };

@@ -15,7 +15,7 @@ export const NO_REFRAME: Reframe = { scale: 1, x: 0, y: 0 };
 export const MIN_REFRAME_SCALE = 0.3;
 export const MAX_REFRAME_SCALE = 4;
 /** Colour of the empty areas sent to the model (the usual outpainting convention). */
-export const GAP_COLOR = '#808080';
+const GAP_COLOR = '#808080';
 
 /** Where the image lands in a frame of `width` × `height`. */
 export function imageRect(t: Reframe, width: number, height: number) {
@@ -117,7 +117,7 @@ export function seamEdges(points: Point[], width: number, height: number): Array
 }
 
 /** Width of the repainted band along a moved zone's cut, as a fraction of the image's longer side. */
-export const SEAM_BAND = 0.03;
+const SEAM_BAND = 0.03;
 
 function seamPath(points: Point[], width: number, height: number): Path2D {
   const path = new Path2D();

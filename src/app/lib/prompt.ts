@@ -18,7 +18,7 @@ export type ImageRole =
   | { kind: 'persona'; name: string; description?: string; expression?: string }
   | { kind: 'reference'; label?: string };
 
-export interface BriefInput {
+interface BriefInput {
   brief: string;
   videoTitle?: string;
   aspectRatio: AspectRatio;

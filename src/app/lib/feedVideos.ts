@@ -21,7 +21,7 @@ export interface FeedVideo {
   thumbnail: string;
 }
 
-export interface FeedData {
+interface FeedData {
   region: string;
   fetchedAt: string;
   videos: FeedVideo[];

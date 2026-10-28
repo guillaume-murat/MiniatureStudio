@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { NO_REFRAME, type Point, type Reframe } from '../lib/reframe';
 
 /** What reframe mode moves: the whole image, or a freehand zone drawn on it. */
-export type ReframeTarget = 'image' | 'zone';
+type ReframeTarget = 'image' | 'zone';
 
 /** The framing being edited in reframe mode, shared by the view and its toolbar. */
 interface ReframeState {

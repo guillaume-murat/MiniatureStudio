@@ -5,10 +5,10 @@
 /** Reference images are downscaled before upload: keeps requests small (Netlify
  * functions cap bodies at ~6 MB) and follows Replicate's advice to keep inline
  * data URLs around 256 KB. 1536px is plenty for identity/style preservation. */
-export const REF_MAX_SIDE = 1536;
-export const REF_TARGET_BYTES = 280_000;
+const REF_MAX_SIDE = 1536;
+const REF_TARGET_BYTES = 280_000;
 
-export function blobToDataUrl(blob: Blob): Promise<string> {
+function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
@@ -30,7 +30,7 @@ export async function fetchBlob(url: string, signal?: AbortSignal): Promise<Blob
   return blob;
 }
 
-export function decode(blob: Blob): Promise<ImageBitmap> {
+function decode(blob: Blob): Promise<ImageBitmap> {
   return createImageBitmap(blob);
 }
 

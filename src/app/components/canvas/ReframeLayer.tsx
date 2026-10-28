@@ -147,7 +147,7 @@ export function ReframeView({ gen }: { gen: Generation }) {
 export function ReframeToolbar() {
   const t = useT();
   const { value, set, target, setTarget, zone, setZone } = useReframe();
-  const { reframe, setReframeMode } = useWorkspace();
+  const { reframe, setTool } = useWorkspace();
   const [applying, setApplying] = useState(false);
   const byZone = target === 'zone';
   // A moved zone always leaves something for the model: its old place and its outline.
@@ -155,7 +155,7 @@ export function ReframeToolbar() {
   const ready = !isIdentity(value) && (!byZone || isZone(zone));
 
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-2 border-b bg-background px-2 py-1.5">
+    <div className="flex shrink-0 flex-wrap items-center gap-2 border-t bg-background px-2 py-1.5">
       <ToggleGroup type="single" size="sm" variant="outline" value={target} onValueChange={(v) => v && setTarget(v as typeof target)}>
         <ToggleGroupItem value="image" className="px-2.5 text-xs">
           {t('reframe.wholeImage')}
@@ -189,7 +189,7 @@ export function ReframeToolbar() {
         </span>
       )}
       <div className="ml-auto flex flex-wrap justify-end gap-1.5">
-        <Button variant="ghost" size="sm" onClick={() => setReframeMode(false)}>
+        <Button variant="ghost" size="sm" onClick={() => setTool(null)}>
           <X /> {t('common.cancel')}
         </Button>
         <Button

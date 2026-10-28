@@ -103,8 +103,6 @@ function Editor({ initial, onDone }: { initial?: Persona; onDone: () => void }) 
       createdAt: initial?.createdAt ?? Date.now(),
     });
     await reload();
-    // A new person is usually added to be in the next thumbnail.
-    if (!initial && !useWorkspace.getState().personaIds.includes(id)) useWorkspace.getState().togglePersona(id);
     onDone();
   }
 

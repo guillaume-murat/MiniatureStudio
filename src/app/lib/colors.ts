@@ -30,7 +30,7 @@ export function mergeColors(current: string[], added: string[]): string[] {
   return [...new Set([...current, ...added])].slice(0, MAX_BRAND_COLORS);
 }
 
-export type PaletteId =
+type PaletteId =
   | 'neon'
   | 'sunset'
   | 'ocean'

@@ -3,9 +3,9 @@
  * Google Fonts CSS API for any other family.
  */
 
-export type FontCategory = 'display' | 'sans' | 'fun' | 'tech' | 'serif';
+type FontCategory = 'display' | 'sans' | 'fun' | 'tech' | 'serif';
 
-export interface GoogleFont {
+interface GoogleFont {
   family: string;
   category: FontCategory;
   /** Heaviest weight Google Fonts has for the family (400 when it has a single weight). */

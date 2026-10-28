@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { Check, Download, GitBranch, Grid2x2, Star, X } from 'lucide-react';
+import { Check, Copy, Download, GitBranch, Grid2x2, Plus, Square, Star, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from './ui/button';
 import { Toggle } from './ui/toggle';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
+import { useSettings } from '../stores/settings';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { useBlobUrl } from '../hooks/use-blob-url';
 import { useWorkspace } from '../stores/workspace';
@@ -11,6 +13,9 @@ import { thumbnails } from '../lib/versions';
 import { useT } from '../i18n';
 import type { Generation } from '../lib/types';
 import { cn } from '../lib/utils';
+
+/** Thumbnail height in the strip, in pixels. */
+const TILE_HEIGHT = 84;
 
 /** One thumbnail: its video title, then the version being worked on (or its latest), with how many versions it has. */
 function Tile({
@@ -35,50 +40,53 @@ function Tile({
 }) {
   const t = useT();
   const url = useBlobUrl(gen.blob);
+  // Explicit pixel sizes: WebKit (the macOS app) let the image's own width win over a percentage height + aspect-ratio.
+  const width = Math.round((TILE_HEIGHT * gen.width) / gen.height);
   return (
-    <div className="flex h-full shrink-0 flex-col gap-1">
-      {/* w-0 min-w-full: the title takes the thumbnail's width instead of setting it. */}
-      <p
-        className={cn('w-0 min-w-full truncate text-[10px] leading-3', title ? 'text-foreground/80' : 'text-muted-foreground italic')}
-        title={title || undefined}
-      >
-        {title || t('filmstrip.untitled')}
-      </p>
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={onSelect}
-        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(e)}
-        title={gen.prompt}
-        className={cn(
-          'group relative h-[calc(100%-1rem)] shrink-0 cursor-pointer overflow-hidden rounded-md border bg-muted transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring',
-          selected ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : 'opacity-80 hover:opacity-100',
-        )}
-        style={{ aspectRatio: `${gen.width} / ${gen.height}` }}
-      >
-        <img src={url} alt="" className="size-full object-cover" loading="lazy" draggable={false} />
-        {gen.favorite && <Star className="absolute top-1 left-1 size-3 fill-amber-400 text-amber-400 drop-shadow" />}
-        {count > 1 && (
-          <span className="tabular absolute bottom-1 left-1 flex items-center gap-0.5 rounded bg-black/70 px-1 text-[10px] leading-4 font-medium text-white">
-            <GitBranch className="size-2.5" /> {count}
-          </span>
-        )}
-        <button
-          type="button"
-          aria-label={pickLabel}
-          aria-pressed={picked}
-          onClick={(e) => {
-            e.stopPropagation();
-            onPick();
-          }}
-          className={cn(
-            'absolute top-1 right-1 flex size-4 items-center justify-center rounded-full border border-white/80 bg-black/40 text-white transition-opacity',
-            picked ? 'border-primary bg-primary text-primary-foreground opacity-100' : 'opacity-0 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100',
-          )}
-        >
-          {picked && <Check className="size-3" />}
-        </button>
-      </div>
+    <div className="flex shrink-0 flex-col gap-1" style={{ width }}>
+      <p className={cn('truncate text-[10px] leading-3', title ? 'text-foreground/80' : 'text-muted-foreground italic')}>{title || t('filmstrip.untitled')}</p>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={onSelect}
+            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(e)}
+            aria-label={title || t('filmstrip.untitled')}
+            className={cn(
+              'group relative shrink-0 cursor-pointer overflow-hidden rounded-md border bg-muted transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              selected ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : 'opacity-80 hover:opacity-100',
+            )}
+            style={{ width, height: TILE_HEIGHT }}
+          >
+            <img src={url} alt="" className="size-full object-cover" loading="lazy" draggable={false} />
+            {gen.favorite && <Star className="absolute top-1 left-1 size-3 fill-amber-400 text-amber-400 drop-shadow" />}
+            {count > 1 && (
+              <span className="tabular absolute bottom-1 left-1 flex items-center gap-0.5 rounded bg-black/70 px-1 text-[10px] leading-4 font-medium text-white">
+                <GitBranch className="size-2.5" /> {count}
+              </span>
+            )}
+            <button
+              type="button"
+              aria-label={pickLabel}
+              aria-pressed={picked}
+              onClick={(e) => {
+                e.stopPropagation();
+                onPick();
+              }}
+              className={cn(
+                'absolute top-1 right-1 flex size-4 items-center justify-center rounded-full border border-white/80 bg-black/40 text-white transition-opacity',
+                picked
+                  ? 'border-primary bg-primary text-primary-foreground opacity-100'
+                  : 'opacity-0 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100',
+              )}
+            >
+              {picked && <Check className="size-3" />}
+            </button>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-72">{title || t('filmstrip.untitled')}</TooltipContent>
+      </Tooltip>
     </div>
   );
 }
@@ -88,18 +96,27 @@ export function Filmstrip() {
   const { generations, selectedId, pickedIds, jobs, select, togglePick, clearPicks, setView } = useWorkspace();
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const all = thumbnails(generations);
-  const shown = favoritesOnly ? all.filter((th) => th.versions.some((g) => g.favorite)) : all;
+  const isFavorite = (th: (typeof all)[number]) => th.versions.some((g) => g.favorite);
+  const favorites = all.filter(isFavorite).length;
+  const shown = favoritesOnly ? all.filter(isFavorite) : all;
+  const projectName = useWorkspace((s) => s.projects.find((p) => p.id === s.projectId)?.name ?? '');
+  const [adding, setAdding] = useState(false);
   const pending = jobs.filter((j) => j.status === 'running' && j.kind === 'generate').length;
 
   return (
     <div className="shrink-0 border-t bg-background">
-      <div className="flex h-9 items-center gap-2 px-3 text-xs">
-        <span className="font-medium text-muted-foreground">
-          {t('filmstrip.title')} <span className="tabular">· {all.length}</span>
+      <div className="flex h-9 items-center gap-2 overflow-hidden px-3 text-xs">
+        {/* The project and its counts come first; the export hint gives way when space runs out. */}
+        <span className="min-w-0 shrink-0 truncate text-muted-foreground">
+          <span className="font-medium text-foreground">{projectName}</span>
+          <span className="tabular">
+            {' · '}
+            {all.length === 1 ? t('filmstrip.countOne') : t('filmstrip.count', { n: all.length })}, {t('filmstrip.favorites', { n: favorites })}
+          </span>
         </span>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Toggle size="sm" className="h-6 min-w-6 px-1" pressed={favoritesOnly} onPressedChange={setFavoritesOnly} aria-label={t('filmstrip.favoritesOnly')}>
+            <Toggle size="sm" className="h-6 min-w-6 shrink-0 px-1" pressed={favoritesOnly} onPressedChange={setFavoritesOnly} aria-label={t('filmstrip.favoritesOnly')}>
               <Star className={cn('size-3.5', favoritesOnly && 'fill-amber-400 text-amber-400')} />
             </Toggle>
           </TooltipTrigger>
@@ -107,7 +124,7 @@ export function Filmstrip() {
         </Tooltip>
 
         {pickedIds.length > 0 ? (
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex shrink-0 items-center gap-1">
             <Button size="xs" variant="secondary" onClick={() => setView('compare')} disabled={pickedIds.length < 2}>
               <Grid2x2 /> {t('canvas.viewCompare')} ({pickedIds.length})
             </Button>
@@ -126,17 +143,35 @@ export function Filmstrip() {
           </div>
         ) : (
           all.length > 1 && (
-            <span className="ml-auto hidden text-muted-foreground lg:inline">
+            <span className="ml-auto hidden min-w-0 truncate text-muted-foreground xl:block">
               {t('filmstrip.exportHint')} · {t('filmstrip.shiftClick')}
             </span>
           )
         )}
       </div>
-      <div className="flex h-[7.25rem] gap-2 overflow-x-auto px-3 pt-1 pb-3">
+      <div className="flex gap-2 overflow-x-auto px-3 pt-1 pb-3">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              aria-label={t('filmstrip.add')}
+              className="mt-4 flex shrink-0 items-center justify-center rounded-md border-2 border-dashed border-muted-foreground/30 text-muted-foreground transition-colors hover:border-primary/50 hover:bg-accent hover:text-foreground"
+              style={{ width: Math.round((TILE_HEIGHT * 16) / 9), height: TILE_HEIGHT }}
+            >
+              <Plus className="size-5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>{t('filmstrip.add')}</TooltipContent>
+        </Tooltip>
         {Array.from({ length: pending }).map((_, i) => (
-          <div key={`p${i}`} className="mt-4 aspect-video h-[calc(100%-1rem)] shrink-0 animate-pulse rounded-md bg-muted" />
+          <div key={`p${i}`} className="mt-4 aspect-video shrink-0 animate-pulse rounded-md bg-muted" style={{ height: TILE_HEIGHT }} />
         ))}
-        {shown.length === 0 && pending === 0 && <p className="flex h-full items-center text-xs text-muted-foreground">{t('filmstrip.empty')}</p>}
+        {shown.length === 0 && pending === 0 && (
+          <p className="flex items-center text-xs text-muted-foreground" style={{ height: TILE_HEIGHT + 16 }}>
+            {t('filmstrip.empty')}
+          </p>
+        )}
         {shown.map((th) => {
           const current = th.versions.find((g) => g.id === selectedId);
           const shownVersion = current ?? th.latest;
@@ -158,6 +193,47 @@ export function Filmstrip() {
           );
         })}
       </div>
+      <AddThumbnailDialog open={adding} onOpenChange={setAdding} />
     </div>
+  );
+}
+
+/** The + tile: a blank image or a copy of the selected one, as a new thumbnail. */
+function AddThumbnailDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const t = useT();
+  const { addBlankImage, duplicateSelected } = useWorkspace();
+  const hasSelection = useWorkspace((s) => !!s.selectedId);
+  const ratio = useSettings((s) => s.aspectRatio);
+  const run = async (action: () => Promise<unknown>) => {
+    onOpenChange(false);
+    await action();
+  };
+  const option =
+    'flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors hover:border-primary/50 hover:bg-accent disabled:pointer-events-none disabled:opacity-50';
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t('filmstrip.addTitle')}</DialogTitle>
+          <DialogDescription>{t('filmstrip.addDescription')}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <button type="button" className={option} onClick={() => run(addBlankImage)}>
+            <Square className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            <span>
+              <span className="block text-sm font-medium">{t('filmstrip.blank')}</span>
+              <span className="block text-xs text-muted-foreground">{t('filmstrip.blankDescription', { ratio })}</span>
+            </span>
+          </button>
+          <button type="button" className={option} disabled={!hasSelection} onClick={() => run(duplicateSelected)}>
+            <Copy className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            <span>
+              <span className="block text-sm font-medium">{t('filmstrip.duplicate')}</span>
+              <span className="block text-xs text-muted-foreground">{hasSelection ? t('filmstrip.duplicateDescription') : t('filmstrip.duplicateNone')}</span>
+            </span>
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

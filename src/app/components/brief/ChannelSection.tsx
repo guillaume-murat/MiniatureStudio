@@ -43,7 +43,8 @@ export function ChannelSection() {
     const channel = await fetchChannel(value);
     setFetching(false);
     if (!channel) return void toast.error(t('brand.channelError'));
-    await save({ channelName: channel.name, ...(channel.logo ? { logo: channel.logo } : {}) });
+    // The banner goes to the channel preview; a channel without one keeps the current banner.
+    await save({ channelName: channel.name, ...(channel.logo ? { logo: channel.logo } : {}), ...(channel.banner ? { banner: channel.banner } : {}) });
     setUrl('');
     setName(null);
     toast.success(t('brand.channelLoaded', { name: channel.name }));

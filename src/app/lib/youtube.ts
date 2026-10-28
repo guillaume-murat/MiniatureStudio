@@ -55,14 +55,15 @@ export async function fetchThumbnail(videoId: string): Promise<Blob | null> {
   }
 }
 
-/** Name and profile picture of the channel behind a channel or video URL (through our function: youtube.com has no CORS). */
-export async function fetchChannel(url: string): Promise<{ name: string; logo?: Blob } | null> {
+/** Name, profile picture and banner of the channel behind a channel or video URL (through our function: youtube.com has no CORS). */
+export async function fetchChannel(url: string): Promise<{ name: string; logo?: Blob; banner?: Blob } | null> {
   try {
     const res = await fetch(`/.netlify/functions/youtube-channel?url=${encodeURIComponent(url.trim())}`);
     if (!res.ok) return null;
-    const data = (await res.json()) as { name?: string; logo?: string };
+    const data = (await res.json()) as { name?: string; logo?: string; banner?: string };
     if (!data.name) return null;
-    return { name: data.name, logo: data.logo ? await dataUrlToBlob(data.logo) : undefined };
+    const [logo, banner] = await Promise.all([data.logo, data.banner].map((d) => (d ? dataUrlToBlob(d) : undefined)));
+    return { name: data.name, logo, banner };
   } catch {
     return null;
   }

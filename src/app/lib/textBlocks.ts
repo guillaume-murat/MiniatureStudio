@@ -45,6 +45,15 @@ export interface ArrowBlock {
   /** Border colour, or null for none. */
   outline: string | null;
   shadow: boolean;
+  /** Shadow darkness, 0–1 (arrows made before it existed: `ARROW_SHADOW`). */
+  shadowOpacity?: number;
+}
+
+/** Shadow darkness of arrows saved before it became editable. */
+const ARROW_SHADOW = 0.55;
+
+export function arrowShadowOpacity(a: ArrowBlock): number {
+  return a.shadowOpacity ?? ARROW_SHADOW;
 }
 
 export type LayerBlock = TextBlock | ArrowBlock;
@@ -93,15 +102,17 @@ export function newArrowBlock(partial: Partial<ArrowBlock> = {}): ArrowBlock {
     color: '#ff2d2d',
     head: 'filled',
     dashed: false,
-    outline: '#ffffff',
+    // No border, a light black drop shadow: both editable.
+    outline: null,
     shadow: true,
+    shadowOpacity: 0.35,
     ...partial,
   };
 }
 
 type Pt = { x: number; y: number };
 
-export interface ArrowGeometry {
+interface ArrowGeometry {
   start: Pt;
   tip: Pt;
   control: Pt;
@@ -175,7 +186,7 @@ export function dashPattern(stroke: number): number[] {
   return [stroke * 1.6, stroke * 1.4];
 }
 
-export function drawArrow(ctx: CanvasRenderingContext2D, a: ArrowBlock, width: number, height: number): void {
+function drawArrow(ctx: CanvasRenderingContext2D, a: ArrowBlock, width: number, height: number): void {
   const g = arrowGeometry(a, width, height);
   const shaft = new Path2D(g.shaft);
   const heads = g.heads.map((d) => new Path2D(d));
@@ -201,7 +212,7 @@ export function drawArrow(ctx: CanvasRenderingContext2D, a: ArrowBlock, width: n
   };
   if (a.shadow) {
     ctx.save();
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+    ctx.shadowColor = `rgba(0, 0, 0, ${arrowShadowOpacity(a)})`;
     ctx.shadowBlur = g.stroke * 1.5;
     ctx.shadowOffsetY = g.stroke * 0.4;
     layer(a.outline ?? a.color, 2 * g.border);

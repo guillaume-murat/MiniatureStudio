@@ -2,9 +2,10 @@ import type { Handler, HandlerEvent } from '@netlify/functions';
 import { corsHeaders, isAllowedRequest } from '../lib/origin';
 
 /**
- * Name and profile picture of a YouTube channel, from a channel URL or one of
- * its videos. The studio can't read youtube.com itself (no CORS): the channel
- * page's Open Graph tags give both, the picture is returned inline.
+ * Name, profile picture and banner of a YouTube channel, from a channel URL or
+ * one of its videos. The studio can't read youtube.com itself (no CORS): the
+ * channel page's Open Graph tags give the name and picture, its page data the
+ * banner; images are returned inline.
  */
 
 const YOUTUBE_HOSTS = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be']);
@@ -39,6 +40,21 @@ function meta(html: string, property: string): string | undefined {
   return raw?.replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
 }
 
+/** The channel banner as YouTube shows it on desktop (already cropped to the wide strip), largest size up to 2560 px. */
+export function bannerUrl(html: string): string | undefined {
+  const sources = html.match(/"imageBannerViewModel":\{"image":\{"sources":\[(.*?)\]/)?.[1];
+  if (!sources) return undefined;
+  const found = [...sources.matchAll(/"url":"([^"]+)","width":(\d+)/g)].map((m) => ({ url: m[1].replace(/\\u0026/g, '&'), width: Number(m[2]) }));
+  const best = found.filter((s) => s.width <= 2560).sort((a, b) => b.width - a.width)[0];
+  return best && IMAGE_HOSTS.test(new URL(best.url).hostname) ? best.url : undefined;
+}
+
+async function inline(url: string): Promise<string | undefined> {
+  const img = await fetch(url);
+  if (!img.ok) return undefined;
+  return `data:${img.headers.get('content-type') || 'image/jpeg'};base64,${Buffer.from(await img.arrayBuffer()).toString('base64')}`;
+}
+
 export const handler: Handler = async (event: HandlerEvent) => {
   const cors = corsHeaders(event.headers.origin, 'GET, OPTIONS', 'Content-Type');
   const json = (statusCode: number, body: unknown) => ({ statusCode, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -58,14 +74,14 @@ export const handler: Handler = async (event: HandlerEvent) => {
     const name = meta(html, 'title');
     if (!name) return json(404, { error: 'Channel not found' });
 
-    let logo: string | undefined;
     const image = meta(html, 'image');
-    if (image && IMAGE_HOSTS.test(new URL(image).hostname)) {
+    const banner = bannerUrl(html);
+    const [logo, bannerData] = await Promise.all([
       // 240 px is plenty for a channel picture.
-      const img = await fetch(image.replace(/=s\d+-/, '=s240-'));
-      if (img.ok) logo = `data:${img.headers.get('content-type') || 'image/jpeg'};base64,${Buffer.from(await img.arrayBuffer()).toString('base64')}`;
-    }
-    return json(200, { name, logo });
+      image && IMAGE_HOSTS.test(new URL(image).hostname) ? inline(image.replace(/=s\d+-/, '=s240-')) : undefined,
+      banner ? inline(banner) : undefined,
+    ]);
+    return json(200, { name, logo, banner: bannerData });
   } catch {
     return json(502, { error: 'YouTube unreachable' });
   }

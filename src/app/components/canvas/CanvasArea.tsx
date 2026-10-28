@@ -41,7 +41,7 @@ import { useBlobUrl } from '../../hooks/use-blob-url';
 import { fit, useElementSize } from '../../hooks/use-element-size';
 import { usePinch } from '../../hooks/use-pinch';
 import { clampPan, NO_ZOOM, zoomAt, type ViewZoom } from '../../lib/zoom';
-import { selectedGeneration, useWorkspace, type Job } from '../../stores/workspace';
+import { isLayerTool, selectedGeneration, useWorkspace, type Job } from '../../stores/workspace';
 import { useReframe } from '../../stores/reframe';
 import { downloadForYouTube } from '../../lib/exporting';
 import { downloadBlob, extensionFor, FULL_HD_SIZE } from '../../lib/images';
@@ -113,10 +113,10 @@ function EmptyState({ running }: { running: number }) {
 }
 
 function ImageView({ gen, tool, brushSize, clearSignal }: { gen: Generation; tool: MaskTool; brushSize: number; clearSignal: number }) {
-  const { safeZones, maskMode, textMode } = useWorkspace();
+  const { safeZones, tool: active } = useWorkspace();
   const reframing = useWorkspace((s) => blockingJob(s.jobs)?.parentId === gen.id);
   // While its text is being edited, a text version shows its image without the text.
-  const url = useBlobUrl(textMode && gen.textLayer ? gen.textLayer.base : gen.blob);
+  const url = useBlobUrl(isLayerTool(active) && gen.textLayer ? gen.textLayer.base : gen.blob);
   const [ref, box] = useElementSize<HTMLDivElement>();
   const size = fit(gen.width / gen.height, { width: box.width - 48, height: box.height - 48 });
   const [zoom, setZoom] = useState<ViewZoom>(NO_ZOOM);
@@ -152,8 +152,8 @@ function ImageView({ gen, tool, brushSize, clearSignal }: { gen: Generation; too
         >
           <img src={url} alt={gen.prompt} className={cn('size-full select-none transition-[filter] duration-300', reframing && 'blur-md')} draggable={false} />
           {safeZones && <SafeZones aspectRatio={gen.params.aspectRatio} />}
-          {maskMode && <MaskLayer width={gen.width} height={gen.height} tool={tool} brushSize={brushSize} clearSignal={clearSignal} />}
-          {textMode && <TextOverlay width={size.width} height={size.height} />}
+          {active === 'mask' && <MaskLayer width={gen.width} height={gen.height} tool={tool} brushSize={brushSize} clearSignal={clearSignal} />}
+          {isLayerTool(active) && <TextOverlay width={size.width} height={size.height} kind={active} />}
         </div>
       )}
     </div>
@@ -263,9 +263,70 @@ export function CanvasArea({ onDescribeRegion }: { onDescribeRegion?: () => void
         <ViewSwitcher />
       </div>
 
-      {/* Mask tools get their own row: they don't fit next to the view switcher on narrow widths */}
-      {ws.maskMode && ws.view === 'image' && gen && (
-        <div className="flex h-10 shrink-0 items-center gap-1.5 border-b bg-background px-2">
+      {/* Body */}
+      <div className="relative min-h-0 flex-1">
+        {ws.view === 'compare' ? (
+          <CompareView />
+        ) : ws.view === 'feed' && gen ? (
+          <FeedPreview generation={gen} />
+        ) : ws.view === 'channel' ? (
+          <ChannelPreview />
+        ) : gen && ws.tool === 'reframe' ? (
+          <ReframeView gen={gen} />
+        ) : gen ? (
+          <ImageView gen={gen} tool={tool} brushSize={brushSize} clearSignal={clearSignal} />
+        ) : (
+          <div className="flex size-full items-center justify-center">
+            <EmptyState running={running} />
+          </div>
+        )}
+
+        {ws.tool === 'reframe' && ws.view === 'image' && (
+          <p className="pointer-events-none absolute top-3 left-1/2 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-2xl bg-foreground px-3 py-1 text-xs text-background shadow sm:rounded-full">
+            {reframeTarget === 'zone' && !reframeZone ? t('reframe.zoneHint') : t('canvas.reframeHint')}
+          </p>
+        )}
+
+        {isLayerTool(ws.tool) && ws.view === 'image' && (
+          <p className="pointer-events-none absolute top-3 left-1/2 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-2xl bg-foreground px-3 py-1 text-xs text-background shadow sm:rounded-full">
+            {ws.tool === 'arrow' ? t('arrow.hint') : t('canvas.textHint')}
+          </p>
+        )}
+
+        {ws.tool === 'mask' && ws.view === 'image' && (
+          <p className="pointer-events-none absolute top-3 left-1/2 flex w-max max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-2 rounded-2xl bg-foreground px-3 py-1 text-xs text-background shadow sm:rounded-full sm:whitespace-nowrap">
+            <span className="sm:truncate">{onDescribeRegion ? t('canvas.maskHintMobile') : t('canvas.maskHint')}</span>
+            <Kbd className="shrink-0 [@media(pointer:coarse)]:hidden">Esc</Kbd>
+          </p>
+        )}
+
+        {ws.tool === 'mask' && ws.view === 'image' && (
+          // Bottom left, clear of the image actions on the right.
+          <p className="pointer-events-none absolute bottom-3 left-3 flex max-w-[calc(100%-10rem)] items-start gap-2 rounded-lg border bg-background/90 px-3 py-2 text-xs shadow-sm backdrop-blur">
+            <Bandage className="mt-px size-3.5 shrink-0 text-muted-foreground" />
+            {t('heal.context')}
+          </p>
+        )}
+
+        {/* Over the image rather than in a toolbar row: the image gets the height. */}
+        {gen && ws.view === 'image' && ws.tool !== 'reframe' && (
+          <div className="absolute right-3 bottom-3 z-10 flex items-center gap-0.5 rounded-lg border bg-background/85 p-0.5 shadow-sm backdrop-blur">
+            <ImageActions gen={gen} />
+          </div>
+        )}
+
+        {ws.jobs.length > 0 && (
+          <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1.5">
+            {ws.jobs.map((j) => (
+              <JobChip key={j.id} job={j} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* The active tool's controls, under the image. */}
+      {ws.tool === 'mask' && ws.view === 'image' && gen && (
+        <div className="flex h-10 shrink-0 items-center gap-1.5 border-t bg-background px-2">
           <ToggleGroup type="single" size="sm" value={tool} onValueChange={(v) => v && setTool(v as MaskTool)}>
             <ToggleGroupItem value="brush" aria-label={t('canvas.brush')}>
               <Brush />
@@ -310,61 +371,8 @@ export function CanvasArea({ onDescribeRegion }: { onDescribeRegion?: () => void
         </div>
       )}
 
-      {ws.textMode && ws.view === 'image' && gen && <TextToolbar />}
-      {ws.reframeMode && ws.view === 'image' && gen && <ReframeToolbar />}
-
-      {/* Body */}
-      <div className="relative min-h-0 flex-1">
-        {ws.view === 'compare' ? (
-          <CompareView />
-        ) : ws.view === 'feed' && gen ? (
-          <FeedPreview generation={gen} />
-        ) : ws.view === 'channel' ? (
-          <ChannelPreview />
-        ) : gen && ws.reframeMode ? (
-          <ReframeView gen={gen} />
-        ) : gen ? (
-          <ImageView gen={gen} tool={tool} brushSize={brushSize} clearSignal={clearSignal} />
-        ) : (
-          <div className="flex size-full items-center justify-center">
-            <EmptyState running={running} />
-          </div>
-        )}
-
-        {ws.reframeMode && ws.view === 'image' && (
-          <p className="pointer-events-none absolute top-3 left-1/2 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-2xl bg-foreground px-3 py-1 text-xs text-background shadow sm:rounded-full">
-            {reframeTarget === 'zone' && !reframeZone ? t('reframe.zoneHint') : t('canvas.reframeHint')}
-          </p>
-        )}
-
-        {ws.textMode && ws.view === 'image' && (
-          <p className="pointer-events-none absolute top-3 left-1/2 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-2xl bg-foreground px-3 py-1 text-xs text-background shadow sm:rounded-full">
-            {t('canvas.textHint')}
-          </p>
-        )}
-
-        {ws.maskMode && ws.view === 'image' && (
-          <p className="pointer-events-none absolute top-3 left-1/2 flex w-max max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-2 rounded-2xl bg-foreground px-3 py-1 text-xs text-background shadow sm:rounded-full sm:whitespace-nowrap">
-            <span className="sm:truncate">{onDescribeRegion ? t('canvas.maskHintMobile') : t('canvas.maskHint')}</span>
-            <Kbd className="shrink-0 [@media(pointer:coarse)]:hidden">Esc</Kbd>
-          </p>
-        )}
-
-        {/* Over the image rather than in a toolbar row: the image gets the height. */}
-        {gen && ws.view === 'image' && !ws.reframeMode && (
-          <div className="absolute right-3 bottom-3 z-10 flex items-center gap-0.5 rounded-lg border bg-background/85 p-0.5 shadow-sm backdrop-blur">
-            <ImageActions gen={gen} />
-          </div>
-        )}
-
-        {ws.jobs.length > 0 && (
-          <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1.5">
-            {ws.jobs.map((j) => (
-              <JobChip key={j.id} job={j} />
-            ))}
-          </div>
-        )}
-      </div>
+      {isLayerTool(ws.tool) && ws.view === 'image' && gen && <TextToolbar kind={ws.tool} />}
+      {ws.tool === 'reframe' && ws.view === 'image' && gen && <ReframeToolbar />}
     </div>
   );
 }

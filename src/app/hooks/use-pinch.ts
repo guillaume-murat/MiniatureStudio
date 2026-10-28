@@ -1,6 +1,6 @@
 import { useEffect, useRef, type RefObject } from 'react';
 
-export interface PinchHandlers {
+interface PinchHandlers {
   /** Zoom by `factor` (>1 = in) around the point (clientX, clientY). */
   onZoom: (factor: number, clientX: number, clientY: number) => void;
   /** Two-finger scroll (no pinch), in pixels. Return false to let the page scroll instead. */

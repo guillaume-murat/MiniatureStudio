@@ -4,26 +4,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
 import { useUI } from '../../stores/ui';
-import { useText } from '../../stores/text';
-import { selectedGeneration, useWorkspace } from '../../stores/workspace';
-import { isArrow, isVisible, type LayerBlock } from '../../lib/textBlocks';
+import { useWorkspace } from '../../stores/workspace';
+import { isArrow, type LayerBlock } from '../../lib/textBlocks';
 import { useT } from '../../i18n';
 
-/** Text and arrows on the selected image that aren't part of its pixels: being edited, or saved as an editable layer. */
-function pendingBlocks(): LayerBlock[] {
-  const ws = useWorkspace.getState();
-  if (ws.textMode) return useText.getState().blocks.filter(isVisible);
-  return selectedGeneration(ws)?.textLayer?.blocks ?? [];
-}
-
-/** The reframe tool toggle: asks first what to do with pending text and arrows. */
-export function toggleReframe() {
-  const ws = useWorkspace.getState();
-  if (ws.reframeMode || !ws.selectedId) return ws.setReframeMode(false);
-  if (pendingBlocks().length) useUI.getState().open('reframeText');
-  else ws.setReframeMode(true);
-}
-
+/** Opened by the reframe command when the image has text or arrows outside its pixels: which ones to merge before moving it. */
 export function ReframeTextDialog() {
   const t = useT();
   const open = useUI((s) => s.dialog === 'reframeText');
@@ -34,7 +19,7 @@ export function ReframeTextDialog() {
 
   useEffect(() => {
     if (open) {
-      setBlocks(pendingBlocks());
+      setBlocks(useWorkspace.getState().pendingBlocks());
       setMerge({ text: true, arrows: true });
     }
   }, [open]);
@@ -48,7 +33,7 @@ export function ReframeTextDialog() {
     const done = await ws.bakeText(blocks, withMerge);
     setBusy(false);
     close();
-    if (done) ws.setReframeMode(true);
+    if (done) ws.setTool('reframe');
   }
 
   return (

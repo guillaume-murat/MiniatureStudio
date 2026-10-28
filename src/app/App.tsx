@@ -4,7 +4,8 @@ import { Toaster } from './components/ui/sonner';
 import { TooltipProvider } from './components/ui/tooltip';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from './components/ui/resizable';
 import { TopBar } from './components/TopBar';
-import { ReframeTextDialog, toggleReframe } from './components/canvas/ReframeTextDialog';
+import { ReframeTextDialog } from './components/canvas/ReframeTextDialog';
+import { runShortcut } from './commands';
 import { BlockingJobOverlay, blockingJob } from './components/canvas/BlockingJob';
 import { BriefPanel } from './components/brief/BriefPanel';
 import { CanvasArea } from './components/canvas/CanvasArea';
@@ -20,7 +21,7 @@ import { PromptDialog } from './components/dialogs/PromptDialog';
 import { useAgent } from './agent/bridge';
 import { useApplyTheme } from './hooks/use-theme';
 import { useMediaQuery } from './hooks/use-media-query';
-import { useWorkspace } from './stores/workspace';
+import { isLayerTool, useWorkspace } from './stores/workspace';
 import { useText } from './stores/text';
 import { useUI } from './stores/ui';
 import { useSettings } from './stores/settings';
@@ -85,19 +86,10 @@ export default function App() {
         ui.dialog === 'commands' ? ui.close() : ui.open('commands');
       } else if (!mod && !isTyping(e.target) && !useUI.getState().dialog) {
         const ws = useWorkspace.getState();
-        // Letters work with caps lock on too. Each letter has one action (see the command palette).
-        const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-        if (key === 'p') ws.setView(ws.view === 'feed' ? 'image' : 'feed');
-        else if (key === 'c') ws.setView(ws.view === 'channel' ? 'image' : 'channel');
-        else if (key === 'z') ws.setSafeZones(!ws.safeZones);
-        else if (key === 'm' && ws.selectedId) ws.setMaskMode(!ws.maskMode);
-        else if (key === 'Escape' && ws.maskMode) ws.setMaskMode(false);
-        else if (key === 't' && ws.selectedId) ws.setTextMode(!ws.textMode);
-        else if (key === 'a' && ws.selectedId) ws.addArrow();
-        else if (key === 'Escape' && ws.textMode) ws.setTextMode(false);
-        else if (key === 'r' && ws.selectedId) toggleReframe();
-        else if (key === 'Escape' && ws.reframeMode) ws.setReframeMode(false);
-        else if ((e.key === 'Delete' || e.key === 'Backspace') && ws.textMode) {
+        // Letters (any case) come from the command list, shared with the palette and the edits panel.
+        if (e.key.length === 1) runShortcut(e.key);
+        else if (e.key === 'Escape' && ws.tool) ws.setTool(null);
+        else if ((e.key === 'Delete' || e.key === 'Backspace') && isLayerTool(ws.tool)) {
           const text = useText.getState();
           if (text.selectedId) text.remove(text.selectedId);
         }

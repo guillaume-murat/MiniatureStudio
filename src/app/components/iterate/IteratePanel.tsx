@@ -4,7 +4,6 @@ import {
   ArrowUpRight,
   Bandage,
   Blend,
-  CornerDownRight,
   Crop,
   GitBranch,
   ImageUp,
@@ -22,11 +21,11 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Section } from '../Section';
 import { Toggle } from '../ui/toggle';
 import { Kbd } from '../ui/kbd';
-import { toggleReframe } from '../canvas/ReframeTextDialog';
+import { COMMANDS, isAvailable } from '../../commands';
 import { MergeTextButton } from '../canvas/TextLayer';
 import { useBlobUrl } from '../../hooks/use-blob-url';
-import { selectedGeneration, useWorkspace } from '../../stores/workspace';
-import { rootOf, versionTree } from '../../lib/versions';
+import { isLayerTool, selectedGeneration, useWorkspace } from '../../stores/workspace';
+import { rootOf, treeLines, versionTree } from '../../lib/versions';
 import { useT, type TKey } from '../../i18n';
 import type { Generation } from '../../lib/types';
 import { cn } from '../../lib/utils';
@@ -45,8 +44,26 @@ const STEP_ICONS = {
   heal: Bandage,
 } as const;
 
-/** One step of the thumbnail's history, indented under the version it was made from. */
-function VersionRow({ gen, depth, active, onClick }: { gen: Generation; depth: number; active: boolean; onClick: () => void }) {
+/** Indent per tree level, and where a level's line runs: under the left part of its thumbnail. */
+const TREE_INDENT = 20;
+const TREE_PAD = 6;
+const lineX = (depth: number) => TREE_PAD + depth * TREE_INDENT + 10;
+const LINE = 'pointer-events-none absolute border-dashed border-muted-foreground/60';
+
+/** One step of the thumbnail's history, under the version it was made from, linked to it by a dashed line. */
+function VersionRow({
+  gen,
+  depth,
+  lines,
+  active,
+  onClick,
+}: {
+  gen: Generation;
+  depth: number;
+  lines: ReturnType<typeof treeLines>[number];
+  active: boolean;
+  onClick: () => void;
+}) {
   const t = useT();
   const url = useBlobUrl(gen.blob);
   const step = gen.action ?? gen.kind;
@@ -58,10 +75,22 @@ function VersionRow({ gen, depth, active, onClick }: { gen: Generation; depth: n
     <button
       type="button"
       onClick={onClick}
-      className={cn('flex w-full items-center gap-3 rounded-md p-1.5 text-left transition-colors hover:bg-accent', active && 'bg-accent')}
-      style={{ paddingLeft: 6 + Math.min(depth, 4) * 14 }}
+      className={cn('relative flex w-full items-center gap-3 rounded-md p-1.5 text-left transition-colors hover:bg-accent', active && 'bg-accent')}
+      style={{ paddingLeft: TREE_PAD + depth * TREE_INDENT }}
     >
-      {depth > 0 && <CornerDownRight className="size-3 shrink-0 text-muted-foreground" />}
+      {lines.through.map((on, k) =>
+        k === depth - 1 ? (
+          <span key={k}>
+            {/* The elbow into this version's thumbnail, then on to its next sibling. */}
+            <span className={cn(LINE, 'top-0 h-1/2 rounded-bl-md border-b border-l')} style={{ left: lineX(k), width: TREE_INDENT - 12 }} />
+            {on && <span className={cn(LINE, 'top-1/2 bottom-0 border-l')} style={{ left: lineX(k) }} />}
+          </span>
+        ) : (
+          on && <span key={k} className={cn(LINE, 'top-0 bottom-0 border-l')} style={{ left: lineX(k) }} />
+        ),
+      )}
+      {/* Down from under the thumbnail (36 px high) to the first version made from it. */}
+      {lines.hasChildren && <span className={cn(LINE, 'top-[calc(50%+18px)] bottom-0 border-l')} style={{ left: lineX(depth) }} />}
       <img src={url} alt="" className="aspect-video w-16 shrink-0 rounded object-cover ring-1 ring-border" />
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1 text-xs font-medium">
@@ -83,51 +112,26 @@ function EditTools({ onUse }: { onUse?: () => void }) {
     action();
     onUse?.();
   };
-  const tools = [
-    {
-      key: 'text',
-      icon: Type,
-      label: gen?.textLayer ? t('canvas.textEdit') : t('canvas.textTool'),
-      shortcut: 'T',
-      pressed: ws.textMode,
-      run: () => ws.setTextMode(!ws.textMode),
-    },
-    {
-      key: 'arrow',
-      icon: ArrowUpRight,
-      label: t('arrow.addTool'),
-      shortcut: 'A',
-      pressed: false,
-      run: ws.addArrow,
-    },
-    {
-      key: 'mask',
-      icon: Paintbrush,
-      label: t('canvas.maskTool'),
-      shortcut: 'M',
-      pressed: ws.maskMode,
-      run: () => ws.setMaskMode(!ws.maskMode),
-    },
-    {
-      key: 'reframe',
-      icon: Crop,
-      label: t('canvas.reframeTool'),
-      shortcut: 'R',
-      pressed: ws.reframeMode,
-      run: toggleReframe,
-    },
-  ];
+  const tools = COMMANDS.filter((c) => c.group === 'tool');
   return (
     <>
       <div className="mb-2 grid gap-1.5">
-        {tools.map(({ key, icon: Icon, label, shortcut, pressed, run }) => (
-          <Toggle key={key} variant="outline" size="sm" pressed={pressed} onPressedChange={use(run)} className="justify-start gap-2 px-2.5 text-xs">
-            <Icon /> <span className="truncate">{label}</span>
-            {shortcut && <Kbd className="ml-auto hidden sm:inline-flex">{shortcut}</Kbd>}
+        {tools.map((c) => (
+          <Toggle
+            key={c.id}
+            variant="outline"
+            size="sm"
+            pressed={c.active?.(ws) ?? false}
+            disabled={!isAvailable(c, ws)}
+            onPressedChange={use(() => c.run(useWorkspace.getState()))}
+            className="justify-start gap-2 px-2.5 text-xs"
+          >
+            <c.icon /> <span className="truncate">{t(c.label(ws))}</span>
+            <Kbd className="ml-auto hidden sm:inline-flex">{c.key.toUpperCase()}</Kbd>
           </Toggle>
         ))}
       </div>
-      {gen?.textLayer && !ws.textMode && (
+      {gen?.textLayer && !isLayerTool(ws.tool) && (
         <div className="mb-2 [&>button]:w-full">
           <MergeTextButton onMerge={() => ws.mergeText(gen.id)} />
         </div>
@@ -138,12 +142,13 @@ function EditTools({ onUse }: { onUse?: () => void }) {
 
 function EditTab({ gen, onEdited }: { gen: Generation; onEdited?: () => void }) {
   const t = useT();
-  const { generations, select, edit, maskMode, hasMask, jobs } = useWorkspace();
+  const { generations, select, edit, tool, hasMask, jobs } = useWorkspace();
   const [instruction, setInstruction] = useState('');
   const root = rootOf(generations, gen.id) ?? gen;
   const versions = versionTree(generations, root.id);
+  const lines = treeLines(versions);
   const editing = jobs.some((j) => j.status === 'running' && j.parentId === gen.id);
-  const region = maskMode && hasMask;
+  const region = tool === 'mask' && hasMask;
 
   const submit = (text = instruction) => {
     if (!text.trim()) return;
@@ -156,22 +161,21 @@ function EditTab({ gen, onEdited }: { gen: Generation; onEdited?: () => void }) 
     <div className="flex h-full flex-col">
       <ScrollArea className="min-h-0 flex-1">
         <div className="space-y-6 p-4">
-          {versions.length > 1 && (
-            <Section
-              title={
-                <span className="flex items-center gap-1.5">
-                  <GitBranch className="size-3.5" /> {t('iterate.versions')} <span className="tabular font-normal">· {versions.length}</span>
-                </span>
-              }
-            >
-              <p className="-mt-1 text-xs text-muted-foreground">{t('versions.hint')}</p>
-              <div className="space-y-0.5">
-                {versions.map(({ item, depth }) => (
-                  <VersionRow key={item.id} gen={item} depth={depth} active={item.id === gen.id} onClick={() => select(item.id)} />
-                ))}
-              </div>
-            </Section>
-          )}
+          {/* Always shown: with no edit yet, it holds the original, selected. */}
+          <Section
+            title={
+              <span className="flex items-center gap-1.5">
+                <GitBranch className="size-3.5" /> {t('iterate.versions')} <span className="tabular font-normal">· {versions.length}</span>
+              </span>
+            }
+          >
+            <p className="-mt-1 text-xs text-muted-foreground">{versions.length > 1 ? t('versions.hint') : t('versions.first')}</p>
+            <div>
+              {versions.map(({ item, depth }, i) => (
+                <VersionRow key={item.id} gen={item} depth={depth} lines={lines[i]} active={item.id === gen.id} onClick={() => select(item.id)} />
+              ))}
+            </div>
+          </Section>
 
           <Section title={t('iterate.quick')}>
             <EditTools onUse={onEdited} />

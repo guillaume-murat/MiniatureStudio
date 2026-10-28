@@ -14,7 +14,7 @@ export interface Rect {
   h: number;
 }
 
-export interface CardLayout {
+interface CardLayout {
   thumb: Rect;
   /** Title block: up to two lines, the ⋮ menu sits at its right. */
   title: Rect;
@@ -24,7 +24,7 @@ export interface CardLayout {
   menu: Rect;
 }
 
-export interface ChannelLayout {
+interface ChannelLayout {
   masthead: Rect;
   sidebar: Rect;
   sidebarItemHeight: number;

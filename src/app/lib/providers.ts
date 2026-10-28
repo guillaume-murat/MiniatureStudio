@@ -8,7 +8,7 @@ import { dataUrlToBlob, fetchBlob } from './images';
  * (`local/vertex.ts`, served by `npm run dev` and the macOS app).
  */
 
-export const PROXY_URL = '/.netlify/functions/replicate-proxy?url=';
+const PROXY_URL = '/.netlify/functions/replicate-proxy?url=';
 
 const REPLICATE_IMAGE_MODELS: Record<ModelId, string> = {
   'nano-banana-pro': 'google/nano-banana-pro',
@@ -24,7 +24,7 @@ const GEMINI_TEXT_MODEL = 'gemini-3.8-flash';
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 /** Same-origin route of the local Vertex helper; it adds the gcloud token and the project. */
-export const VERTEX_BASE = '/vertex/models';
+const VERTEX_BASE = '/vertex/models';
 /** Stands in for the key when Vertex should authenticate with gcloud (no express-mode key). */
 export const VERTEX_GCLOUD = 'gcloud';
 
@@ -69,7 +69,7 @@ export function isAbort(error: unknown): boolean {
   return error instanceof DOMException && error.name === 'AbortError';
 }
 
-export interface ImageRequest {
+interface ImageRequest {
   prompt: string;
   /** Data URLs, already downscaled. */
   images: string[];

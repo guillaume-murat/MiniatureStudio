@@ -12,7 +12,7 @@ export const VIDEO_SLOTS = 6;
 export const VIEWS_MIN = 50_000;
 export const VIEWS_MAX = 500_000;
 
-export interface VideoStats {
+interface VideoStats {
   views: number;
   durationSec: number;
   /** Time since upload; increases from one video to the next ("Latest" order). */
@@ -173,7 +173,7 @@ export function ellipsis(text: string, maxWidth: number, measure: (s: string) =>
 }
 
 /** A version that can go in a video slot; `thumbnail` groups the versions of one image. */
-export interface SlotCandidate {
+interface SlotCandidate {
   id: string;
   thumbnail: string;
 }

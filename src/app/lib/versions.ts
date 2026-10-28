@@ -4,6 +4,8 @@
  * per thumbnail; the versions panel shows the tree of the selected one.
  */
 
+import type { Generation, GenerationAction, GenerationKind, GenerationParams } from './types';
+
 interface Node {
   id: string;
   parentId?: string;
@@ -44,6 +46,25 @@ export function versionTree<T extends Node>(items: T[], rootId: string): Array<{
   return out;
 }
 
+/**
+ * The connecting lines of a `versionTree` row, to draw it as a tree: `through[k]`
+ * says whether the line of the ancestor at depth k carries on past this row (a
+ * later child of it is still to come); `hasChildren`, whether one starts under it.
+ * The last entry of `through` is the row's own link to its parent.
+ */
+export function treeLines(tree: Array<{ depth: number }>): Array<{ through: boolean[]; hasChildren: boolean }> {
+  return tree.map(({ depth }, i) => {
+    const through = Array.from({ length: depth }, (_, k) => {
+      for (let j = i + 1; j < tree.length; j++) {
+        if (tree[j].depth <= k) return false;
+        if (tree[j].depth === k + 1) return true;
+      }
+      return false;
+    });
+    return { through, hasChildren: (tree[i + 1]?.depth ?? 0) > depth };
+  });
+}
+
 export interface Thumbnail<T> {
   root: T;
   /** Most recent version (the one a tile opens). */
@@ -67,4 +88,46 @@ export function thumbnails<T extends Node>(items: T[]): Array<Thumbnail<T>> {
       return { root: byId.get(rootId)!, latest, versions };
     })
     .sort((a, b) => b.latest.createdAt - a.latest.createdAt);
+}
+
+/** What a new version is made of; the rest comes from its parent. */
+export interface VersionInput {
+  /** The version it derives from: gives its parent link, project, video title and params unless they are set. */
+  parent?: Generation;
+  projectId?: string;
+  kind: GenerationKind;
+  action?: GenerationAction;
+  prompt: string;
+  fullPrompt?: string;
+  params?: GenerationParams;
+  videoTitle?: string;
+  blob: Blob;
+  width: number;
+  height: number;
+  textLayer?: Generation['textLayer'];
+}
+
+/** A new version (or an original, without a parent). */
+export function newGeneration(input: VersionInput, id: string, createdAt: number): Generation {
+  const { parent } = input;
+  const projectId = input.projectId ?? parent?.projectId;
+  const params = input.params ?? parent?.params;
+  if (!projectId || !params) throw new Error('A version needs a project and params, given or from its parent');
+  const videoTitle = input.videoTitle ?? parent?.videoTitle;
+  return {
+    id,
+    projectId,
+    ...(parent ? { parentId: parent.id } : {}),
+    kind: input.kind,
+    ...(input.action ? { action: input.action } : {}),
+    prompt: input.prompt,
+    fullPrompt: input.fullPrompt ?? '',
+    ...(videoTitle ? { videoTitle } : {}),
+    params,
+    blob: input.blob,
+    width: input.width,
+    height: input.height,
+    createdAt,
+    ...(input.textLayer ? { textLayer: input.textLayer } : {}),
+  };
 }

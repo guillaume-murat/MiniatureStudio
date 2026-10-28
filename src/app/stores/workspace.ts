@@ -17,13 +17,14 @@ import { dimensions, highlightRegion, mergeWithMask, normaliseUpload, prepareRef
 import { explainError } from '../lib/errors';
 import { smoothRegion } from '../lib/smooth';
 import { randomSeed } from '../lib/channel';
+import { newGeneration, type VersionInput } from '../lib/versions';
 import { findStyle } from '../lib/styles';
 import { rankThumbnails, type Ranking } from '../lib/ai';
-import type { BrandKit, ChannelPage, Generation, GenerationAction, GenerationKind, GenerationParams, LibraryImage, Persona, Project, RefImage, RefSource } from '../lib/types';
+import type { AspectRatio, BrandKit, ChannelPage, Generation, GenerationAction, GenerationKind, GenerationParams, LibraryImage, ModelId, Persona, Project, RefImage, RefSource } from '../lib/types';
 import { useSettings } from './settings';
-import { t } from '../i18n';
-import { drawTextBlocks, cssFont, isArrow, isVisible, type LayerBlock, type TextBlock } from '../lib/textBlocks';
-import { loadGoogleFont } from '../lib/fonts';
+import { t, translate } from '../i18n';
+import { isArrow, isVisible, type LayerBlock } from '../lib/textBlocks';
+import { renderText, textSummary } from '../lib/textLayer';
 import { useText } from './text';
 
 export const MAX_IMAGES = 14;
@@ -56,7 +57,7 @@ export interface Outcome<T> {
   error?: string;
 }
 
-export interface ErrorReport {
+interface ErrorReport {
   message: string;
   status?: number;
   details?: unknown;
@@ -81,11 +82,9 @@ interface WorkspaceState {
 
   view: ViewMode;
   safeZones: boolean;
-  maskMode: boolean;
-  /** Placing text blocks over the selected image (see stores/text.ts). */
-  textMode: boolean;
-  /** Moving / zooming the selected image inside its frame (see stores/reframe.ts). */
-  reframeMode: boolean;
+  /** The image tool in use, one at a time (see `setTool`). */
+  tool: Tool | null;
+  /** Something is painted with the area tool. */
   hasMask: boolean;
   ranking: { ids: string[]; result: Ranking } | null;
   ranking_busy: boolean;
@@ -114,6 +113,10 @@ interface WorkspaceState {
   edit: (instruction: string, opts?: { mask?: HTMLCanvasElement }) => Promise<Outcome<Generation>[]>;
   /** Healing brush: the painted area is repainted to erase seams and hard edges. */
   heal: () => Promise<Outcome<Generation> | null>;
+  /** A plain white image in the output format, as a new thumbnail of the project. */
+  addBlankImage: () => Promise<Generation | null>;
+  /** The selected version copied as a new, independent thumbnail (its text layer included). */
+  duplicateSelected: () => Promise<Generation | null>;
   /** « Lisser »: the painted area is refilled from its surroundings, locally, without AI. */
   smooth: () => Promise<Generation | null>;
   /**
@@ -140,22 +143,28 @@ interface WorkspaceState {
   // ui
   setView: (view: ViewMode) => void;
   setSafeZones: (on: boolean) => void;
-  setMaskMode: (on: boolean) => void;
-  setTextMode: (on: boolean) => void;
-  /** Adds an arrow to the selected image, opening the text tool (its layer holds arrows too). */
-  addArrow: () => void;
-  setReframeMode: (on: boolean) => void;
+  /**
+   * Opens an image tool (null leaves it): the text tool loads the image's
+   * editable layer, leaving it drops the unapplied blocks, the reframe tool
+   * starts from the image as it is, and the painted area goes with the area tool.
+   */
+  setTool: (tool: Tool | null) => void;
+  /** Adds a text block (the brand's first colour behind it) or an arrow to the layer being edited. */
+  addBlock: (kind: 'text' | 'arrow') => void;
+  /** Text and arrows on the selected image that aren't part of its pixels: being edited, or its editable layer. */
+  pendingBlocks: () => LayerBlock[];
   /**
    * New version with the image moved / scaled in its frame. Done locally when it
-   * still covers the frame; otherwise the model fills the empty areas.
+   * still covers the frame; otherwise the model fills the empty areas. Moves
+   * the whole image, or only `zone` (fractions of the image) when given.
    */
-  /** Moves the whole image, or only `zone` (fractions of the image) when given. */
   reframe: (frame: Reframe, zone?: Point[] | null) => Promise<Outcome<Generation> | null>;
   /**
    * Draws the text blocks on the selected image. A text version is updated in
-   * place (its blocks stay editable); any other image gets a new text version.
+   * place (its blocks stay editable, or final with `merge`); any other image
+   * gets a new text version.
    */
-  applyText: (blocks: LayerBlock[]) => Promise<Generation | null>;
+  applyText: (blocks: LayerBlock[], opts?: { merge?: boolean }) => Promise<Generation | null>;
   /** Before reframing: draws the chosen kinds of blocks into the image (they move with it); the others stay editable. */
   bakeText: (blocks: LayerBlock[], merge: { text: boolean; arrows: boolean }) => Promise<Generation | null>;
   /** Makes a text version's text final: keeps the image, forgets the editable blocks. */
@@ -208,6 +217,18 @@ function migrateBrand(saved: (BrandKit & { avatar?: Blob }) | undefined): BrandK
   return { id: 'default', channelName, colors, logo: saved.avatar ?? saved.logo, banner, handle, subscribers, videoCount, description, verified, updatedAt };
 }
 
+/** Size of a blank image per output format (the edits keep it). */
+const BLANK_SIZES: Record<AspectRatio, { width: number; height: number }> = {
+  '16:9': { width: 1920, height: 1080 },
+  '9:16': { width: 1080, height: 1920 },
+  '4:3': { width: 1440, height: 1080 },
+  '1:1': { width: 1080, height: 1080 },
+  '21:9': { width: 2520, height: 1080 },
+};
+
+/** The name a new project gets, in either language: a project still named so was never renamed. */
+const DEFAULT_PROJECT_NAMES = new Set([translate('fr', 'topbar.untitled'), translate('en', 'topbar.untitled')]);
+
 const BRIEF_KEY = 'nt_brief';
 const EMPTY_BRIEF: Brief = { videoTitle: '', brief: '', styleId: '' };
 function loadBrief(): Brief {
@@ -247,8 +268,45 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     });
   }
 
+  /**
+   * Every new image goes through here: a version of `parent`, or an original.
+   * `blob` is the image itself, or the base under `blocks` when they are given
+   * (an editable text layer). Saved, then shown when its project is still open,
+   * unless `show` is false (the later results of a batch).
+   */
+  async function saveVersion(input: Omit<VersionInput, 'width' | 'height' | 'textLayer'> & { blocks?: LayerBlock[]; show?: boolean }): Promise<Generation> {
+    const { blocks, show = true, ...rest } = input;
+    const textLayer = blocks ? { base: input.blob, blocks } : undefined;
+    const blob = textLayer ? await renderText(textLayer.base, textLayer.blocks) : input.blob;
+    const { width, height } = await dimensions(blob);
+    const generation = newGeneration({ projectId: get().projectId, ...rest, blob, width, height, textLayer }, db.uid('g_'), Date.now());
+    await db.putGeneration(generation);
+    if (generation.projectId !== get().projectId) return generation;
+    set({ generations: [generation, ...get().generations] });
+    if (show) {
+      // Leaves the current tool, so the result shows without a mask or text draft over it.
+      get().select(generation.id);
+      if (get().view === 'compare' || get().view === 'channel') set({ view: 'image' });
+    }
+    return generation;
+  }
+
+  /** Saves a changed version in place (favourite, text layer edited or merged). */
+  async function replaceVersion(generation: Generation) {
+    await db.putGeneration(generation);
+    set({ generations: get().generations.map((g) => (g.id === generation.id ? generation : g)) });
+  }
+
   /** Edits only the area of `mask` (white/opaque = edit); the rest is merged back untouched. */
-  async function regionEdit(source: Generation, mask: HTMLCanvasElement, prompt: string, fullPrompt: string, apiKey: string, action?: GenerationAction) {
+  async function regionEdit(
+    source: Generation,
+    mask: HTMLCanvasElement,
+    prompt: string,
+    fullPrompt: string,
+    apiKey: string,
+    action?: GenerationAction,
+    model?: ModelId,
+  ) {
     const highlighted = await highlightRegion(source.blob, mask);
     return runJob({
       kind: 'region',
@@ -258,9 +316,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       // Clean image first (what gets edited), marked copy second (where to edit):
       // sending only the marked copy lets the magenta tint bleed into the result.
       images: [source.blob, highlighted],
-      params: { ...useSettings.getState().params(), aspectRatio: source.params.aspectRatio },
-      parentId: source.id,
-      videoTitle: source.videoTitle,
+      params: { ...useSettings.getState().params(), aspectRatio: source.params.aspectRatio, ...(model ? { model } : {}) },
+      parent: source,
       apiKey,
       finalize: (edited) => mergeWithMask(source.blob, edited, mask),
       batch: { shown: false },
@@ -307,7 +364,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     fullPrompt: string;
     images: Blob[];
     params: GenerationParams;
-    parentId?: string;
+    /** The version being edited; none for a generation from the brief. */
+    parent?: Generation;
     videoTitle?: string;
     apiKey: string;
     /** Post-process the raw model output (region edits merge it back into the original). */
@@ -320,6 +378,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     batch: { shown: boolean };
     blocking?: boolean;
   }): Promise<Outcome<Generation>> {
+    // The project it was started in, even if the user opens another one meanwhile.
+    const projectId = opts.parent?.projectId ?? get().projectId;
     const job: Job = {
       id: db.uid('j_'),
       kind: opts.kind,
@@ -327,7 +387,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       status: 'running',
       startedAt: Date.now(),
       elapsed: 0,
-      parentId: opts.parentId,
+      parentId: opts.parent?.id,
       controller: new AbortController(),
     };
     set({ jobs: [...get().jobs, job] });
@@ -345,34 +405,22 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         onProgress: (elapsed) => patchJob({ elapsed }),
       });
       if (opts.finalize) blob = await opts.finalize(blob);
-      const textLayer = opts.textBlocks ? { base: blob, blocks: opts.textBlocks } : undefined;
-      if (textLayer) blob = await renderText(textLayer.base, textLayer.blocks);
-      const { width, height } = await dimensions(blob);
-      const generation: Generation = {
-        id: db.uid('g_'),
-        projectId: get().projectId,
-        parentId: opts.parentId,
+      // The first result of a batch gets shown.
+      const show = !opts.batch.shown && projectId === get().projectId;
+      if (show) opts.batch.shown = true;
+      const generation = await saveVersion({
+        parent: opts.parent,
+        projectId,
         kind: opts.kind,
-        ...(opts.action ? { action: opts.action } : {}),
+        action: opts.action,
         prompt: opts.prompt,
         fullPrompt: opts.fullPrompt,
         videoTitle: opts.videoTitle,
         params: opts.params,
         blob,
-        width,
-        height,
-        createdAt: Date.now(),
-        ...(textLayer ? { textLayer } : {}),
-      };
-      await db.putGeneration(generation);
-      // The user may have switched project meanwhile: only show it if still relevant.
-      if (generation.projectId === get().projectId) {
-        set({ generations: [generation, ...get().generations] });
-        if (!opts.batch.shown) {
-          opts.batch.shown = true;
-          set({ selectedId: generation.id, maskMode: false, hasMask: false, view: get().view === 'compare' ? 'image' : get().view });
-        }
-      }
+        blocks: opts.textBlocks,
+        show,
+      });
       set({ jobs: get().jobs.filter((j) => j.id !== job.id) });
       return { value: generation };
     } catch (error) {
@@ -402,9 +450,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     brand: EMPTY_BRAND,
     view: 'image',
     safeZones: false,
-    maskMode: false,
-    textMode: false,
-    reframeMode: false,
+    tool: null,
     hasMask: false,
     ranking: null,
     ranking_busy: false,
@@ -417,7 +463,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         db.listLibrary(),
         db.getBrandKit(),
       ]);
-      set({ projects, personas, library, brand: migrateBrand(brand) });
+      // Every registered person is in the thumbnails by default (up to the limit); unticking one lasts until the next launch.
+      set({ projects, personas, library, brand: migrateBrand(brand), personaIds: personas.slice(0, MAX_PERSONAS).map((p) => p.id) });
       let lastId: string | null = null;
       try {
         lastId = localStorage.getItem('nt_project');
@@ -441,7 +488,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     openProject: async (id) => {
       get().generations.forEach((g) => revoke(g.blob));
       const generations = await db.listGenerations(id);
-      set({ projectId: id, generations, selectedId: generations[0]?.id ?? null, pickedIds: [], ranking: null, maskMode: false });
+      get().setTool(null);
+      set({ projectId: id, generations, selectedId: generations[0]?.id ?? null, pickedIds: [], ranking: null });
       try {
         localStorage.setItem('nt_project', id);
       } catch {
@@ -525,7 +573,38 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       const mask = snapshotMask(maskCanvas);
       // Filled locally first: the model then only restores texture, it has no hole to invent into.
       const patched = await smoothRegion(source.blob, mask);
-      return regionEdit({ ...source, blob: patched }, mask, t('heal.done'), buildHealPrompt(), apiKey, 'heal');
+      // Always Nano Banana 2, whatever the model chosen for generating.
+      return regionEdit({ ...source, blob: patched }, mask, t('heal.done'), buildHealPrompt(), apiKey, 'heal', 'nano-banana-2');
+    },
+
+    addBlankImage: async () => {
+      const settings = useSettings.getState();
+      const { width, height } = BLANK_SIZES[settings.aspectRatio];
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+      const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas export failed'))), 'image/png'));
+      return saveVersion({ kind: 'import', prompt: t('filmstrip.blankImage'), videoTitle: get().brief.videoTitle || undefined, params: settings.params(), blob });
+    },
+
+    duplicateSelected: async () => {
+      const source = selectedGeneration(get());
+      if (!source) return null;
+      const base = source.textLayer?.base ?? source.blob;
+      // Its own Blob: deleting one of the two must not free the other's image.
+      return saveVersion({
+        projectId: source.projectId,
+        kind: source.kind,
+        prompt: source.prompt,
+        fullPrompt: source.fullPrompt,
+        videoTitle: source.videoTitle,
+        params: source.params,
+        blob: new Blob([base], { type: base.type }),
+        blocks: source.textLayer?.blocks,
+      });
     },
 
     smooth: async () => {
@@ -533,26 +612,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       if (!source || !get().hasMask || !maskCanvas) return null;
       try {
         const blob = await smoothRegion(source.blob, snapshotMask(maskCanvas));
-        const generation: Generation = {
-          id: db.uid('g_'),
-          projectId: source.projectId,
-          parentId: source.id,
-          kind: 'region',
-          action: 'smooth',
-          prompt: t('smooth.done'),
-          fullPrompt: '',
-          videoTitle: source.videoTitle,
-          params: source.params,
-          blob,
-          width: source.width,
-          height: source.height,
-          createdAt: Date.now(),
-        };
-        await db.putGeneration(generation);
-        set({ generations: [generation, ...get().generations] });
-        // Leaves the area tool, so the result shows without the painted mask over it.
-        get().select(generation.id);
-        return generation;
+        return await saveVersion({ parent: source, kind: 'region', action: 'smooth', prompt: t('smooth.done'), blob });
       } catch (error) {
         reportError(error, set);
         return null;
@@ -602,8 +662,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         images: [source.textLayer?.base ?? source.blob],
         // 2K is above 1920×1080 at every aspect ratio.
         params: { ...useSettings.getState().params(), aspectRatio: source.params.aspectRatio, resolution: '2K' },
-        parentId: source.id,
-        videoTitle: source.videoTitle,
+        parent: source,
         apiKey,
         textBlocks: source.textLayer?.blocks,
         // The model needs the full detail of the image it is asked to sharpen.
@@ -620,7 +679,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
 
       const settings = useSettings.getState();
       const params: GenerationParams = { ...settings.params(), aspectRatio: source.params.aspectRatio };
-      const painted = get().maskMode && get().hasMask ? maskCanvas : null;
+      const painted = get().tool === 'mask' && get().hasMask ? maskCanvas : null;
 
       const mask = opts?.mask ?? (painted ? snapshotMask(painted) : null);
       if (mask) return [await regionEdit(source, mask, instruction, buildRegionEditPrompt(instruction), apiKey)];
@@ -633,8 +692,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         fullPrompt: buildEditPrompt(instruction, people.map((p) => p.role)),
         images: [source.blob, ...people.map((p) => p.blob)],
         params,
-        parentId: source.id,
-        videoTitle: source.videoTitle,
+        parent: source,
         apiKey,
         batch: { shown: false },
       });
@@ -648,9 +706,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     cancelAll: () => get().jobs.forEach((j) => j.status === 'running' && j.controller.abort()),
 
     select: (id) => {
-      if (get().textMode) useText.getState().clear();
-      useReframe.getState().reset();
-      set({ selectedId: id, maskMode: false, hasMask: false, textMode: false, reframeMode: false });
+      get().setTool(null);
+      set({ selectedId: id });
     },
 
     togglePick: (id) => {
@@ -662,16 +719,15 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     toggleFavorite: async (id) => {
       const gen = get().generations.find((g) => g.id === id);
       if (!gen) return;
-      const updated = { ...gen, favorite: !gen.favorite };
-      await db.putGeneration(updated);
-      set({ generations: get().generations.map((g) => (g.id === id ? updated : g)) });
+      await replaceVersion({ ...gen, favorite: !gen.favorite });
     },
 
     removeGeneration: async (id) => {
       const gen = get().generations.find((g) => g.id === id);
       await db.deleteGeneration(id);
-      revoke(gen?.blob);
       const generations = get().generations.filter((g) => g.id !== id);
+      // Versions can share a Blob in memory (a copy, a text version's base): only free it once unused.
+      if (gen && !generations.some((g) => g.blob === gen.blob || g.textLayer?.base === gen.blob)) revoke(gen.blob);
       set({
         generations,
         selectedId: get().selectedId === id ? (generations[0]?.id ?? null) : get().selectedId,
@@ -709,14 +765,23 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     },
 
     reloadPersonas: async () => {
+      const known = new Set(get().personas.map((p) => p.id));
       const personas = await db.listPersonas();
-      set({ personas, personaIds: get().personaIds.filter((id) => personas.some((p) => p.id === id)) });
+      // Deleted people leave the selection; people just added join it, while there is room.
+      const ids = get().personaIds.filter((id) => personas.some((p) => p.id === id));
+      for (const p of personas) if (!known.has(p.id) && !ids.includes(p.id) && ids.length < MAX_PERSONAS) ids.push(p.id);
+      set({ personas, personaIds: ids });
     },
     reloadLibrary: async () => set({ library: await db.listLibrary() }),
     saveBrand: async (kit) => {
+      const previous = get().brand.channelName;
       const updated = { ...kit, updatedAt: Date.now() };
       await db.putBrandKit(updated);
       set({ brand: updated });
+      // A project still under its default name takes the channel's name; a name the user chose is kept.
+      const project = get().projects.find((p) => p.id === get().projectId);
+      const name = updated.channelName.trim();
+      if (name && name !== previous.trim() && project && DEFAULT_PROJECT_NAMES.has(project.name)) await get().renameProject(name);
     },
     saveToLibrary: async (blob) => {
       await db.putLibraryImage({ id: db.uid('l_'), blob, createdAt: Date.now() });
@@ -724,43 +789,34 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       toast.success(t('canvas.savedToLibrary'));
     },
 
-    setView: (view) => set({ view, maskMode: view === 'image' ? get().maskMode : false }),
+    // The painted area lives on the image view's canvas.
+    setView: (view) => {
+      if (view !== 'image' && get().tool === 'mask') get().setTool(null);
+      set({ view });
+    },
     setSafeZones: (on) => set({ safeZones: on }),
-    setMaskMode: (on) =>
-      set({
-        maskMode: on,
-        hasMask: on ? get().hasMask : false,
-        textMode: on ? false : get().textMode,
-        reframeMode: on ? false : get().reframeMode,
-        view: on ? 'image' : get().view,
-      }),
-    addArrow: () => {
-      if (!get().selectedId) return;
-      if (!get().textMode) get().setTextMode(true);
-      useText.getState().addArrow();
+    setTool: (tool) => {
+      const current = get().tool;
+      if (tool === current || (tool && !get().selectedId)) return;
+      // Text and arrows share one layer: switching between them keeps the unapplied blocks.
+      const text = useText.getState();
+      if (isLayerTool(current) && !isLayerTool(tool)) text.clear();
+      if (isLayerTool(current) && isLayerTool(tool)) text.select(null);
+      if (!isLayerTool(current) && isLayerTool(tool)) text.load(selectedGeneration(get())?.textLayer?.blocks ?? []);
+      if (current === 'reframe' || tool === 'reframe') useReframe.getState().reset();
+      set({ tool, hasMask: tool === 'mask' && current === 'mask' && get().hasMask, ...(tool ? { view: 'image' as const } : {}) });
+      // Opening one with nothing of its kind yet starts with one to place.
+      if (tool === 'text' && !useText.getState().blocks.some((b) => !isArrow(b))) get().addBlock('text');
+      if (tool === 'arrow' && !useText.getState().blocks.some(isArrow)) get().addBlock('arrow');
     },
-    setTextMode: (on) => {
-      const layer = selectedGeneration(get())?.textLayer;
-      if (on && layer) useText.getState().load(layer.blocks);
-      else useText.getState().clear();
-      set({
-        textMode: on,
-        maskMode: on ? false : get().maskMode,
-        hasMask: on ? false : get().hasMask,
-        reframeMode: on ? false : get().reframeMode,
-        view: on ? 'image' : get().view,
-      });
+    addBlock: (kind) => {
+      const color = get().brand.colors[0];
+      if (kind === 'arrow') useText.getState().addArrow();
+      else useText.getState().add('Anton', color ? { background: color } : {});
     },
-    setReframeMode: (on) => {
-      useReframe.getState().reset();
-      if (on) useText.getState().clear();
-      set({
-        reframeMode: on,
-        maskMode: on ? false : get().maskMode,
-        hasMask: on ? false : get().hasMask,
-        textMode: on ? false : get().textMode,
-        view: on ? 'image' : get().view,
-      });
+    pendingBlocks: () => {
+      if (isLayerTool(get().tool)) return useText.getState().blocks.filter(isVisible);
+      return selectedGeneration(get())?.textLayer?.blocks ?? [];
     },
 
     reframe: async (frame, zone) => {
@@ -773,30 +829,11 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         const { composed, mask, width, height } = isZone(zone) ? await composeZoneReframe(base, frame, zone) : await composeReframe(base, frame);
         if (!mask) {
           // Still covers the frame (zoom in / crop): no model needed.
-          const textLayer = blocks ? { base: composed, blocks } : undefined;
-          const generation: Generation = {
-            id: db.uid('g_'),
-            projectId: source.projectId,
-            parentId: source.id,
-            kind: 'edit',
-            action: 'reframe',
-            prompt: t('reframe.done'),
-            fullPrompt: '',
-            videoTitle: source.videoTitle,
-            params: source.params,
-            blob: textLayer ? await renderText(composed, textLayer.blocks) : composed,
-            width,
-            height,
-            createdAt: Date.now(),
-            ...(textLayer ? { textLayer } : {}),
-          };
-          await db.putGeneration(generation);
-          set({ generations: [generation, ...get().generations], selectedId: generation.id, reframeMode: false });
-          return { value: generation };
+          return { value: await saveVersion({ parent: source, kind: 'edit', action: 'reframe', prompt: t('reframe.done'), blob: composed, blocks }) };
         }
         const apiKey = checkKey();
         if (!apiKey) return null;
-        set({ reframeMode: false });
+        get().setTool(null);
         return runJob({
           kind: 'edit',
           action: 'reframe',
@@ -804,8 +841,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
           fullPrompt: buildOutpaintPrompt(),
           images: [composed],
           params: { ...useSettings.getState().params(), aspectRatio: source.params.aspectRatio },
-          parentId: source.id,
-          videoTitle: source.videoTitle,
+          parent: source,
           apiKey,
           textBlocks: blocks,
           // Only the empty areas come from the model; the moved image stays pixel-exact.
@@ -820,42 +856,19 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       }
     },
 
-    applyText: async (blocks) => {
+    applyText: async (blocks, opts) => {
       const source = get().generations.find((g) => g.id === get().selectedId);
       const used = blocks.filter(isVisible);
       // A text version may end up with no text (all removed); a plain image needs some.
       if (!source || (!used.length && !source.textLayer)) return null;
       try {
         const base = source.textLayer?.base ?? source.blob;
-        const blob = await renderText(base, used);
-        const summary = used.map((b) => (isArrow(b) ? '➜' : b.text.replace(/\s+/g, ' ').trim())).join(' · ');
-        const textLayer = { base, blocks: used };
-        let generation: Generation;
-        if (source.textLayer) {
-          generation = { ...source, blob, textLayer, prompt: summary || source.prompt };
-          await db.putGeneration(generation);
-          set({ generations: get().generations.map((g) => (g.id === source.id ? generation : g)) });
-        } else {
-          generation = {
-            id: db.uid('g_'),
-            projectId: source.projectId,
-            parentId: source.id,
-            kind: 'text',
-            prompt: summary,
-            fullPrompt: '',
-            videoTitle: source.videoTitle,
-            params: source.params,
-            blob,
-            width: source.width,
-            height: source.height,
-            createdAt: Date.now(),
-            textLayer,
-          };
-          await db.putGeneration(generation);
-          set({ generations: [generation, ...get().generations], selectedId: generation.id });
-        }
-        useText.getState().clear();
-        set({ textMode: false });
+        const summary = textSummary(used);
+        if (!source.textLayer) return await saveVersion({ parent: source, kind: 'text', prompt: summary, blob: base, blocks: used });
+        const generation: Generation = { ...source, blob: await renderText(base, used), textLayer: { base, blocks: used }, prompt: summary || source.prompt };
+        if (opts?.merge) delete generation.textLayer;
+        await replaceVersion(generation);
+        get().setTool(null);
         return generation;
       } catch (error) {
         reportError(error, set);
@@ -873,25 +886,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       try {
         const kept = used.filter((b) => !baked.includes(b));
         const base = await renderText(source.textLayer?.base ?? source.blob, baked);
-        const generation: Generation = {
-          id: db.uid('g_'),
-          projectId: source.projectId,
-          parentId: source.id,
-          kind: 'text',
-          prompt: used.map((b) => (isArrow(b) ? '➜' : b.text.replace(/\s+/g, ' ').trim())).join(' · '),
-          fullPrompt: '',
-          videoTitle: source.videoTitle,
-          params: source.params,
-          blob: kept.length ? await renderText(base, kept) : base,
-          width: source.width,
-          height: source.height,
-          createdAt: Date.now(),
-          ...(kept.length ? { textLayer: { base, blocks: kept } } : {}),
-        };
-        await db.putGeneration(generation);
-        useText.getState().clear();
-        set({ generations: [generation, ...get().generations], selectedId: generation.id, textMode: false });
-        return generation;
+        return await saveVersion({ parent: source, kind: 'text', prompt: textSummary(used), blob: base, blocks: kept.length ? kept : undefined });
       } catch (error) {
         reportError(error, set);
         return null;
@@ -903,28 +898,19 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       if (!gen?.textLayer) return;
       const merged: Generation = { ...gen };
       delete merged.textLayer;
-      await db.putGeneration(merged);
-      set({ generations: get().generations.map((g) => (g.id === id ? merged : g)) });
+      await replaceVersion(merged);
     },
     setHasMask: (on) => set({ hasMask: on }),
     showError: (report) => set({ lastError: report }),
   };
 });
 
-/** `base` with the text blocks drawn on it, at the image's own resolution. */
-async function renderText(base: Blob, blocks: LayerBlock[]): Promise<Blob> {
-  // The canvas only draws with fonts the page has loaded.
-  const texts = blocks.filter((b): b is TextBlock => !isArrow(b));
-  await Promise.all([...new Set(texts.map((b) => b.font))].map((f) => loadGoogleFont(f).catch(() => undefined)));
-  await Promise.all(texts.map((b) => document.fonts.load(cssFont(b, 48)).catch(() => undefined)));
-  const bitmap = await createImageBitmap(base);
-  const canvas = document.createElement('canvas');
-  canvas.width = bitmap.width;
-  canvas.height = bitmap.height;
-  const ctx = canvas.getContext('2d')!;
-  ctx.drawImage(bitmap, 0, 0);
-  drawTextBlocks(ctx, canvas.width, canvas.height, blocks);
-  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas export failed'))), 'image/png'));
+/** An image tool working on the selected image. */
+export type Tool = 'mask' | 'text' | 'arrow' | 'reframe';
+
+/** The text and arrow tools edit the same layer (`stores/text.ts`), each its own kind of block. */
+export function isLayerTool(tool: Tool | null): tool is 'text' | 'arrow' {
+  return tool === 'text' || tool === 'arrow';
 }
 
 export function selectedGeneration(s: WorkspaceState): Generation | undefined {

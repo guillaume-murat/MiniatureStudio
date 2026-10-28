@@ -1,4 +1,4 @@
-import { ArrowUpRight, Bot, Crop, Folder, PanelsTopLeft, Paintbrush, Plus, ScanLine, Settings, Sparkles, SunMoon, Tv, Type, Users, Wand2 } from 'lucide-react';
+import { Bot, Folder, Plus, Settings, Sparkles, SunMoon, Users, Wand2 } from 'lucide-react';
 import {
   CommandDialog,
   CommandEmpty,
@@ -10,7 +10,7 @@ import {
   CommandShortcut,
 } from '../ui/command';
 import { MOD } from '../TopBar';
-import { toggleReframe } from '../canvas/ReframeTextDialog';
+import { COMMANDS, isAvailable, type Command } from '../../commands';
 import { useUI } from '../../stores/ui';
 import { useWorkspace } from '../../stores/workspace';
 import { useSettings } from '../../stores/settings';
@@ -29,6 +29,12 @@ export function CommandMenu() {
     close();
     fn();
   };
+  const item = (c: Command) => (
+    <CommandItem key={c.id} onSelect={run(() => c.run(useWorkspace.getState()))} disabled={!isAvailable(c, ws)}>
+      <c.icon /> {t(c.label(ws))}
+      <CommandShortcut>{c.key.toUpperCase()}</CommandShortcut>
+    </CommandItem>
+  );
 
   return (
     <CommandDialog open={open} onOpenChange={(o) => !o && close()} title={t('topbar.commands')} description={t('commands.placeholder')}>
@@ -43,37 +49,11 @@ export function CommandMenu() {
           <CommandItem onSelect={run(() => openDialog('assistant'))}>
             <Sparkles /> {t('commands.assistant')}
           </CommandItem>
-          <CommandItem onSelect={run(() => ws.setView(ws.view === 'feed' ? 'image' : 'feed'))} disabled={!ws.selectedId}>
-            <Tv /> {t('commands.feed')}
-            <CommandShortcut>P</CommandShortcut>
-          </CommandItem>
-          <CommandItem onSelect={run(() => ws.setView(ws.view === 'channel' ? 'image' : 'channel'))}>
-            <PanelsTopLeft /> {t('canvas.viewChannel')}
-            <CommandShortcut>C</CommandShortcut>
-          </CommandItem>
-          <CommandItem onSelect={run(() => ws.setSafeZones(!ws.safeZones))}>
-            <ScanLine /> {t('commands.safeZones')}
-            <CommandShortcut>Z</CommandShortcut>
-          </CommandItem>
+          {COMMANDS.filter((c) => c.group === 'view').map(item)}
         </CommandGroup>
         <CommandSeparator />
         <CommandGroup>
-          <CommandItem onSelect={run(() => ws.setTextMode(true))} disabled={!ws.selectedId}>
-            <Type /> {t('canvas.textTool')}
-            <CommandShortcut>T</CommandShortcut>
-          </CommandItem>
-          <CommandItem onSelect={run(ws.addArrow)} disabled={!ws.selectedId}>
-            <ArrowUpRight /> {t('arrow.addTool')}
-            <CommandShortcut>A</CommandShortcut>
-          </CommandItem>
-          <CommandItem onSelect={run(() => ws.setMaskMode(true))} disabled={!ws.selectedId}>
-            <Paintbrush /> {t('canvas.maskTool')}
-            <CommandShortcut>M</CommandShortcut>
-          </CommandItem>
-          <CommandItem onSelect={run(toggleReframe)} disabled={!ws.selectedId}>
-            <Crop /> {t('canvas.reframeTool')}
-            <CommandShortcut>R</CommandShortcut>
-          </CommandItem>
+          {COMMANDS.filter((c) => c.group === 'tool').map(item)}
         </CommandGroup>
         <CommandSeparator />
         <CommandGroup>
