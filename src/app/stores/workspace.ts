@@ -262,7 +262,7 @@ let loadedProjectId: string | null = null;
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
 /** Output settings at launch, for projects made before they were per project. */
 let legacyOutput: ProjectOutput = DEFAULT_OUTPUT;
-/** Every person record known, to spot the one just created (it joins the open project). */
+/** Every person record known, to spot the one just created (it joins the open project's selection). */
 let knownPersonaIds = new Set<string>();
 
 function scheduleSave() {
@@ -280,7 +280,7 @@ async function flushSave() {
   const ws = useWorkspace.getState();
   const project = ws.projects.find((p) => p.id === ws.projectId);
   if (!project || loadedProjectId !== project.id) return;
-  const inputs: ProjectInputs = { brief: ws.brief, refs: ws.refs, brand: ws.brand, people: ws.personas.map((p) => p.id), output: currentOutput() };
+  const inputs: ProjectInputs = { brief: ws.brief, refs: ws.refs, brand: ws.brand, people: ws.personaIds, output: currentOutput() };
   const updated = { ...project, inputs };
   useWorkspace.setState({ projects: useWorkspace.getState().projects.map((p) => (p.id === updated.id ? updated : p)) });
   await db.putProject(updated);
@@ -513,9 +513,10 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     lastError: null,
 
     init: async () => {
-      const [projects, library] = await Promise.all([db.listProjects(), db.listLibrary()]);
+      const [projects, library, personas] = await Promise.all([db.listProjects(), db.listLibrary(), db.listPersonas()]);
       legacyOutput = currentOutput();
-      set({ projects, library });
+      knownPersonaIds = new Set(personas.map((p) => p.id));
+      set({ projects, library, personas });
       let lastId: string | null = null;
       try {
         lastId = localStorage.getItem('nt_project');
@@ -547,17 +548,17 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       await flushSave();
       loadedProjectId = null;
       get().generations.forEach((g) => revoke(g.blob));
-      const [generations, everyone] = await Promise.all([db.listGenerations(id), db.listPersonas()]);
-      knownPersonaIds = new Set(everyone.map((p) => p.id));
+      const generations = await db.listGenerations(id);
+      const { personas } = get();
       const project = get().projects.find((p) => p.id === id);
       const inputs: ProjectInputs = project?.inputs ?? {
         brief: loadBrief(),
         refs: [],
         brand: migrateBrand(await db.getBrandKit()),
-        people: everyone.map((p) => p.id),
+        // Everyone was in the thumbnails by default.
+        people: personas.slice(0, MAX_PERSONAS).map((p) => p.id),
         output: legacyOutput,
       };
-      const personas = inputs.people.map((pid) => everyone.find((p) => p.id === pid)).filter((p): p is Persona => !!p);
       get().setTool(null);
       useSettings.getState().set(inputs.output);
       set({
@@ -569,9 +570,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         brief: inputs.brief,
         refs: inputs.refs,
         brand: inputs.brand,
-        personas,
-        // Every person of the project is in the thumbnails by default (up to the limit); unticking one lasts until the project is reopened.
-        personaIds: personas.slice(0, MAX_PERSONAS).map((p) => p.id),
+        // The library is shared; the people in this project's thumbnails are its own.
+        personaIds: inputs.people.filter((pid) => personas.some((p) => p.id === pid)).slice(0, MAX_PERSONAS),
       });
       loadedProjectId = id;
       // An older project gets its own copy of what was shared.
@@ -858,15 +858,12 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
 
     reloadPersonas: async () => {
       const everyone = await db.listPersonas();
-      // A person just created joins the open project (and the selection, while there is room); deleted ones leave.
+      // A person just created joins the open project's selection while there is room; deleted ones leave it.
       const created = everyone.filter((p) => !knownPersonaIds.has(p.id));
       knownPersonaIds = new Set(everyone.map((p) => p.id));
-      const people = [...get().personas.map((p) => p.id), ...created.map((p) => p.id)];
-      const personas = people.map((id) => everyone.find((p) => p.id === id)).filter((p): p is Persona => !!p);
-      const ids = get().personaIds.filter((id) => personas.some((p) => p.id === id));
+      const ids = get().personaIds.filter((id) => everyone.some((p) => p.id === id));
       for (const p of created) if (ids.length < MAX_PERSONAS) ids.push(p.id);
-      set({ personas, personaIds: ids });
-      scheduleSave();
+      set({ personas: everyone, personaIds: ids });
     },
     reloadLibrary: async () => set({ library: await db.listLibrary() }),
     saveBrand: async (kit) => {
@@ -1014,6 +1011,11 @@ export function selectedGeneration(s: WorkspaceState): Generation | undefined {
 }
 
 // Output settings live in the settings store (shared with the request code) but belong to the open project.
+// The selection is saved however it changes (panel, new person, agent); not while a project opens.
+useWorkspace.subscribe((state, previous) => {
+  if (loadedProjectId && state.personaIds !== previous.personaIds) scheduleSave();
+});
+
 useSettings.subscribe((state, previous) => {
   if (OUTPUT_KEYS.some((k) => state[k] !== previous[k])) scheduleSave();
 });

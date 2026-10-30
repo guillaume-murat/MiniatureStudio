@@ -63,7 +63,7 @@ export interface ProjectInputs {
   brief: { videoTitle: string; brief: string; styleId: string };
   refs: RefImage[];
   brand: BrandKit;
-  /** The people added to this project (records in the `personas` store). */
+  /** The people in this project's thumbnails, at most 5 (records in the `personas` store, a library shared by all projects). */
   people: string[];
   output: ProjectOutput;
 }
