@@ -7,7 +7,7 @@ type Patch = Partial<Omit<TextBlock, 'id' | 'kind'>> | Partial<Omit<ArrowBlock, 
 interface TextState {
   blocks: LayerBlock[];
   selectedId: string | null;
-  add: (font: string, partial?: Partial<TextBlock>) => void;
+  add: (font?: string, partial?: Partial<TextBlock>) => void;
   addArrow: (partial?: Partial<ArrowBlock>) => void;
   update: (id: string, patch: Patch) => void;
   remove: (id: string) => void;

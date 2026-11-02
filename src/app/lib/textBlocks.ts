@@ -22,7 +22,12 @@ export interface TextBlock {
   color: string;
   /** Box behind the text, or null for none. */
   background: string | null;
+  /** The box's corners; absent on blocks saved before it could change (rounded). */
+  corners?: BoxCorners;
 }
+
+export type BoxCorners = 'square' | 'rounded' | 'pill';
+export const BOX_CORNERS: BoxCorners[] = ['square', 'rounded', 'pill'];
 
 export type ArrowHead = 'filled' | 'open' | 'double';
 
@@ -72,8 +77,16 @@ export const LINE_HEIGHT = 1.15;
 export const PADDING_X = 0.35;
 export const PADDING_Y = 0.15;
 export const RADIUS = 0.2;
+/** The font of a new text block. */
+export const DEFAULT_TEXT_FONT = 'Bricolage Grotesque';
 
-export function newTextBlock(font: string, partial: Partial<TextBlock> = {}): TextBlock {
+/** Corner radius of a block's box, in pixels, for a font size `px` and a box height `boxH`. */
+export function boxRadius(block: TextBlock, px: number, boxH: number): number {
+  const corners = block.corners ?? 'rounded';
+  return corners === 'square' ? 0 : corners === 'pill' ? boxH / 2 : RADIUS * px;
+}
+
+export function newTextBlock(font = DEFAULT_TEXT_FONT, partial: Partial<TextBlock> = {}): TextBlock {
   return {
     id: `t_${Math.random().toString(36).slice(2, 10)}`,
     text: 'TEXTE',
@@ -84,7 +97,8 @@ export function newTextBlock(font: string, partial: Partial<TextBlock> = {}): Te
     font,
     bold: true,
     color: '#ffffff',
-    background: '#111111',
+    background: '#000000',
+    corners: 'rounded',
     ...partial,
   };
 }
@@ -263,7 +277,7 @@ export function drawTextBlocks(ctx: CanvasRenderingContext2D, width: number, hei
     if (block.background) {
       ctx.fillStyle = block.background;
       ctx.beginPath();
-      ctx.roundRect(-boxW / 2, -boxH / 2, boxW, boxH, RADIUS * px);
+      ctx.roundRect(-boxW / 2, -boxH / 2, boxW, boxH, boxRadius(block, px, boxH));
       ctx.fill();
     }
     ctx.fillStyle = block.color;

@@ -51,7 +51,8 @@ export function FontPicker({ value, onChange, className }: { value: string; onCh
   const ready = state === value;
 
   return (
-    <div className={className}>
+    // The trigger fills the given width and truncates the name: on its own a long family pushed it past its box.
+    <div className={cn('flex shrink-0', className)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -60,7 +61,7 @@ export function FontPicker({ value, onChange, className }: { value: string; onCh
             role="combobox"
             aria-expanded={open}
             aria-label={t('brand.font')}
-            className="min-w-0 flex-1 justify-between font-normal"
+            className="w-full min-w-0 justify-between font-normal"
           >
             <span className={cn('truncate', !value && 'text-muted-foreground')} style={ready ? { fontFamily: `"${value}"` } : undefined}>
               {value || t('brand.fontPlaceholder')}

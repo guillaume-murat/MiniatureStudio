@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { arrowGeometry, bendThrough, clamp01, cssFont, isVisible, newArrowBlock, newTextBlock, rotationTowards } from '../textBlocks';
+import { arrowGeometry, bendThrough, boxRadius, clamp01, cssFont, isVisible, newArrowBlock, newTextBlock, rotationTowards } from '../textBlocks';
 
 describe('rotationTowards', () => {
   it('reads the handle straight above as no rotation', () => {
@@ -20,6 +20,15 @@ describe('text blocks', () => {
     const b = newTextBlock('Anton');
     expect(b).toMatchObject({ x: 0.5, y: 0.5, rotation: 0, font: 'Anton', bold: true });
     expect(cssFont(b, 40)).toBe('bold 40px "Anton", sans-serif');
+  });
+  it('are white on black in Bricolage Grotesque by default', () => {
+    expect(newTextBlock()).toMatchObject({ font: 'Bricolage Grotesque', color: '#ffffff', background: '#000000', corners: 'rounded' });
+  });
+  it('round their box as chosen, older blocks staying rounded', () => {
+    const b = newTextBlock();
+    expect(boxRadius({ ...b, corners: 'square' }, 40, 60)).toBe(0);
+    expect(boxRadius({ ...b, corners: 'pill' }, 40, 60)).toBe(30);
+    expect(boxRadius({ ...b, corners: undefined }, 40, 60)).toBe(boxRadius({ ...b, corners: 'rounded' }, 40, 60));
   });
   it('keep positions inside the image', () => {
     expect(clamp01(-0.2)).toBe(0);

@@ -6,7 +6,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from './componen
 import { TopBar } from './components/TopBar';
 import { ReframeTextDialog } from './components/canvas/ReframeTextDialog';
 import { runShortcut } from './commands';
-import { BlockingJobOverlay, blockingJob } from './components/canvas/BlockingJob';
+import { BlockingJobOverlay, runningJobs } from './components/canvas/BlockingJob';
 import { BriefPanel } from './components/brief/BriefPanel';
 import { CanvasArea } from './components/canvas/CanvasArea';
 import { Filmstrip } from './components/Filmstrip';
@@ -74,8 +74,8 @@ export default function App() {
   // Global shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      // A reframe is running: shortcuts would act on the image it is replacing.
-      if (blockingJob(useWorkspace.getState().jobs)) return;
+      // Nano Banana is working: shortcuts would act on an image about to change.
+      if (runningJobs(useWorkspace.getState().jobs).length) return;
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key === 'Enter') {
         e.preventDefault();

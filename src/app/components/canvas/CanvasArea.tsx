@@ -10,7 +10,6 @@ import {
   ImageIcon,
   ImagePlus,
   Library,
-  Loader2,
   MoreHorizontal,
   RotateCcw,
   ScanLine,
@@ -33,7 +32,7 @@ import { ViewSwitcher } from './ViewSwitcher';
 import { ChannelPreview } from './ChannelPreview';
 import { TextOverlay, TextToolbar } from './TextLayer';
 import { ReframeToolbar, ReframeView } from './ReframeLayer';
-import { blockingJob } from './BlockingJob';
+import { runningJobs } from './BlockingJob';
 import { FeedPreview } from './FeedPreview';
 import { CompareView } from './CompareView';
 import { MOD } from '../TopBar';
@@ -58,30 +57,15 @@ function IconTip({ label, children }: { label: string; children: React.ReactElem
   );
 }
 
-function JobChip({ job }: { job: Job }) {
+/** A call that failed (running ones are shown by BlockingJobOverlay). */
+function FailedJob({ job }: { job: Job }) {
   const t = useT();
-  const { cancelJob, dismissJob } = useWorkspace();
-  const failed = job.status === 'failed';
+  const dismissJob = useWorkspace((s) => s.dismissJob);
   return (
-    <div
-      className={cn(
-        'flex items-center gap-2 rounded-full border bg-card/95 py-1 pr-1 pl-3 text-xs shadow-sm backdrop-blur',
-        failed && 'border-destructive/40 text-destructive',
-      )}
-    >
-      {failed ? <AlertCircle className="size-3.5" /> : <Loader2 className="size-3.5 animate-spin text-primary" />}
-      <span className="max-w-64 truncate">
-        {failed
-          ? job.error || t('canvas.failed')
-          : `${job.kind === 'generate' ? t('brief.generating') : job.kind === 'upscale' ? t('export.upscaling') : t('iterate.edit')} ${t('common.seconds', { n: Math.round(job.elapsed / 1000) })}`}
-      </span>
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        className="rounded-full"
-        onClick={() => (failed ? dismissJob(job.id) : cancelJob(job.id))}
-        aria-label={failed ? t('common.close') : t('common.cancel')}
-      >
+    <div className="flex items-center gap-2 rounded-full border border-destructive/40 bg-card/95 py-1 pr-1 pl-3 text-xs text-destructive shadow-sm backdrop-blur">
+      <AlertCircle className="size-3.5" />
+      <span className="max-w-64 truncate">{job.error || t('canvas.failed')}</span>
+      <Button variant="ghost" size="icon-xs" className="rounded-full" onClick={() => dismissJob(job.id)} aria-label={t('common.close')}>
         <X />
       </Button>
     </div>
@@ -114,7 +98,6 @@ function EmptyState({ running }: { running: number }) {
 
 function ImageView({ gen, tool, brushSize, clearSignal }: { gen: Generation; tool: MaskTool; brushSize: number; clearSignal: number }) {
   const { safeZones, tool: active } = useWorkspace();
-  const reframing = useWorkspace((s) => blockingJob(s.jobs)?.parentId === gen.id);
   // While its text is being edited, a text version shows its image without the text.
   const url = useBlobUrl(isLayerTool(active) && gen.textLayer ? gen.textLayer.base : gen.blob);
   const [ref, box] = useElementSize<HTMLDivElement>();
@@ -150,7 +133,7 @@ function ImageView({ gen, tool, brushSize, clearSignal }: { gen: Generation; too
           className="relative overflow-hidden rounded-lg shadow-lg ring-1 ring-border"
           style={{ ...size, transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.z})` }}
         >
-          <img src={url} alt={gen.prompt} className={cn('size-full select-none transition-[filter] duration-300', reframing && 'blur-md')} draggable={false} />
+          <img src={url} alt={gen.prompt} className="size-full select-none" draggable={false} />
           {safeZones && <SafeZones aspectRatio={gen.params.aspectRatio} />}
           {active === 'mask' && <MaskLayer width={gen.width} height={gen.height} tool={tool} brushSize={brushSize} clearSignal={clearSignal} />}
           {isLayerTool(active) && <TextOverlay width={size.width} height={size.height} kind={active} />}
@@ -255,6 +238,9 @@ export function CanvasArea({ onDescribeRegion }: { onDescribeRegion?: () => void
   const [brushSize, setBrushSize] = useState(0.05);
   const [clearSignal, setClearSignal] = useState(0);
   const running = ws.jobs.filter((j) => j.status === 'running' && j.kind === 'generate').length;
+  // Blurred while Nano Banana works (BlockingJobOverlay locks the studio); failed calls stay readable.
+  const busy = runningJobs(ws.jobs).length > 0;
+  const failed = ws.jobs.filter((j) => j.status === 'failed');
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col bg-canvas">
@@ -264,7 +250,7 @@ export function CanvasArea({ onDescribeRegion }: { onDescribeRegion?: () => void
       </div>
 
       {/* Body */}
-      <div className="relative min-h-0 flex-1">
+      <div className={cn('relative min-h-0 flex-1 transition-[filter] duration-300', busy && 'pointer-events-none blur-md')}>
         {ws.view === 'compare' ? (
           <CompareView />
         ) : ws.view === 'feed' && gen ? (
@@ -315,10 +301,10 @@ export function CanvasArea({ onDescribeRegion }: { onDescribeRegion?: () => void
           </div>
         )}
 
-        {ws.jobs.length > 0 && (
+        {failed.length > 0 && !busy && (
           <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1.5">
-            {ws.jobs.map((j) => (
-              <JobChip key={j.id} job={j} />
+            {failed.map((j) => (
+              <FailedJob key={j.id} job={j} />
             ))}
           </div>
         )}

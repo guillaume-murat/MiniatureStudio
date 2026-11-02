@@ -25,6 +25,8 @@ import {
   arrowGeometry,
   arrowShadowOpacity,
   bendThrough,
+  BOX_CORNERS,
+  boxRadius,
   clamp01,
   dashPattern,
   isArrow,
@@ -32,10 +34,10 @@ import {
   LINE_HEIGHT,
   PADDING_X,
   PADDING_Y,
-  RADIUS,
   rotationTowards,
   type ArrowBlock,
   type ArrowHead,
+  type BoxCorners,
   type LayerBlock,
   type TextBlock,
 } from '../../lib/textBlocks';
@@ -186,6 +188,7 @@ export function TextOverlay({ width, height, kind }: { width: number; height: nu
           );
         }
         const px = block.size * height;
+        const boxH = block.text.split('\n').length * LINE_HEIGHT * px + 2 * PADDING_Y * px;
         return (
           <div
             key={block.id}
@@ -202,7 +205,7 @@ export function TextOverlay({ width, height, kind }: { width: number; height: nu
                 fontSize: px,
                 lineHeight: LINE_HEIGHT,
                 padding: `${PADDING_Y * px}px ${PADDING_X * px}px`,
-                borderRadius: RADIUS * px,
+                borderRadius: boxRadius(block, px, boxH),
                 color: block.color,
                 background: block.background ?? 'transparent',
               }}
@@ -408,7 +411,7 @@ export function TextToolbar({ kind }: { kind: 'text' | 'arrow' }) {
               <Toggle
                 size="sm"
                 pressed={!!block.background}
-                onPressedChange={(on) => patch({ background: on ? '#111111' : null })}
+                onPressedChange={(on) => patch({ background: on ? '#000000' : null })}
                 aria-label={t('text.background')}
               >
                 <PaintBucket />
@@ -416,7 +419,32 @@ export function TextToolbar({ kind }: { kind: 'text' | 'arrow' }) {
             </TooltipTrigger>
             <TooltipContent>{t('text.background')}</TooltipContent>
           </Tooltip>
-          {block.background && <ColorSwatch value={block.background} onChange={(background) => patch({ background })} label={t('text.backgroundColor')} />}
+          {block.background && (
+            <>
+              <ColorSwatch value={block.background} onChange={(background) => patch({ background })} label={t('text.backgroundColor')} />
+              <ToggleGroup
+                type="single"
+                size="sm"
+                variant="outline"
+                value={block.corners ?? 'rounded'}
+                onValueChange={(v) => v && patch({ corners: v as BoxCorners })}
+              >
+                {BOX_CORNERS.map((corners) => (
+                  <Tooltip key={corners}>
+                    <TooltipTrigger asChild>
+                      <ToggleGroupItem value={corners} aria-label={t(`text.corners.${corners}`)}>
+                        {/* The box's shape, drawn small. */}
+                        <span
+                          className={cn('h-2.5 w-4 border-[1.5px] border-current', corners === 'rounded' && 'rounded-[3px]', corners === 'pill' && 'rounded-full')}
+                        />
+                      </ToggleGroupItem>
+                    </TooltipTrigger>
+                    <TooltipContent>{t(`text.corners.${corners}`)}</TooltipContent>
+                  </Tooltip>
+                ))}
+              </ToggleGroup>
+            </>
+          )}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" size="sm" className="tabular w-14 px-1" onClick={() => patch({ rotation: 0 })} aria-label={t('text.resetRotation')}>

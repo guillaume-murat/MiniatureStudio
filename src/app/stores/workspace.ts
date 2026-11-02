@@ -57,8 +57,8 @@ export interface Job {
   parentId?: string;
   error?: string;
   controller: AbortController;
-  /** The studio is locked while it runs (reframing: the image being worked on is about to be replaced). */
-  blocking?: boolean;
+  /** The tool behind it (reframe, heal), for its label. The studio is locked while any job runs (BlockingJobOverlay). */
+  action?: GenerationAction;
 }
 
 export type Brief = ProjectInputs['brief'];
@@ -136,7 +136,6 @@ interface WorkspaceState {
    * version. Editable text is kept as text and redrawn on the upscaled image.
    */
   upscale: (id: string) => Promise<Outcome<Generation> | null>;
-  cancelJob: (id: string) => void;
   dismissJob: (id: string) => void;
   cancelAll: () => void;
   // gallery
@@ -432,14 +431,13 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     reference?: { maxSide: number; bytes: number };
     /** Shared by the jobs of one batch: the first result to arrive gets shown. */
     batch: { shown: boolean };
-    blocking?: boolean;
   }): Promise<Outcome<Generation>> {
     // The project it was started in, even if the user opens another one meanwhile.
     const projectId = opts.parent?.projectId ?? get().projectId;
     const job: Job = {
       id: db.uid('j_'),
       kind: opts.kind,
-      blocking: opts.blocking,
+      action: opts.action,
       status: 'running',
       startedAt: Date.now(),
       elapsed: 0,
@@ -791,9 +789,6 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       return [outcome];
     },
 
-    cancelJob: (id) => {
-      get().jobs.find((j) => j.id === id)?.controller.abort();
-    },
     dismissJob: (id) => set({ jobs: get().jobs.filter((j) => j.id !== id) }),
     cancelAll: () => get().jobs.forEach((j) => j.status === 'running' && j.controller.abort()),
 
@@ -903,9 +898,9 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       if (tool === 'arrow' && !useText.getState().blocks.some(isArrow)) get().addBlock('arrow');
     },
     addBlock: (kind) => {
-      const color = get().brand.colors[0];
+      // New text: Bricolage Grotesque, white on black (newTextBlock).
       if (kind === 'arrow') useText.getState().addArrow();
-      else useText.getState().add('Anton', color ? { background: color } : {});
+      else useText.getState().add();
     },
     pendingBlocks: () => {
       if (isLayerTool(get().tool)) return useText.getState().blocks.filter(isVisible);
@@ -941,7 +936,6 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
           finalize: (generated) => mergeWithMask(composed, generated, mask, 16, true),
           reference: { maxSide: 2048, bytes: 3_000_000 },
           batch: { shown: false },
-          blocking: true,
         });
       } catch (error) {
         reportError(error, set);
