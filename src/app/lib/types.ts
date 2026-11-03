@@ -2,7 +2,10 @@ import type { LayerBlock } from './textBlocks';
 
 export type Provider = 'replicate' | 'gemini' | 'openrouter' | 'mammouth' | 'vertex';
 export type ModelId = 'nano-banana-pro' | 'nano-banana-2';
+/** The ratio of an existing image: older ones may be in a format the studio no longer generates, and their edits keep it. */
 export type AspectRatio = '16:9' | '9:16' | '4:3' | '1:1' | '21:9';
+/** The formats a new image can have. */
+export type OutputRatio = '16:9' | '9:16';
 export type Resolution = '1K' | '2K' | '4K';
 export type OutputFormat = 'png' | 'jpg';
 export type SafetyLevel = 'block_only_high' | 'block_medium_and_above' | 'block_low_and_above';
@@ -20,7 +23,7 @@ export interface GenerationParams {
 export type GenerationKind = 'generate' | 'edit' | 'region' | 'import' | 'text' | 'upscale';
 
 /** The tool behind a version, when its kind alone doesn't say it (named in the versions panel). */
-export type GenerationAction = 'reframe' | 'smooth' | 'heal';
+export type GenerationAction = 'reframe' | 'smooth' | 'heal' | 'arrow';
 
 export interface Generation {
   id: string;
@@ -58,9 +61,24 @@ export interface Project {
   updatedAt: number;
 }
 
+export type TitleZone = 'top-left' | 'top' | 'top-right' | 'left' | 'center' | 'right' | 'bottom-left' | 'bottom' | 'bottom-right' | 'none';
+
+export type Guideline = 'focal' | 'background' | 'colors' | 'emotion';
+
+/** The advanced options of the brief panel. Absent values come from the style's preset. */
+export interface PromptOptions {
+  text?: 'none' | 'style';
+  titleZone?: TitleZone;
+  guidelines?: Partial<Record<Guideline, boolean>>;
+  brandWeight?: 'subtle' | 'accents' | 'dominant';
+  likeness?: 'exact' | 'style';
+}
+
+export type ResolvedPromptOptions = Required<Omit<PromptOptions, 'guidelines'>> & { guidelines: Record<Guideline, boolean> };
+
 /** The brief panel of a project: each project starts empty and keeps its own. Only app settings (provider, keys, theme, language) are shared. */
 export interface ProjectInputs {
-  brief: { videoTitle: string; brief: string; styleId: string };
+  brief: { videoTitle: string; brief: string; styleId: string; options?: PromptOptions };
   refs: RefImage[];
   brand: BrandKit;
   /** The people in this project's thumbnails, at most 5 (records in the `personas` store, a library shared by all projects). */
@@ -87,6 +105,16 @@ export interface PersonaPhoto {
   /** Free label for expression photos, e.g. "surprised", "laughing". */
   expression?: string;
   blob: Blob;
+}
+
+/** A style the user wrote, shared by every project. */
+export interface CustomStyle {
+  id: string;
+  name: string;
+  hint?: string;
+  emoji: string;
+  prompt: string;
+  createdAt: number;
 }
 
 export interface Persona {
@@ -123,10 +151,14 @@ export interface BrandKit {
 export type RefSource = 'upload' | 'persona' | 'library' | 'history' | 'youtube';
 
 /** An image attached to the current brief. */
+export type ReferenceUse = 'free' | 'composition' | 'style' | 'object' | 'background';
+
 export interface RefImage {
   id: string;
   blob: Blob;
   source: RefSource;
   personaId?: string;
   label?: string;
+  /** What the image is for; absent = as the brief says. */
+  use?: ReferenceUse;
 }

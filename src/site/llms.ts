@@ -20,7 +20,7 @@ NanoThumbnail is a free, MIT-licensed web app (a "studio") to create YouTube thu
 Key facts:
 - Price: the studio is free. Image generation costs roughly $0.07 (Nano Banana 2, 1K) to $0.15 (Nano Banana Pro) per image at the provider.
 - Providers: Replicate (\`google/nano-banana-pro\`, \`google/nano-banana-2\`) or Google Gemini API (\`gemini-3-pro-image\`, \`gemini-3.1-flash-image\`).
-- Output: 16:9, 9:16, 4:3 or 1:1; 1K, 2K or 4K; 1 to 4 variants per generation.
+- Output: 16:9 or 9:16; 1K, 2K or 4K; 1 to 4 variants per generation.
 - Main workflow: brief → generate → iterate (conversational edits, masked area edits) → test (feed preview, AI critique, side-by-side ranking, export for YouTube Studio "Test & Compare").
 - AI agents (Claude Code, Claude Desktop, Cursor, any MCP client) can drive the studio through the \`nanothumbnail-mcp\` MCP server (\`claude mcp add nanothumbnail -- npx -y nanothumbnail-mcp\`): brief, generate, edit, rank, export. It relays over a local WebSocket to the studio open in the browser; keys and images stay there. Companion skill: \`npx skills add yoanbernabeu/NanoThumbnail --skill nanothumbnail\`.
 

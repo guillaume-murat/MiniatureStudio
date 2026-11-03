@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { VERTEX_GCLOUD } from '../lib/providers';
-import type { AspectRatio, GenerationParams, ModelId, OutputFormat, Provider, Resolution, SafetyLevel } from '../lib/types';
+import { outputRatio } from '../lib/prompt';
+import type { OutputRatio, GenerationParams, ModelId, OutputFormat, Provider, Resolution, SafetyLevel } from '../lib/types';
 
 export type Theme = 'light' | 'dark' | 'system';
 export type Lang = 'en' | 'fr';
@@ -12,7 +13,7 @@ interface SettingsState {
   keys: Record<Provider, string>;
   keyPersistence: KeyPersistence;
   model: ModelId;
-  aspectRatio: AspectRatio;
+  aspectRatio: OutputRatio;
   resolution: Resolution;
   format: OutputFormat;
   safety: SafetyLevel;
@@ -96,7 +97,7 @@ function load() {
     keys: Object.fromEntries(PROVIDERS.map((p) => [p, safeGet(store, KEY_PREFIX + p) ?? ''])) as Record<Provider, string>,
     keyPersistence,
     model: (prefs.model === 'nano-banana-2' ? 'nano-banana-2' : 'nano-banana-pro') as ModelId,
-    aspectRatio: (prefs.aspectRatio ?? '16:9') as AspectRatio,
+    aspectRatio: outputRatio(prefs.aspectRatio),
     resolution: (prefs.resolution ?? '1K') as Resolution,
     format: (prefs.format ?? 'png') as OutputFormat,
     safety: (prefs.safety ?? 'block_only_high') as SafetyLevel,

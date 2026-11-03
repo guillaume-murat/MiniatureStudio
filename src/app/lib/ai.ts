@@ -4,14 +4,14 @@ import { prepareReference } from './images';
 type Auth = Pick<TextRequest, 'provider' | 'apiKey' | 'signal'>;
 type Lang = 'en' | 'fr';
 
-const LANG_NAME: Record<Lang, string> = { en: 'English', fr: 'French' };
+const LANG_NAME: Record<Lang, string> = { en: 'anglais', fr: 'français' };
 
 /** Thumbnails are judged at the size they're actually seen, so no need for full resolution. */
 const toVisionInput = (blob: Blob) => prepareReference(blob, 1024, 200_000);
 
-const CRITIC_SYSTEM = `You are a senior YouTube packaging strategist who has reviewed thousands of thumbnails.
-You judge thumbnails the way viewers meet them: a split second, at small size, among many others in a feed.
-Be specific and actionable. Refer to concrete elements in the image. Never be generic or flattering.`;
+const CRITIC_SYSTEM = `Tu es un stratège senior du packaging YouTube qui a analysé des milliers de miniatures.
+Tu juges les miniatures comme les spectateurs les découvrent : en une fraction de seconde, en petit, parmi beaucoup d’autres dans un fil.
+Sois précis et concret. Appuie-toi sur des éléments réels de l’image. Ne sois jamais générique ni flatteur.`;
 
 export interface Ranking {
   /** Indices into the submitted images, best first. */
@@ -25,11 +25,11 @@ export async function rankThumbnails(
   images: Blob[],
   context: { videoTitle?: string; lang: Lang },
 ): Promise<Ranking> {
-  const prompt = `These ${images.length} images are alternative thumbnails for the same video${context.videoTitle ? ` titled "${context.videoTitle}"` : ''}, numbered 1 to ${images.length} in order.
-Rank them by how likely a viewer scrolling a YouTube feed on a phone is to click, while still matching the title.
-Return JSON only:
-{"order": [<image numbers, best first>], "reasons": ["<one sentence per image, in the original order 1..${images.length}>"], "winnerWhy": "<two sentences on why the winner wins>"}
-Write in ${LANG_NAME[context.lang]}.`;
+  const prompt = `Ces ${images.length} images sont des miniatures alternatives pour la même vidéo${context.videoTitle ? ` intitulée "${context.videoTitle}"` : ''}, numérotées de 1 à ${images.length} dans l’ordre.
+Classe-les selon la probabilité qu’un spectateur qui fait défiler un fil YouTube sur son téléphone clique, tout en restant fidèles au titre.
+Réponds uniquement en JSON :
+{"order": [<numéros des images, de la meilleure à la moins bonne>], "reasons": ["<une phrase par image, dans l’ordre d’origine 1..${images.length}>"], "winnerWhy": "<deux phrases expliquant pourquoi la gagnante l’emporte>"}
+Rédige en ${LANG_NAME[context.lang]}.`;
 
   const raw = await generateJSON<Ranking>({
     ...auth,
@@ -53,20 +53,20 @@ export async function suggestConcepts(
   auth: Auth,
   input: { videoTitle: string; idea: string; lang: Lang; styles: Array<{ id: string; name: string }> },
 ): Promise<Concept[]> {
-  const prompt = `Video title: "${input.videoTitle || '(none yet)'}"
-Creator's rough idea: "${input.idea || '(none)'}"
+  const prompt = `Titre de la vidéo : "${input.videoTitle || '(pas encore de titre)'}"
+Idée de départ du créateur : "${input.idea || '(aucune)'}"
 
-Propose 3 thumbnail concepts that take genuinely different angles (e.g. emotional reaction vs. result/transformation vs. mystery/object). For each:
-- name: 2-4 words
-- brief: a vivid scene description for an image model (subject, action, emotion, composition, background, lighting), 2-3 sentences, written in ${LANG_NAME[input.lang]}
-- why: one sentence in ${LANG_NAME[input.lang]} on why it would get clicks
-- styleId: the best matching id from this list, or "" : ${input.styles.map((s) => `${s.id} (${s.name})`).join(', ')}
+Propose 3 concepts de miniature aux angles vraiment différents (par exemple réaction émotionnelle, résultat ou transformation, mystère ou objet). Pour chacun :
+- name : 2 à 4 mots
+- brief : une description de scène vivante pour un modèle d’image (sujet, action, émotion, composition, fond, lumière), en 2 ou 3 phrases, rédigée en ${LANG_NAME[input.lang]}
+- why : une phrase en ${LANG_NAME[input.lang]} expliquant pourquoi elle donnerait envie de cliquer
+- styleId : l’identifiant le plus adapté dans cette liste, ou "" : ${input.styles.map((s) => `${s.id} (${s.name})`).join(', ')}
 
-Return JSON only: {"concepts": [{"name": "", "brief": "", "why": "", "styleId": ""}]}`;
+Réponds uniquement en JSON : {"concepts": [{"name": "", "brief": "", "why": "", "styleId": ""}]}`;
 
   const raw = await generateJSON<{ concepts: Concept[] }>({
     ...auth,
-    system: 'You are a top YouTube thumbnail strategist. You think in terms of curiosity gaps, stakes and instantly readable visuals.',
+    system: 'Tu es un grand stratège des miniatures YouTube. Tu raisonnes en termes de curiosité, d’enjeux et de visuels lisibles au premier regard.',
     prompt,
   });
   return (raw.concepts ?? []).slice(0, 3);

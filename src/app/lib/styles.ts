@@ -1,119 +1,197 @@
+import { DEFAULT_PROMPT_OPTIONS } from './prompt';
+import type { CustomStyle, Guideline, PromptOptions, ResolvedPromptOptions } from './types';
+
 /**
  * Thumbnail style presets. Each injects an art-direction fragment into the prompt.
+ * The user's own styles (`CustomStyle`, shared by every project) work the same way.
  *
  * Based on current creator practice (1of10, vidIQ 2026 breakout study, Google's
  * Nano Banana guides). Composition rules are conventions, not proven CTR laws:
  * the point is to give the model a coherent, recognisable visual grammar.
- * "The featured person" refers to whoever is attached as a persona, if anyone.
+ * « La personne mise en avant » is whoever is attached as a persona, if anyone. In French, like every prompt.
  */
-interface StylePreset {
+export interface StylePreset {
   id: string;
   name: { en: string; fr: string };
   hint: { en: string; fr: string };
+  emoji: string;
   prompt: string;
+  /** Written by the user, in the shared style library. */
+  custom?: boolean;
+  /** Where the general instructions would fight the style: what its advanced options start at. */
+  preset?: { text?: 'style'; off?: Guideline[]; likeness?: 'style' };
 }
 
 export const STYLES: StylePreset[] = [
   {
     id: 'reaction',
+    emoji: '😲',
+    preset: { off: ['focal'] },
     name: { en: 'Reaction + object', fr: 'Réaction + objet' },
     hint: { en: 'Entertainment, reviews', fr: 'Divertissement, tests' },
     prompt:
-      'Tight close-up of the featured person on one third of the frame, face filling about a third of the image with a genuine, clearly readable reaction. On the other side, one hero object shown big and sharp. Clean saturated background, soft rim light separating the subject.',
+      'Gros plan serré sur la personne mise en avant, sur un tiers du cadre, le visage occupant environ un tiers de l’image avec une réaction sincère et clairement lisible. De l’autre côté, un seul objet principal, grand et net. Fond propre et saturé, léger contre-jour qui détache le sujet.',
   },
   {
     id: 'versus',
+    emoji: '🆚',
+    preset: { text: 'style', off: ['focal'] },
     name: { en: 'Versus', fr: 'Versus' },
     hint: { en: 'Comparisons, debates', fr: 'Comparatifs, débats' },
     prompt:
-      'Split composition: the first subject on a cool blue left half, the second on a warm orange right half, a bold "VS" badge in the centre. Both at equal scale, crisp studio lighting, strong separation between the halves.',
+      'Composition divisée en deux : le premier sujet sur une moitié gauche bleu froid, le second sur une moitié droite orange chaud, un grand badge « VS » au centre. Les deux à la même échelle, éclairage de studio net, forte séparation entre les moitiés.',
   },
   {
     id: 'before-after',
+    emoji: '🔄',
+    preset: { off: ['focal'] },
     name: { en: 'Before / after', fr: 'Avant / après' },
     hint: { en: 'Transformations, results', fr: 'Transformations, résultats' },
     prompt:
-      'Side-by-side before/after with identical framing on both halves. Left half desaturated, dim and flat; right half vibrant, polished and bright. A bold arrow or clean divider between them makes the transformation obvious.',
+      'Avant/après côte à côte avec un cadrage identique sur les deux moitiés. Moitié gauche désaturée, sombre et terne ; moitié droite éclatante, soignée et lumineuse. Une grande flèche ou une séparation nette rend la transformation évidente.',
   },
   {
     id: 'tech',
+    emoji: '💻',
+    preset: { text: 'style', off: ['focal'] },
     name: { en: 'Tech tutorial', fr: 'Tuto tech' },
     hint: { en: 'Dev, software, how-to', fr: 'Dev, logiciels, tutos' },
     prompt:
-      'Clean modern tech look: the featured person on one side with a confident expression, next to a floating device or app screen with a crisp, legible interface. Smooth dark gradient background, soft key light, generous empty space.',
+      'Style tech moderne et épuré : la personne mise en avant d’un côté, l’air sûr d’elle, à côté d’un appareil ou d’un écran d’application flottant à l’interface nette et lisible. Fond en dégradé sombre et doux, lumière principale douce, beaucoup d’espace libre.',
   },
   {
     id: 'cinematic',
+    emoji: '🎬',
+    preset: { off: ['background', 'colors'] },
     name: { en: 'Cinematic documentary', fr: 'Documentaire cinéma' },
     hint: { en: 'History, true crime, essays', fr: 'Histoire, faits divers, essais' },
     prompt:
-      'Cinematic wide shot like a film still, dramatic chiaroscuro lighting, muted teal-and-amber grade, subtle film grain, shallow depth of field. Atmosphere and mystery over bright colours.',
+      'Plan large cinématographique, comme un photogramme de film, éclairage en clair-obscur dramatique, étalonnage sourd bleu-vert et ambre, léger grain argentique, faible profondeur de champ. L’atmosphère et le mystère priment sur les couleurs vives.',
   },
   {
     id: 'minimal',
+    emoji: '⬜',
+    preset: { off: ['emotion'] },
     name: { en: 'Minimal bold', fr: 'Minimaliste' },
     hint: { en: 'Commentary, business', fr: 'Opinion, business' },
     prompt:
-      'Minimal graphic design: a flat, bold single-colour background, one small striking element, and lots of empty space. Typography, if any, dominates the frame. Nothing else competes for attention.',
+      'Graphisme minimaliste : un fond uni d’une seule couleur forte, un seul petit élément marquant et beaucoup d’espace vide. La typographie, s’il y en a, domine le cadre. Rien d’autre ne détourne l’attention.',
   },
   {
     id: 'story',
+    emoji: '⏱️',
     name: { en: 'Story moment', fr: 'Moment clé' },
     hint: { en: 'Challenges, narrative vlogs', fr: 'Défis, vlogs narratifs' },
     prompt:
-      'A single frozen moment of tension captured mid-action with a low-angle wide lens. The outcome is visibly unresolved, creating a curiosity gap. Dynamic diagonal composition, natural but punchy colours.',
+      'Un seul instant de tension figé en pleine action, en contre-plongée au grand-angle. L’issue reste visiblement incertaine, ce qui crée de la curiosité. Composition en diagonale dynamique, couleurs naturelles mais percutantes.',
   },
   {
     id: 'ranking',
+    emoji: '🏆',
+    preset: { text: 'style', off: ['focal', 'background'] },
     name: { en: 'List / ranking', fr: 'Classement / top' },
     hint: { en: 'Top N, mistakes, tips', fr: 'Tops, erreurs, astuces' },
     prompt:
-      'The featured person holding or pointing at one hero item, with a large bold number badge in a top corner and a few smaller items fanned out behind. High-contrast lighting on an uncluttered background.',
+      'La personne mise en avant tient ou montre un objet principal, avec un grand badge numéroté dans un coin supérieur et quelques objets plus petits disposés en éventail derrière. Éclairage très contrasté sur un fond épuré.',
   },
   {
     id: 'gaming',
+    emoji: '🎮',
+    preset: { off: ['background'] },
     name: { en: 'Gaming', fr: 'Gaming' },
     hint: { en: "Let's plays, highlights", fr: 'Let’s play, highlights' },
     prompt:
-      'Energetic gaming look: the featured person lit by neon purple and cyan with strong rim light, game action exploding behind them, dynamic diagonal composition, glowing accents and high saturation.',
+      'Style gaming plein d’énergie : la personne mise en avant éclairée par des néons violet et cyan avec un fort contre-jour, une action de jeu qui explose derrière elle, composition en diagonale dynamique, accents lumineux et forte saturation.',
   },
   {
     id: 'finance',
+    emoji: '💰',
+    preset: { off: ['focal'] },
     name: { en: 'Money / finance', fr: 'Argent / finance' },
     hint: { en: 'Finance, crypto, business', fr: 'Finance, crypto, business' },
     prompt:
-      'The featured person beside a giant glossy chart arrow (green and rising, or red and crashing, whichever fits the brief), with a clear money-related prop nearby. Dark background, high contrast, serious or shocked expression.',
+      'La personne mise en avant à côté d’une immense flèche de graphique brillante (verte et montante, ou rouge et en chute, selon le brief), avec un accessoire clairement lié à l’argent à proximité. Fond sombre, fort contraste, expression sérieuse ou choquée.',
   },
   {
     id: 'vlog',
+    emoji: '✈️',
+    preset: { off: ['background', 'colors'] },
     name: { en: 'Vlog / travel', fr: 'Vlog / voyage' },
     hint: { en: 'Travel, lifestyle', fr: 'Voyage, lifestyle' },
     prompt:
-      'Candid golden-hour photograph, natural smile, warm film-like colours, shot on a 35mm lens. The location is instantly recognisable and takes a large part of the frame.',
+      'Photo spontanée à l’heure dorée, sourire naturel, couleurs chaudes façon pellicule, prise à l’objectif 35 mm. Le lieu est immédiatement reconnaissable et occupe une grande partie du cadre.',
   },
   {
     id: 'hyper',
+    emoji: '🤯',
     name: { en: 'Hyper-saturated', fr: 'Hyper-saturé' },
     hint: { en: 'Big challenges, stakes', fr: 'Gros défis, enjeux' },
     prompt:
-      'Ultra-bright, hyper-saturated look with glossy clean lighting and vivid primary colours. People react with wide eyes to something with huge, oversized stakes. Everything is exaggerated in scale and instantly readable.',
+      'Style ultra-lumineux et hyper-saturé, éclairage propre et brillant, couleurs primaires éclatantes. Les personnes réagissent, les yeux écarquillés, face à quelque chose aux enjeux énormes et démesurés. Tout est exagéré en taille et lisible au premier regard.',
   },
   {
     id: 'clay',
+    emoji: '🧸',
+    preset: { off: ['colors', 'emotion'], likeness: 'style' },
     name: { en: '3D / clay', fr: '3D / pâte à modeler' },
     hint: { en: 'Explainers, faceless channels', fr: 'Vulgarisation, chaînes sans visage' },
     prompt:
-      'Rendered as a cute, glossy 3D clay diorama with soft studio lighting, a pastel background and a tilt-shift miniature feel. Rounded shapes, playful and tactile.',
+      'Rendu sous forme de mignon diorama 3D en pâte à modeler brillante, éclairage de studio doux, fond pastel et effet miniature tilt-shift. Formes arrondies, ludiques et tactiles.',
   },
   {
     id: 'podcast',
+    emoji: '🎙️',
+    preset: { off: ['focal', 'colors'] },
     name: { en: 'Podcast / interview', fr: 'Podcast / interview' },
     hint: { en: 'Interviews, talk shows', fr: 'Interviews, talk-shows' },
     prompt:
-      'Two people in close-up facing each other with podcast microphones, blurred studio bokeh behind, soft key light and a subtle rim light. Expressions caught mid-conversation, intense and engaged.',
+      'Deux personnes en gros plan face à face avec des micros de podcast, studio flou en bokeh derrière elles, lumière principale douce et léger contre-jour. Expressions saisies en pleine conversation, intenses et captivées.',
   },
 ];
 
-export function findStyle(id: string | undefined): StylePreset | undefined {
-  return id ? STYLES.find((s) => s.id === id) : undefined;
+/** The emoji of « Libre », no style at all. */
+export const NO_STYLE_EMOJI = '✨';
+
+/** Quick choices when writing a style. */
+export const STYLE_EMOJIS = ['🎨', '🔥', '⚡', '🌈', '🌙', '🖤', '📸', '🎥', '🧠', '🚀', '👑', '💎', '🌿', '🍿', '📚', '🛠️'];
+
+/** The user's styles first, then the presets, all in the same shape. */
+export function allStyles(custom: CustomStyle[]): StylePreset[] {
+  const own = custom.map((s) => ({
+    id: s.id,
+    name: { en: s.name, fr: s.name },
+    hint: { en: s.hint ?? '', fr: s.hint ?? '' },
+    emoji: s.emoji,
+    prompt: s.prompt,
+    custom: true,
+  }));
+  return [...own, ...STYLES];
+}
+
+export function findStyle(id: string | undefined, custom: CustomStyle[] = []): StylePreset | undefined {
+  return id ? allStyles(custom).find((s) => s.id === id) : undefined;
+}
+
+/** The advanced options in effect: the user's choices over the style's preset. */
+export function resolveOptions(style: StylePreset | undefined, options: PromptOptions = {}): ResolvedPromptOptions {
+  const off = Object.fromEntries((style?.preset?.off ?? []).map((g) => [g, false]));
+  return {
+    text: options.text ?? style?.preset?.text ?? DEFAULT_PROMPT_OPTIONS.text,
+    titleZone: options.titleZone ?? DEFAULT_PROMPT_OPTIONS.titleZone,
+    guidelines: { ...DEFAULT_PROMPT_OPTIONS.guidelines, ...off, ...options.guidelines },
+    brandWeight: options.brandWeight ?? DEFAULT_PROMPT_OPTIONS.brandWeight,
+    likeness: options.likeness ?? style?.preset?.likeness ?? DEFAULT_PROMPT_OPTIONS.likeness,
+  };
+}
+
+/** Choosing another style brings back its preset; what does not depend on the style stays. */
+export function optionsForNewStyle(options: PromptOptions | undefined): PromptOptions | undefined {
+  if (!options) return undefined;
+  const { titleZone, brandWeight } = options;
+  return { titleZone, brandWeight };
+}
+
+/** What an emoji field keeps of its text: the last character typed, whole (an emoji can be several code points). */
+export function lastGrapheme(text: string): string {
+  return Array.from(new Intl.Segmenter().segment(text.trim())).at(-1)?.segment ?? '';
 }

@@ -13,6 +13,7 @@ import { Filmstrip } from './components/Filmstrip';
 import { IteratePanel } from './components/iterate/IteratePanel';
 import { SettingsDialog } from './components/dialogs/SettingsDialog';
 import { PersonaDialog } from './components/dialogs/PersonaDialog';
+import { StyleDialog } from './components/dialogs/StyleDialog';
 import { AssistantDialog } from './components/dialogs/AssistantDialog';
 import { ErrorDialog } from './components/dialogs/ErrorDialog';
 import { CommandMenu } from './components/dialogs/CommandMenu';
@@ -171,6 +172,7 @@ export default function App() {
 
       <SettingsDialog />
       <PersonaDialog />
+      <StyleDialog />
       <AssistantDialog />
       <ErrorDialog />
       <CommandMenu />

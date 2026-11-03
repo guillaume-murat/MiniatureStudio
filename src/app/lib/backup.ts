@@ -1,7 +1,7 @@
 import { strFromU8, strToU8, unzip, zip, type Unzipped, type Zippable } from 'fflate';
-import { getBrandKit, getDB, listGenerations, listLibrary, listPersonas, listProjects } from './db';
+import { getBrandKit, getDB, listGenerations, listLibrary, listPersonas, listProjects, listStyles } from './db';
 import { extensionFor } from './images';
-import type { BrandKit, Generation, LibraryImage, Persona, Project } from './types';
+import type { BrandKit, CustomStyle, Generation, LibraryImage, Persona, Project } from './types';
 
 /**
  * Full local backup as a zip: `backup.json` holds all records with each Blob
@@ -20,6 +20,8 @@ interface Manifest {
   projects: Project[];
   generations: unknown[];
   personas: unknown[];
+  /** Absent from backups made before the style library. */
+  styles?: CustomStyle[];
   library: unknown[];
   brand: unknown | null;
 }
@@ -66,10 +68,11 @@ function hydrate(value: unknown, files: Unzipped): unknown {
 
 export async function exportBackup(): Promise<Blob> {
   const files: Zippable = {};
-  const [projects, generations, personas, library, brand] = await Promise.all([
+  const [projects, generations, personas, styles, library, brand] = await Promise.all([
     listProjects(),
     listGenerations(),
     listPersonas(),
+    listStyles(),
     listLibrary(),
     getBrandKit(),
   ]);
@@ -81,6 +84,7 @@ export async function exportBackup(): Promise<Blob> {
     projects: await Promise.all(projects.map((p) => dehydrate(p, files, p.id))) as Project[],
     generations: await Promise.all(generations.map((g) => dehydrate(g, files, g.id))),
     personas: await Promise.all(personas.map((p) => dehydrate(p, files, p.id))),
+    styles,
     library: await Promise.all(library.map((l) => dehydrate(l, files, l.id))),
     brand: brand ? await dehydrate(brand, files, 'brand') : null,
   };
@@ -97,7 +101,7 @@ export async function importBackup(file: Blob): Promise<number> {
   if (manifest.format !== FORMAT) throw new Error('Not a NanoThumbnail backup');
 
   const db = await getDB();
-  const tx = db.transaction(['projects', 'generations', 'personas', 'library', 'brand'], 'readwrite');
+  const tx = db.transaction(['projects', 'generations', 'personas', 'styles', 'library', 'brand'], 'readwrite');
   let count = 0;
   for (const p of manifest.projects) {
     await tx.objectStore('projects').put(hydrate(p, files) as Project);
@@ -109,6 +113,10 @@ export async function importBackup(file: Blob): Promise<number> {
   }
   for (const p of manifest.personas) {
     await tx.objectStore('personas').put(hydrate(p, files) as Persona);
+    count++;
+  }
+  for (const s of manifest.styles ?? []) {
+    await tx.objectStore('styles').put(s);
     count++;
   }
   for (const l of manifest.library) {

@@ -1,33 +1,109 @@
 import { describe, expect, it } from 'vitest';
-import { buildEditPrompt, buildGenerationPrompt, buildOutpaintPrompt, buildRegionEditPrompt, buildUpscalePrompt, describeImages, quote } from '../prompt';
+import { buildEditPrompt, buildGenerationPrompt, buildOutpaintPrompt, buildRegionEditPrompt, buildUpscalePrompt, colorsLine, DEFAULT_PROMPT_OPTIONS, describeImages, formatLine, guidelinesLine, IMAGES_HEADER, marginLine, outputRatio, priorityLine, sceneLine, styleLine, textLine, titleLine, titlePreviewLine, titleZoneLine } from '../prompt';
 
-const base = { brief: 'A developer on Mars', aspectRatio: '16:9' as const, roles: [] };
+const base = { brief: 'Une développeuse sur Mars', aspectRatio: '16:9' as const, roles: [] };
+
+describe('outputRatio', () => {
+  it('keeps the two formats and falls back to 16:9 for the others', () => {
+    expect(outputRatio('9:16')).toBe('9:16');
+    expect(outputRatio('16:9')).toBe('16:9');
+    expect(outputRatio('4:3')).toBe('16:9');
+    expect(outputRatio('1:1')).toBe('16:9');
+    expect(outputRatio(undefined)).toBe('16:9');
+  });
+});
 
 describe('buildGenerationPrompt', () => {
-  it('states the format and the scene', () => {
-    const p = buildGenerationPrompt(base);
-    expect(p).toMatch(/^Generate a 16:9 YouTube video thumbnail\./);
-    expect(p).toContain('Scene: A developer on Mars');
+  it('is made of the lines shown in the brief panel', () => {
+    const p = buildGenerationPrompt({ ...base, videoTitle: 'Mars', style: 'Flat', colors: ['#ff0000'] });
+    for (const line of [formatLine('16:9'), titleLine('Mars'), styleLine('Flat'), textLine(), titleZoneLine(), colorsLine(['#ff0000'])]) {
+      expect(p).toContain(line);
+    }
+    expect([titleLine(' '), styleLine(''), colorsLine([])]).toEqual(['', '', '']);
   });
 
-  it('keeps text out of the image and leaves room for it', () => {
+  it('sends nothing beyond the blocks shown in the brief panel', () => {
+    const roles = [{ kind: 'persona', name: 'Alex' }, { kind: 'reference' }] as const;
+    let p = buildGenerationPrompt({ ...base, roles: [...roles], videoTitle: 'Mars', style: 'Flat', colors: ['#ff0000'] });
+    const shown = [formatLine('16:9'), titleLine('Mars'), sceneLine(base.brief), styleLine('Flat', 1), textLine(), titleZoneLine(), IMAGES_HEADER, ...describeImages([...roles]), colorsLine(['#ff0000']), guidelinesLine(), marginLine(), priorityLine()];
+    for (const block of shown) {
+      expect(p).toContain(block);
+      p = p.replace(block, '');
+    }
+    expect(p.trim()).toBe('');
+  });
+
+  it('asks for margins rather than a centred subject', () => {
     const p = buildGenerationPrompt(base);
-    expect(p).toContain('no lettering, captions or watermarks');
-    expect(p).toContain('clean, uncluttered area in the upper part or one side');
-    expect(buildGenerationPrompt({ ...base, aspectRatio: '9:16' })).toContain('in the upper third');
+    expect(p).not.toContain('centraux');
+    expect(p).toContain('Garde le coin bas droit libre');
+  });
+
+  it('follows the advanced options', () => {
+    const options = { ...DEFAULT_PROMPT_OPTIONS, text: 'style', titleZone: 'none', brandWeight: 'dominant', likeness: 'style', guidelines: { focal: false, background: false, colors: true, emotion: false } } as const;
+    const p = buildGenerationPrompt({ ...base, roles: [{ kind: 'persona', name: 'Alex' }], colors: ['#ff0000'], options });
+    expect(p).toContain('uniquement les éléments courts');
+    expect(p).not.toContain('zone dégagée');
+    expect(p).toContain('couleurs dominantes de l’image');
+    expect(p).toContain('Garde Alex reconnaissable');
+    expect(p).not.toContain('exactement identiques');
+    expect(p).toContain('téléphone : un fort contraste et des couleurs percutantes.');
+    expect(p).not.toContain('point focal');
+  });
+
+  it('places the title area where asked, or nowhere', () => {
+    expect(titleZoneLine('top-left')).toContain('en haut à gauche');
+    expect(titleZoneLine('center')).toContain('au centre');
+    expect(titleZoneLine('bottom-right')).toContain('au-dessus du coin où s’affiche la durée');
+    expect(titleZoneLine('none')).toBe('');
+  });
+
+  it('lists no guideline when all are off', () => {
+    expect(guidelinesLine({ focal: false, background: false, colors: false, emotion: false })).toMatch(/téléphone\.$/);
+  });
+
+  it('explains the style’s people when they differ from who is attached', () => {
+    const one = 'La personne mise en avant sourit.';
+    expect(styleLine(one, 1)).toBe(`Direction artistique : ${one}`);
+    expect(styleLine(one, 0)).toContain('Aucune photo de personne');
+    expect(styleLine(one, 2)).toContain('les désigne toutes');
+    expect(styleLine('Deux personnes face à face.', 1)).toContain('Une seule personne');
+    expect(styleLine('Un paysage.', 0)).toBe('Direction artistique : Un paysage.');
+  });
+
+  it('states the format and the scene', () => {
+    const p = buildGenerationPrompt(base);
+    expect(p).toMatch(/^Génère une miniature de vidéo YouTube au format 16:9\./);
+    expect(p).toContain('Scène : Une développeuse sur Mars');
+  });
+
+  it('keeps text out of the image and reserves no room for it unless asked', () => {
+    const p = buildGenerationPrompt(base);
+    expect(p).toContain('aucune lettre, aucun chiffre, légende ni filigrane');
+    expect(p).not.toContain('zone dégagée');
+    const options = { ...DEFAULT_PROMPT_OPTIONS, titleZone: 'top' } as const;
+    expect(buildGenerationPrompt({ ...base, options })).toContain('zone dégagée et épurée en haut pour l’accueillir');
+  });
+
+  it('previews the title block without a title but sends nothing', () => {
+    expect(titlePreviewLine(' ')).toContain('[titre de la vidéo]');
+    expect(titlePreviewLine('Mars')).toBe(titleLine('Mars'));
+    expect(buildGenerationPrompt(base)).not.toContain('titre de la vidéo');
   });
 
   it('adds the video title as context without asking to repeat it', () => {
-    const p = buildGenerationPrompt({ ...base, videoTitle: 'I coded on Mars' });
-    expect(p).toContain('"I coded on Mars"');
-    expect(p).toContain('rather than repeat it');
+    const p = buildGenerationPrompt({ ...base, videoTitle: 'J’ai codé sur Mars' });
+    expect(p).toContain('J’ai codé sur Mars');
+    expect(p).not.toContain('"');
+    expect(p).toContain('à ne pas écrire dans l’image');
+    expect(p).toContain('plutôt que le répéter');
   });
 
   it('includes the style and the brand colours when given', () => {
-    expect(buildGenerationPrompt(base)).not.toContain('Brand colours');
-    const p = buildGenerationPrompt({ ...base, style: 'Clay render', colors: ['#ff0000', '#00ff00'] });
-    expect(p).toContain('Art direction: Clay render');
-    expect(p).toContain('Brand colours: #ff0000, #00ff00');
+    expect(buildGenerationPrompt(base)).not.toContain('Couleurs de marque');
+    const p = buildGenerationPrompt({ ...base, style: 'Pâte à modeler', colors: ['#ff0000', '#00ff00'] });
+    expect(p).toContain('Direction artistique : Pâte à modeler');
+    expect(p).toContain('Couleurs de marque : #ff0000, #00ff00');
   });
 });
 
@@ -35,62 +111,62 @@ describe('describeImages', () => {
   it('groups consecutive photos of the same person', () => {
     const lines = describeImages([
       { kind: 'persona', name: 'Alex' },
-      { kind: 'persona', name: 'Alex', expression: 'surprised' },
+      { kind: 'persona', name: 'Alex', expression: 'surpris' },
       { kind: 'persona', name: 'Sam' },
       { kind: 'reference', label: 'logo' },
     ]);
-    expect(lines[0]).toMatch(/^- Images 1–2: photos of Alex\./);
-    expect(lines[0]).toContain('surprised');
-    expect(lines[1]).toMatch(/^- Image 3: photos of Sam\./);
-    expect(lines[2]).toMatch(/^- Image 4: reference image \(logo\)/);
+    expect(lines[0]).toMatch(/^- Images 1–2 : photos d’Alex\./);
+    expect(lines[0]).toContain('surpris');
+    expect(lines[1]).toMatch(/^- Image 3 : photos de Sam\./);
+    expect(lines[2]).toMatch(/^- Image 4 : image de référence \(logo\)/);
+  });
+
+  it('tells what each reference is for', () => {
+    expect(describeImages([{ kind: 'reference', use: 'style' }])[0]).toContain('référence de style');
+    expect(describeImages([{ kind: 'reference', use: 'object', label: 'montre' }])[0]).toContain('objet (montre) à reproduire');
+    expect(describeImages([{ kind: 'reference' }])[0]).toContain('si le brief n’en parle pas');
   });
 
   it('supports an index offset', () => {
-    expect(describeImages([{ kind: 'reference' }], 1)[0]).toMatch(/^- Image 2:/);
+    expect(describeImages([{ kind: 'reference' }], 1)[0]).toMatch(/^- Image 2 :/);
   });
 });
 
 describe('edit prompts', () => {
   it('applies the instruction fully and keeps only what it does not mention', () => {
-    const p = buildEditPrompt('Move the face down');
-    expect(p).toContain('Using image 1 (the current thumbnail), move the face down');
-    expect(p).toContain('even when it changes the position, size or framing');
-    expect(p).toContain('Keep everything the instruction does not mention exactly the same');
-    expect(p).not.toContain('preserving the original composition');
+    const p = buildEditPrompt('Descends le visage');
+    expect(p).toContain('À partir de l’image 1 (la miniature actuelle), descends le visage');
+    expect(p).toContain('même si elle change la position, la taille ou le cadrage');
+    expect(p).toContain('Garde exactement à l’identique tout ce que l’instruction ne mentionne pas');
+    expect(p).not.toContain('composition d’origine');
   });
 
   it('describes extra images starting at index 2', () => {
-    expect(buildEditPrompt('x', [{ kind: 'persona', name: 'Alex' }])).toContain('- Image 2: photos of Alex');
+    expect(buildEditPrompt('x', [{ kind: 'persona', name: 'Alex' }])).toContain('- Image 2 : photos d’Alex');
   });
 
   it('region edits edit the clean image and use the marked copy only as a guide', () => {
-    const p = buildRegionEditPrompt('add a hat');
-    expect(p).toContain('Edit image 1');
-    expect(p).toContain('Image 2 is the same thumbnail with a translucent magenta overlay');
-    expect(p).toContain('within the area marked in image 2: add a hat');
-  });
-});
-
-describe('quote', () => {
-  it('neutralises inner double quotes', () => {
-    expect(quote('Say "hi"')).toBe('"Say \'hi\'"');
+    const p = buildRegionEditPrompt('ajoute un chapeau');
+    expect(p).toContain('Modifie l’image 1');
+    expect(p).toContain('L’image 2 est la même miniature avec un calque magenta translucide');
+    expect(p).toContain('à l’intérieur de la zone marquée sur l’image 2 : ajoute un chapeau');
   });
 });
 
 describe('buildUpscalePrompt', () => {
   it('asks for the same image, only sharper', () => {
     const p = buildUpscalePrompt();
-    expect(p).toMatch(/^Upscale image 1/);
-    expect(p).toContain('Reproduce it exactly');
-    expect(p).toContain('Do not add, remove, move or restyle anything');
+    expect(p).toMatch(/^Agrandis l’image 1/);
+    expect(p).toContain('Reproduis-la exactement');
+    expect(p).toContain('N’ajoute, ne supprime, ne déplace et ne restyle rien');
   });
 });
 
 describe('buildOutpaintPrompt', () => {
   it('fills only the grey areas, without new subjects', () => {
     const p = buildOutpaintPrompt();
-    expect(p).toContain('flat, uniform mid-grey areas are empty');
-    expect(p).toContain('Do not change anything outside the grey areas');
-    expect(p).toContain('leave no grey behind');
+    expect(p).toContain('zones gris moyen, plates et uniformes, sont vides');
+    expect(p).toContain('Ne change rien en dehors des zones grises');
+    expect(p).toContain('ne laisse aucun gris');
   });
 });

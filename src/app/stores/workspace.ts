@@ -5,10 +5,13 @@ import { generateImage, isAbort } from '../lib/providers';
 import {
   buildEditPrompt,
   buildGenerationPrompt,
+  describeImages,
+  IMAGES_HEADER,
   buildOutpaintPrompt,
   buildRegionEditPrompt,
   buildHealPrompt,
   buildUpscalePrompt,
+  outputRatio,
   type ImageRole,
 } from '../lib/prompt';
 import { composeReframe, composeZoneReframe, isIdentity, isZone, type Point, type Reframe } from '../lib/reframe';
@@ -18,13 +21,14 @@ import { explainError } from '../lib/errors';
 import { smoothRegion } from '../lib/smooth';
 import { randomSeed } from '../lib/channel';
 import { newGeneration, type VersionInput } from '../lib/versions';
-import { findStyle } from '../lib/styles';
+import { findStyle, optionsForNewStyle, resolveOptions } from '../lib/styles';
 import { rankThumbnails, type Ranking } from '../lib/ai';
 import type {
-  AspectRatio,
+  OutputRatio,
   BrandKit,
   ChannelPage,
   Generation,
+  CustomStyle,
   GenerationAction,
   GenerationKind,
   GenerationParams,
@@ -35,12 +39,14 @@ import type {
   ProjectInputs,
   ProjectOutput,
   RefImage,
+  ReferenceUse,
   RefSource,
+  ResolvedPromptOptions,
 } from '../lib/types';
 import { useSettings } from './settings';
 import { t, translate } from '../i18n';
 import { isArrow, isVisible, type LayerBlock } from '../lib/textBlocks';
-import { renderText, textSummary } from '../lib/textLayer';
+import { layerSteps, renderText, textSummary } from '../lib/textLayer';
 import { useText } from './text';
 
 export const MAX_IMAGES = 14;
@@ -89,6 +95,8 @@ interface WorkspaceState {
   refs: RefImage[];
   personaIds: string[];
   personas: Persona[];
+  /** The user's own styles, shared by every project. */
+  customStyles: CustomStyle[];
   library: LibraryImage[];
   brand: BrandKit;
 
@@ -115,12 +123,17 @@ interface WorkspaceState {
   addFiles: (files: Iterable<File | Blob>, source?: RefSource) => Promise<void>;
   addRef: (blob: Blob, source: RefSource, label?: string) => boolean;
   removeRef: (id: string) => void;
+  setRefUse: (id: string, use: ReferenceUse) => void;
   clearRefs: () => void;
   togglePersona: (id: string) => void;
   // generation
   generate: () => Promise<Outcome<Generation>[]>;
   /** The prompt `generate` would send for the current brief, without sending anything. */
   previewPrompt: () => string;
+  /** The lines the selected people and the references add to that prompt, numbered as sent. */
+  previewImageLines: () => { people: string; references: string };
+  /** The advanced options in effect for the current brief. */
+  promptOptions: () => ResolvedPromptOptions;
   /** `mask` overrides the painted mask (the agent describes regions as rectangles). */
   edit: (instruction: string, opts?: { mask?: HTMLCanvasElement }) => Promise<Outcome<Generation>[]>;
   /** Healing brush: the painted area is repainted to erase seams and hard edges. */
@@ -148,6 +161,7 @@ interface WorkspaceState {
   rankPicked: () => Promise<Outcome<Ranking>>;
   // assets
   reloadPersonas: () => Promise<void>;
+  reloadStyles: () => Promise<void>;
   reloadLibrary: () => Promise<void>;
   saveBrand: (kit: BrandKit) => Promise<void>;
   saveToLibrary: (blob: Blob) => Promise<void>;
@@ -229,12 +243,9 @@ function migrateBrand(saved: (BrandKit & { avatar?: Blob }) | undefined): BrandK
 }
 
 /** Size of a blank image per output format (the edits keep it). */
-const BLANK_SIZES: Record<AspectRatio, { width: number; height: number }> = {
+const BLANK_SIZES: Record<OutputRatio, { width: number; height: number }> = {
   '16:9': { width: 1920, height: 1080 },
   '9:16': { width: 1080, height: 1920 },
-  '4:3': { width: 1440, height: 1080 },
-  '1:1': { width: 1080, height: 1080 },
-  '21:9': { width: 2520, height: 1080 },
 };
 
 /** The name a new project gets, in either language: a project still named so was never renamed. */
@@ -323,6 +334,10 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     });
   }
 
+  function referenceImages(): Array<{ blob: Blob; role: ImageRole }> {
+    return get().refs.map((r) => ({ blob: r.blob, role: { kind: 'reference', label: r.label, use: r.use } }));
+  }
+
   /**
    * Every new image goes through here: a version of `parent`, or an original.
    * `blob` is the image itself, or the base under `blocks` when they are given
@@ -381,18 +396,16 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
 
   /** Images and full prompt for the current brief, shared by `generate` and `previewPrompt`. */
   function generationRequest() {
-    const { brief, refs } = get();
-    const attached = [
-      ...personaImages(),
-      ...refs.map((r) => ({ blob: r.blob, role: { kind: 'reference', label: r.label } as ImageRole })),
-    ];
+    const { brief } = get();
+    const attached = [...personaImages(), ...referenceImages()];
     const fullPrompt = buildGenerationPrompt({
       brief: brief.brief,
       videoTitle: brief.videoTitle,
       aspectRatio: useSettings.getState().aspectRatio,
-      style: findStyle(brief.styleId)?.prompt,
+      style: findStyle(brief.styleId, get().customStyles)?.prompt,
       roles: attached.map((a) => a.role),
       colors: get().brand.colors,
+      options: get().promptOptions(),
     });
     return { attached, fullPrompt };
   }
@@ -500,6 +513,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     refs: [],
     personaIds: [],
     personas: [],
+    customStyles: [],
     library: [],
     brand: EMPTY_BRAND,
     view: 'image',
@@ -511,7 +525,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     lastError: null,
 
     init: async () => {
-      const [projects, library, personas] = await Promise.all([db.listProjects(), db.listLibrary(), db.listPersonas()]);
+      const [projects, library, personas, customStyles] = await Promise.all([db.listProjects(), db.listLibrary(), db.listPersonas(), db.listStyles()]);
+      set({ customStyles });
       legacyOutput = currentOutput();
       knownPersonaIds = new Set(personas.map((p) => p.id));
       set({ projects, library, personas });
@@ -558,7 +573,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         output: legacyOutput,
       };
       get().setTool(null);
-      useSettings.getState().set(inputs.output);
+      useSettings.getState().set({ ...inputs.output, aspectRatio: outputRatio(inputs.output.aspectRatio) });
       set({
         projectId: id,
         generations,
@@ -613,7 +628,9 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     },
 
     setBrief: (patch) => {
-      set({ brief: { ...get().brief, ...patch } });
+      const brief = { ...get().brief, ...patch };
+      if (brief.styleId !== get().brief.styleId && !patch.options) brief.options = optionsForNewStyle(brief.options);
+      set({ brief });
       scheduleSave();
     },
 
@@ -639,6 +656,10 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       return true;
     },
 
+    setRefUse: (id, use) => {
+      set({ refs: get().refs.map((r) => (r.id === id ? { ...r, use } : r)) });
+      scheduleSave();
+    },
     removeRef: (id) => {
       set({ refs: get().refs.filter((r) => r.id !== id) });
       scheduleSave();
@@ -710,6 +731,17 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     },
 
     previewPrompt: () => generationRequest().fullPrompt,
+
+    promptOptions: () => resolveOptions(findStyle(get().brief.styleId, get().customStyles), get().brief.options),
+
+    previewImageLines: () => {
+      const people = personaImages().map((a) => a.role);
+      const references = referenceImages().map((a) => a.role);
+      return {
+        people: (people.length ? [IMAGES_HEADER, ...describeImages(people, 0, get().promptOptions().likeness)] : []).join('\n'),
+        references: (references.length && !people.length ? [IMAGES_HEADER] : []).concat(describeImages(references, people.length)).join('\n'),
+      };
+    },
 
     generate: async () => {
       const { brief } = get();
@@ -824,7 +856,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
 
     reuse: (gen) => {
       const s = useSettings.getState();
-      s.set({ model: gen.params.model, aspectRatio: gen.params.aspectRatio, resolution: gen.params.resolution });
+      s.set({ model: gen.params.model, aspectRatio: outputRatio(gen.params.aspectRatio), resolution: gen.params.resolution });
       if (gen.kind === 'generate' || gen.kind === 'import') get().setBrief({ brief: gen.prompt, videoTitle: gen.videoTitle ?? get().brief.videoTitle });
     },
 
@@ -859,6 +891,12 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       const ids = get().personaIds.filter((id) => everyone.some((p) => p.id === id));
       for (const p of created) if (ids.length < MAX_PERSONAS) ids.push(p.id);
       set({ personas: everyone, personaIds: ids });
+    },
+    reloadStyles: async () => {
+      const customStyles = await db.listStyles();
+      set({ customStyles });
+      // The open project falls back to no style when its style was just deleted.
+      if (!findStyle(get().brief.styleId, customStyles)) get().setBrief({ styleId: '' });
     },
     reloadLibrary: async () => set({ library: await db.listLibrary() }),
     saveBrand: async (kit) => {
@@ -950,11 +988,28 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       if (!source || (!used.length && !source.textLayer)) return null;
       try {
         const base = source.textLayer?.base ?? source.blob;
-        const summary = textSummary(used);
-        if (!source.textLayer) return await saveVersion({ parent: source, kind: 'text', prompt: summary, blob: base, blocks: used });
-        const generation: Generation = { ...source, blob: await renderText(base, used), textLayer: { base, blocks: used }, prompt: summary || source.prompt };
-        if (opts?.merge) delete generation.textLayer;
-        await replaceVersion(generation);
+        const steps = layerSteps(source.textLayer?.blocks ?? [], used);
+        // New text or arrows add a version each; changes to existing ones update this one.
+        let generation: Generation = source;
+        for (const step of steps) {
+          generation = await saveVersion({
+            parent: generation,
+            kind: 'text',
+            action: step.added.some(isArrow) ? 'arrow' : undefined,
+            prompt: textSummary(step.added),
+            blob: base,
+            blocks: step.blocks,
+          });
+        }
+        if (!steps.length) {
+          const own = used.filter((b) => isArrow(b) === (source.action === 'arrow'));
+          generation = { ...source, blob: await renderText(base, used), textLayer: { base, blocks: used }, prompt: textSummary(own) || source.prompt };
+        }
+        if (opts?.merge) {
+          generation = { ...generation };
+          delete generation.textLayer;
+        }
+        if (!steps.length || opts?.merge) await replaceVersion(generation);
         get().setTool(null);
         return generation;
       } catch (error) {

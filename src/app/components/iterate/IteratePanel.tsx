@@ -42,6 +42,7 @@ const STEP_ICONS = {
   reframe: Crop,
   smooth: Blend,
   heal: Bandage,
+  arrow: ArrowUpRight,
 } as const;
 
 /** Indent per tree level, and where a level's line runs: under the left part of its thumbnail. */

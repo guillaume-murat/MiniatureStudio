@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import type { BrandKit, Generation, LibraryImage, Persona, Project } from './types';
+import type { BrandKit, CustomStyle, Generation, LibraryImage, Persona, Project } from './types';
 
 interface NanoDB extends DBSchema {
   generations: {
@@ -11,24 +11,28 @@ interface NanoDB extends DBSchema {
   personas: { key: string; value: Persona };
   library: { key: string; value: LibraryImage };
   brand: { key: string; value: BrandKit };
+  styles: { key: string; value: CustomStyle };
 }
 
 const DB_NAME = 'NanoThumbnail';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbPromise: Promise<IDBPDatabase<NanoDB>> | null = null;
 
 export function getDB(): Promise<IDBPDatabase<NanoDB>> {
   dbPromise ??= openDB<NanoDB>(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      const generations = db.createObjectStore('generations', { keyPath: 'id' });
-      generations.createIndex('byProject', 'projectId');
-      generations.createIndex('byCreatedAt', 'createdAt');
-      const projects = db.createObjectStore('projects', { keyPath: 'id' });
-      projects.createIndex('byUpdatedAt', 'updatedAt');
-      db.createObjectStore('personas', { keyPath: 'id' });
-      db.createObjectStore('library', { keyPath: 'id' });
-      db.createObjectStore('brand', { keyPath: 'id' });
+    upgrade(db, oldVersion) {
+      if (oldVersion < 1) {
+        const generations = db.createObjectStore('generations', { keyPath: 'id' });
+        generations.createIndex('byProject', 'projectId');
+        generations.createIndex('byCreatedAt', 'createdAt');
+        const projects = db.createObjectStore('projects', { keyPath: 'id' });
+        projects.createIndex('byUpdatedAt', 'updatedAt');
+        db.createObjectStore('personas', { keyPath: 'id' });
+        db.createObjectStore('library', { keyPath: 'id' });
+        db.createObjectStore('brand', { keyPath: 'id' });
+      }
+      if (oldVersion < 2) db.createObjectStore('styles', { keyPath: 'id' });
     },
   });
   return dbPromise;
@@ -84,7 +88,7 @@ export async function deleteGeneration(id: string): Promise<void> {
   await (await getDB()).delete('generations', id);
 }
 
-// ─── Personas / library / brand ──────────────────────────
+// ─── Personas / styles / library / brand ─────────────────
 
 export async function listPersonas(): Promise<Persona[]> {
   const items = await (await getDB()).getAll('personas');
@@ -95,6 +99,17 @@ export async function putPersona(persona: Persona): Promise<void> {
 }
 export async function deletePersona(id: string): Promise<void> {
   await (await getDB()).delete('personas', id);
+}
+
+export async function listStyles(): Promise<CustomStyle[]> {
+  const items = await (await getDB()).getAll('styles');
+  return items.sort((a, b) => b.createdAt - a.createdAt);
+}
+export async function putStyle(style: CustomStyle): Promise<void> {
+  await (await getDB()).put('styles', style);
+}
+export async function deleteStyle(id: string): Promise<void> {
+  await (await getDB()).delete('styles', id);
 }
 
 export async function listLibrary(): Promise<LibraryImage[]> {

@@ -339,7 +339,8 @@ function ArrowControls({ block }: { block: ArrowBlock }) {
 
 /**
  * Add text blocks and arrows, style the selected one, then apply them. On a
- * text version the blocks are its saved ones, and applying updates it in place.
+ * text version the blocks are its saved ones: applying updates it in place,
+ * and new blocks add a version (`layerSteps`).
  */
 export function TextToolbar({ kind }: { kind: 'text' | 'arrow' }) {
   const t = useT();

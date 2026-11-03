@@ -5,12 +5,12 @@
  */
 import { useWorkspace, MAX_PERSONAS, type Brief, type Outcome, type ViewMode } from '../stores/workspace';
 import { useSettings } from '../stores/settings';
-import { STYLES, findStyle } from '../lib/styles';
+import { allStyles, findStyle } from '../lib/styles';
 import { suggestConcepts } from '../lib/ai';
 import { blobToBase64, exportForYouTube, extensionFor, FULL_HD_SIZE, normaliseUpload, prepareReference, rectMask, YOUTUBE_SIZE } from '../lib/images';
 import { extractVideoId, fetchThumbnail, fetchVideoTitle } from '../lib/youtube';
 import { listProjects } from '../lib/db';
-import type { AspectRatio, Generation, ModelId, Resolution } from '../lib/types';
+import type { OutputRatio, Generation, ModelId, Resolution } from '../lib/types';
 import type { AddReferenceArgs, ToolContent, ToolResult } from './protocol';
 
 type Args = Record<string, unknown>;
@@ -105,7 +105,7 @@ function applyBrief(args: Args): void {
     const value = str(args, key);
     if (value !== undefined) (patch as Record<string, string>)[key] = value;
   }
-  if (patch.styleId && !findStyle(patch.styleId)) throw new ToolError(`Unknown styleId "${patch.styleId}" (see list_styles).`);
+  if (patch.styleId && !findStyle(patch.styleId, ws().customStyles)) throw new ToolError(`Unknown styleId "${patch.styleId}" (see list_styles).`);
   if (Object.keys(patch).length) ws().setBrief(patch);
 }
 
@@ -149,7 +149,7 @@ export const handlers: Record<string, Handler> = {
 
   list_styles: async () => {
     const lang = useSettings.getState().lang;
-    return ok(STYLES.map((st) => ({ id: st.id, name: st.name[lang], goodFor: st.hint[lang] })));
+    return ok(allStyles(ws().customStyles).map((st) => ({ id: st.id, name: st.name[lang], goodFor: st.hint[lang] })));
   },
 
   list_projects: async () => {
@@ -185,7 +185,7 @@ export const handlers: Record<string, Handler> = {
   set_output: async (args) => {
     const patch = {
       model: oneOf<ModelId>(args, 'model', ['nano-banana-pro', 'nano-banana-2']),
-      aspectRatio: oneOf<AspectRatio>(args, 'aspectRatio', ['16:9', '9:16', '4:3', '1:1', '21:9']),
+      aspectRatio: oneOf<OutputRatio>(args, 'aspectRatio', ['16:9', '9:16']),
       resolution: oneOf<Resolution>(args, 'resolution', ['1K', '2K', '4K']),
       count: oneOf(args, 'count', [1, 2, 4] as const),
     };
@@ -242,7 +242,7 @@ export const handlers: Record<string, Handler> = {
         videoTitle: str(args, 'videoTitle') ?? ws().brief.videoTitle,
         idea: str(args, 'idea') ?? ws().brief.brief,
         lang,
-        styles: STYLES.map((st) => ({ id: st.id, name: st.name.en })),
+        styles: allStyles(ws().customStyles).map((st) => ({ id: st.id, name: st.name.en })),
       },
     );
     return ok({ concepts, hint: 'Apply one with generate({ brief, styleId }).' });

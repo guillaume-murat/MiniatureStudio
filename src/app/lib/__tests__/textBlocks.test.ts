@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { layerSteps } from '../textLayer';
 import { arrowGeometry, bendThrough, boxRadius, clamp01, cssFont, isVisible, newArrowBlock, newTextBlock, rotationTowards } from '../textBlocks';
 
 describe('rotationTowards', () => {
@@ -69,5 +70,27 @@ describe('arrows', () => {
   it('counts as visible even without text', () => {
     expect(isVisible(straight)).toBe(true);
     expect(isVisible(newTextBlock('Anton', { text: '  ' }))).toBe(false);
+  });
+});
+
+describe('layerSteps', () => {
+  const text = newTextBlock();
+  const arrow = newArrowBlock();
+  const secondText = newTextBlock();
+
+  it('adds no version when nothing is new', () => {
+    expect(layerSteps([text], [{ ...text, text: 'edited' }])).toEqual([]);
+    expect(layerSteps([text, arrow], [arrow])).toEqual([]);
+  });
+
+  it('adds a version for an arrow over a text', () => {
+    expect(layerSteps([text], [text, arrow])).toEqual([{ added: [arrow], blocks: [text, arrow] }]);
+  });
+
+  it('adds one version per kind, texts first, keeping the stacking order', () => {
+    expect(layerSteps([], [text, arrow, secondText])).toEqual([
+      { added: [text, secondText], blocks: [text, secondText] },
+      { added: [arrow], blocks: [text, arrow, secondText] },
+    ]);
   });
 });

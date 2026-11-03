@@ -107,7 +107,7 @@ export const STUDIO_TOOLS: ToolDef[] = [
   },
   {
     name: 'list_styles',
-    description: 'The style presets available for styleId, with what each is good for.',
+    description: 'The styles available for styleId (the user’s own, then the presets), with what each is good for.',
     inputSchema: obj(),
   },
   {
@@ -142,7 +142,7 @@ export const STUDIO_TOOLS: ToolDef[] = [
       model: str('"nano-banana-pro" (best quality, text) or "nano-banana-2" (faster, cheaper).', {
         enum: ['nano-banana-pro', 'nano-banana-2'],
       }),
-      aspectRatio: str('16:9 for YouTube thumbnails.', { enum: ['16:9', '9:16', '4:3', '1:1', '21:9'] }),
+      aspectRatio: str('16:9 for YouTube thumbnails.', { enum: ['16:9', '9:16'] }),
       resolution: str('Output resolution.', { enum: ['1K', '2K', '4K'] }),
       count: { type: 'integer', enum: [1, 2, 4], description: 'Variations per generate call.' },
     }),

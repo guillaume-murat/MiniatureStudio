@@ -4,9 +4,11 @@ import { toast } from 'sonner';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Section } from '../Section';
+import { Field, Section } from '../Section';
+import { PromptCode } from './PromptCode';
 import { useWorkspace } from '../../stores/workspace';
 import { BRAND_PALETTES, MAX_BRAND_COLORS, mergeColors, normaliseHex, parseHexColors } from '../../lib/colors';
+import { colorsLine } from '../../lib/prompt';
 import { useT } from '../../i18n';
 
 function Swatches({ colors }: { colors: string[] }) {
@@ -41,9 +43,9 @@ function HexInput({ value, onChange, label }: { value: string; onChange: (hex: s
 }
 
 /** Brand colours, sent in the prompt as the dominant accents: a preset palette, pickers, or pasted hex codes. */
-export function BrandColors() {
+export function BrandColors({ number }: { number: number }) {
   const t = useT();
-  const { brand, saveBrand } = useWorkspace();
+  const { brand, saveBrand, promptOptions } = useWorkspace();
   const [hexText, setHexText] = useState('');
   const colors = brand.colors;
   const save = (next: string[]) => saveBrand({ ...useWorkspace.getState().brand, colors: next });
@@ -67,63 +69,70 @@ export function BrandColors() {
   const preset = BRAND_PALETTES.find((p) => p.colors.join() === colors.join())?.id ?? '';
 
   return (
-    <Section title={t('brand.colors')}>
-      <Select value={preset} onValueChange={(id) => save([...BRAND_PALETTES.find((p) => p.id === id)!.colors])}>
-        <SelectTrigger className="w-full" aria-label={t('brand.presets')}>
-          <SelectValue placeholder={t('brand.presets')} />
-        </SelectTrigger>
-        <SelectContent>
-          {BRAND_PALETTES.map((p) => (
-            <SelectItem key={p.id} value={p.id}>
-              <Swatches colors={p.colors} />
-              {t(`brand.palettes.${p.id}`)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+    <Section title={`${number}. ${t('brand.colors')}`}>
+      <Field label={t('brand.presets')} htmlFor="brandPalette">
+        <Select value={preset} onValueChange={(id) => save([...BRAND_PALETTES.find((p) => p.id === id)!.colors])}>
+          <SelectTrigger id="brandPalette" className="w-full">
+            <SelectValue placeholder={t('brand.presetsPlaceholder')} />
+          </SelectTrigger>
+          <SelectContent>
+            {BRAND_PALETTES.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                <Swatches colors={p.colors} />
+                {t(`brand.palettes.${p.id}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Field>
 
       {colors.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
-          {colors.map((c, i) => (
-            <div key={i} className="group relative flex items-center gap-1">
-              <label className="block size-8 shrink-0 cursor-pointer overflow-hidden rounded-md border" style={{ background: c }}>
-                <input type="color" value={c} onChange={(e) => setColor(i, e.target.value)} className="size-full cursor-pointer opacity-0" aria-label={c} />
-              </label>
-              <HexInput value={c} onChange={(hex) => setColor(i, hex)} label={`${t('brand.colors')} ${i + 1}`} />
-              <button
-                type="button"
-                onClick={() => save(colors.filter((_, j) => j !== i))}
-                className="absolute -top-1.5 left-5 hidden rounded-full bg-foreground p-0.5 text-background group-hover:block [@media(pointer:coarse)]:block"
-                aria-label={t('common.remove')}
-              >
-                <X className="size-3" />
-              </button>
-            </div>
-          ))}
-        </div>
+        <Field label={t('brand.selected')}>
+          <div className="flex flex-wrap items-center gap-2">
+            {colors.map((c, i) => (
+              <div key={i} className="group relative flex items-center gap-1">
+                <label className="block size-8 shrink-0 cursor-pointer overflow-hidden rounded-md border" style={{ background: c }}>
+                  <input type="color" value={c} onChange={(e) => setColor(i, e.target.value)} className="size-full cursor-pointer opacity-0" aria-label={c} />
+                </label>
+                <HexInput value={c} onChange={(hex) => setColor(i, hex)} label={`${t('brand.colors')} ${i + 1}`} />
+                <button
+                  type="button"
+                  onClick={() => save(colors.filter((_, j) => j !== i))}
+                  className="absolute -top-1.5 left-5 hidden rounded-full bg-foreground p-0.5 text-background group-hover:block [@media(pointer:coarse)]:block"
+                  aria-label={t('common.remove')}
+                >
+                  <X className="size-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </Field>
       )}
 
-      <div className="flex gap-2">
-        <Input
-          value={hexText}
-          onChange={(e) => setHexText(e.target.value)}
-          onPaste={onHexPaste}
-          onKeyDown={(e) => {
-            if (e.key !== 'Enter') return;
-            e.preventDefault();
-            if (!addHexColors(hexText)) toast.error(t('brand.noHex'));
-          }}
-          placeholder={t('brand.pastePlaceholder')}
-          spellCheck={false}
-          className="font-mono text-xs"
-          aria-label={t('brand.pastePlaceholder')}
-        />
-        {colors.length < MAX_BRAND_COLORS && (
-          <Button variant="outline" size="icon" onClick={() => (hexText.trim() ? addHexColors(hexText) || toast.error(t('brand.noHex')) : save([...colors, '#7c5cff']))} aria-label={t('brand.addColor')}>
-            <Plus />
-          </Button>
-        )}
-      </div>
+      <Field label={t('brand.paste')} htmlFor="brandHex">
+        <div className="flex gap-2">
+          <Input
+            id="brandHex"
+            value={hexText}
+            onChange={(e) => setHexText(e.target.value)}
+            onPaste={onHexPaste}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter') return;
+              e.preventDefault();
+              if (!addHexColors(hexText)) toast.error(t('brand.noHex'));
+            }}
+            placeholder={t('brand.pastePlaceholder')}
+            spellCheck={false}
+            className="font-mono"
+          />
+          {colors.length < MAX_BRAND_COLORS && (
+            <Button variant="outline" size="icon" onClick={() => (hexText.trim() ? addHexColors(hexText) || toast.error(t('brand.noHex')) : save([...colors, '#7c5cff']))} aria-label={t('brand.addColor')}>
+              <Plus />
+            </Button>
+          )}
+        </div>
+      </Field>
+      <PromptCode text={colorsLine(colors, promptOptions().brandWeight)} />
     </Section>
   );
 }

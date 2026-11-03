@@ -10,7 +10,7 @@ import { useUI } from '../../stores/ui';
 import { useWorkspace } from '../../stores/workspace';
 import { useSettings } from '../../stores/settings';
 import { suggestConcepts, type Concept } from '../../lib/ai';
-import { STYLES, findStyle } from '../../lib/styles';
+import { allStyles, findStyle } from '../../lib/styles';
 import { explainError } from '../../lib/errors';
 import { useT } from '../../i18n';
 
@@ -18,7 +18,7 @@ export function AssistantDialog() {
   const t = useT();
   const open = useUI((s) => s.dialog === 'assistant');
   const close = useUI((s) => s.close);
-  const { brief, setBrief } = useWorkspace();
+  const { brief, setBrief, customStyles } = useWorkspace();
   const lang = useSettings((s) => s.lang);
   const [concepts, setConcepts] = useState<Concept[]>([]);
   const [busy, setBusy] = useState(false);
@@ -37,7 +37,7 @@ export function AssistantDialog() {
             videoTitle: brief.videoTitle,
             idea: brief.brief,
             lang: settings.lang,
-            styles: STYLES.map((s) => ({ id: s.id, name: s.name.en })),
+            styles: allStyles(customStyles).map((s) => ({ id: s.id, name: s.name.en })),
           },
         ),
       );
@@ -88,7 +88,7 @@ export function AssistantDialog() {
         {concepts.length > 0 && (
           <div className="grid gap-3 sm:grid-cols-3">
             {concepts.map((c, i) => {
-              const style = findStyle(c.styleId);
+              const style = findStyle(c.styleId, customStyles);
               return (
                 <div key={i} className="flex flex-col gap-2 rounded-lg border bg-card p-3">
                   <p className="font-medium">{c.name}</p>
