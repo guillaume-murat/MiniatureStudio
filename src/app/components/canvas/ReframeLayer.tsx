@@ -34,8 +34,7 @@ export function ReframeView({ gen }: { gen: Generation }) {
   // Drawing the zone: the image stays put and the pointer traces its outline.
   const drawing = target === 'zone' && !isZone(zone);
   const safeZones = useWorkspace((s) => s.safeZones);
-  // A text version moves the image under its text: show that image.
-  const url = useBlobUrl(gen.textLayer?.base ?? gen.blob);
+  const url = useBlobUrl(gen.blob);
   const [ref, box] = useElementSize<HTMLDivElement>();
   // Leave room around the frame to see what gets cropped off.
   const size = fit(gen.width / gen.height, { width: box.width * 0.72, height: box.height * 0.72 });

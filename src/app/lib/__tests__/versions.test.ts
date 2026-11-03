@@ -104,9 +104,4 @@ describe('newGeneration', () => {
     expect(g).not.toHaveProperty('videoTitle');
     expect(() => newGeneration({ kind: 'import', prompt: 'x', blob, width: 1, height: 1 }, 'g', 9)).toThrow();
   });
-
-  it('keeps the text layer', () => {
-    const textLayer = { base: blob, blocks: [] };
-    expect(newGeneration({ parent, kind: 'text', prompt: 't', blob, width: 1, height: 1, textLayer }, 'g', 9).textLayer).toBe(textLayer);
-  });
 });

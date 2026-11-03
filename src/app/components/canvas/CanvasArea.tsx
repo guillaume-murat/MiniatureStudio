@@ -99,8 +99,7 @@ function EmptyState({ running }: { running: number }) {
 
 function ImageView({ gen, tool, brushSize, clearSignal }: { gen: Generation; tool: MaskTool; brushSize: number; clearSignal: number }) {
   const { safeZones, tool: active, duplicateSelected } = useWorkspace();
-  // While its text is being edited, a text version shows its image without the text.
-  const url = useBlobUrl(isLayerTool(active) && gen.textLayer ? gen.textLayer.base : gen.blob);
+  const url = useBlobUrl(gen.blob);
   const [ref, box] = useElementSize<HTMLDivElement>();
   const size = fit(gen.width / gen.height, { width: box.width - 48, height: box.height - 48 });
   const [zoom, setZoom] = useState<ViewZoom>(NO_ZOOM);

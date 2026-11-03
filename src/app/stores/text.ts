@@ -14,7 +14,6 @@ interface TextState {
   select: (id: string | null) => void;
   clear: () => void;
   /** Reopens the blocks saved on a text version. */
-  load: (blocks: LayerBlock[]) => void;
 }
 
 export const useText = create<TextState>((set, get) => ({
@@ -36,5 +35,4 @@ export const useText = create<TextState>((set, get) => ({
   remove: (id) => set({ blocks: get().blocks.filter((b) => b.id !== id), selectedId: get().selectedId === id ? null : get().selectedId }),
   select: (id) => set({ selectedId: id }),
   clear: () => set({ blocks: [], selectedId: null }),
-  load: (blocks) => set({ blocks: blocks.map((b) => ({ ...b })), selectedId: blocks[0]?.id ?? null }),
 }));

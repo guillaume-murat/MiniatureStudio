@@ -4,9 +4,7 @@
  * letter, a label or a condition can't differ between them.
  */
 import { ArrowUpRight, Crop, Paintbrush, PanelsTopLeft, ScanLine, Tv, Type, type LucideIcon } from 'lucide-react';
-import { selectedGeneration, useWorkspace, type Tool } from './stores/workspace';
-import { isArrow } from './lib/textBlocks';
-import { useUI } from './stores/ui';
+import { useWorkspace, type Tool } from './stores/workspace';
 import type { TKey } from './i18n';
 
 type Workspace = ReturnType<typeof useWorkspace.getState>;
@@ -47,7 +45,7 @@ export const COMMANDS: Command[] = [
     key: 't',
     icon: Type,
     group: 'tool',
-    label: (ws) => (selectedGeneration(ws)?.textLayer?.blocks.some((b) => !isArrow(b)) ? 'canvas.textEdit' : 'canvas.textTool'),
+    label: () => 'canvas.textTool',
     needsImage: true,
     active: (ws) => ws.tool === 'text',
     run: (ws) => toggleTool(ws, 'text'),
@@ -57,7 +55,7 @@ export const COMMANDS: Command[] = [
     key: 'a',
     icon: ArrowUpRight,
     group: 'tool',
-    label: (ws) => (selectedGeneration(ws)?.textLayer?.blocks.some(isArrow) ? 'arrow.editTool' : 'arrow.addTool'),
+    label: () => 'arrow.addTool',
     needsImage: true,
     active: (ws) => ws.tool === 'arrow',
     run: (ws) => toggleTool(ws, 'arrow'),
@@ -80,8 +78,7 @@ export const COMMANDS: Command[] = [
     label: () => 'canvas.reframeTool',
     needsImage: true,
     active: (ws) => ws.tool === 'reframe',
-    // Text and arrows not yet in the pixels wouldn't follow the image: ask first (ReframeTextDialog).
-    run: (ws) => (ws.tool !== 'reframe' && ws.pendingBlocks().length ? useUI.getState().open('reframeText') : toggleTool(ws, 'reframe')),
+    run: (ws) => toggleTool(ws, 'reframe'),
   },
 ];
 

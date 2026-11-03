@@ -1,5 +1,3 @@
-import type { LayerBlock } from './textBlocks';
-
 export type Provider = 'replicate' | 'gemini' | 'openrouter' | 'mammouth' | 'vertex';
 export type ModelId = 'nano-banana-pro' | 'nano-banana-2' | 'nano-banana-2-lite';
 /** The ratio of an existing image: older ones may be in a format the studio no longer generates, and their edits keep it. */
@@ -40,7 +38,6 @@ export interface Generation {
    * Editable text added with the text tool: `blob` is `base` with the blocks drawn
    * on it. Dropped when the user merges the text into the image.
    */
-  textLayer?: { base: Blob; blocks: LayerBlock[] };
   videoTitle?: string;
   params: GenerationParams;
   blob: Blob;

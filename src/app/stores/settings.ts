@@ -96,7 +96,7 @@ function load() {
     provider: (PROVIDERS.includes(prefs.provider) ? prefs.provider : 'replicate') as Provider,
     keys: Object.fromEntries(PROVIDERS.map((p) => [p, safeGet(store, KEY_PREFIX + p) ?? ''])) as Record<Provider, string>,
     keyPersistence,
-    model: (['nano-banana-pro', 'nano-banana-2'].includes(prefs.model) ? prefs.model : 'nano-banana-2-lite') as ModelId,
+    model: (['nano-banana-2', 'nano-banana-2-lite'].includes(prefs.model) ? prefs.model : 'nano-banana-pro') as ModelId,
     aspectRatio: outputRatio(prefs.aspectRatio),
     resolution: (prefs.resolution ?? '1K') as Resolution,
     format: (prefs.format ?? 'png') as OutputFormat,

@@ -175,10 +175,9 @@ export const STUDIO_TOOLS: ToolDef[] = [
   },
   {
     name: 'suggest_concepts',
-    description: 'Ask the studio for 3 distinct thumbnail concepts (brief, overlay text, style) from a title and a rough idea.',
+    description: 'Ask the studio for 3 distinct thumbnail concepts (brief, style) from the video title.',
     inputSchema: obj({
       videoTitle: str('Defaults to the brief video title.'),
-      idea: str('Rough idea; defaults to the brief.'),
     }),
   },
   {

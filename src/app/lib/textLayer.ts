@@ -1,6 +1,6 @@
 /**
- * The editable text layer of a version: text blocks and arrows drawn over a
- * base image (`Generation.textLayer`). Geometry and drawing are in textBlocks.ts.
+ * Text blocks and arrows drawn into an image, for good. Geometry and drawing
+ * are in textBlocks.ts.
  */
 import { cssFont, drawTextBlocks, isArrow, type LayerBlock, type TextBlock } from './textBlocks';
 import { loadGoogleFont } from './fonts';
@@ -21,20 +21,9 @@ export async function renderText(base: Blob, blocks: LayerBlock[]): Promise<Blob
   return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas export failed'))), 'image/png'));
 }
 
-/**
- * The versions that applying `blocks` over a layer adds: one for the new texts,
- * then one for the new arrows, each holding the layer as it stands at that step.
- * None when nothing is new (changes to existing blocks stay in their version).
- */
-export function layerSteps(previous: LayerBlock[], blocks: LayerBlock[]): Array<{ added: LayerBlock[]; blocks: LayerBlock[] }> {
-  const known = new Set(previous.map((b) => b.id));
-  const added = blocks.filter((b) => !known.has(b.id));
-  const groups = [added.filter((b) => !isArrow(b)), added.filter(isArrow)].filter((group) => group.length);
-  const shown = new Set(known);
-  return groups.map((group) => {
-    group.forEach((b) => shown.add(b.id));
-    return { added: group, blocks: blocks.filter((b) => shown.has(b.id)) };
-  });
+/** What each new version draws: the texts, then the arrows. */
+export function textSteps(blocks: LayerBlock[]): LayerBlock[][] {
+  return [blocks.filter((b) => !isArrow(b)), blocks.filter(isArrow)].filter((step) => step.length);
 }
 
 /** A text version's name: its texts, an arrow for each arrow. */

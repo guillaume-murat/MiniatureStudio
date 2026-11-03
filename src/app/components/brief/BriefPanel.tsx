@@ -1,4 +1,4 @@
-import { Check, Eye, Loader2, Plus, Sparkles, Square, Users, Wand2 } from 'lucide-react';
+import { Eye, Loader2, Plus, Sparkles, Square, Users, Wand2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
@@ -15,40 +15,15 @@ import { OutputSection } from './OutputSection';
 import { ChannelSection } from './ChannelSection';
 import { AdvancedOptions } from './AdvancedOptions';
 import { BrandColors } from './BrandColors';
+import { PersonaChip } from './PersonaChip';
 import { PromptCode } from './PromptCode';
 import { MOD } from '../TopBar';
-import { useBlobUrl } from '../../hooks/use-blob-url';
 import { MAX_PERSONAS, useWorkspace } from '../../stores/workspace';
 import { useSettings } from '../../stores/settings';
 import { useUI } from '../../stores/ui';
 import { formatLine, OUTPUT_RATIOS, sceneLine, titlePreviewLine } from '../../lib/prompt';
 import { useT } from '../../i18n';
-import type { OutputRatio, Persona } from '../../lib/types';
-import { cn } from '../../lib/utils';
-
-function PersonaChip({ persona, active, onToggle }: { persona: Persona; active: boolean; onToggle: () => void }) {
-  const front = persona.photos.find((p) => p.slot === 'front') ?? persona.photos[0];
-  const url = useBlobUrl(front?.blob);
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-pressed={active}
-      className={cn(
-        'flex items-center gap-2 rounded-full border py-1 pr-3 pl-1 text-sm transition-colors hover:bg-accent',
-        active && 'border-primary bg-primary/10 text-foreground ring-1 ring-primary/40',
-      )}
-    >
-      {url ? <img src={url} alt="" className="size-6 rounded-full object-cover" /> : <span className="size-6 rounded-full bg-muted" />}
-      <span className="max-w-28 truncate">{persona.name}</span>
-      {active && (
-        <span className="flex size-4 items-center justify-center rounded-full bg-success text-white">
-          <Check className="size-3" strokeWidth={3} />
-        </span>
-      )}
-    </button>
-  );
-}
+import type { OutputRatio } from '../../lib/types';
 
 function PeopleSection({ number }: { number: number }) {
   const t = useT();

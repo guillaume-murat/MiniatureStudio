@@ -14,6 +14,7 @@ import {
   SquareDashedMousePointer,
   Type,
   Wand2,
+  Eye,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
@@ -22,7 +23,8 @@ import { Section } from '../Section';
 import { Toggle } from '../ui/toggle';
 import { Kbd } from '../ui/kbd';
 import { COMMANDS, isAvailable } from '../../commands';
-import { MergeTextButton } from '../canvas/TextLayer';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
+import { EditPromptDialog } from '../dialogs/EditPromptDialog';
 import { useBlobUrl } from '../../hooks/use-blob-url';
 import { isLayerTool, selectedGeneration, useWorkspace } from '../../stores/workspace';
 import { rootOf, treeLines, versionTree } from '../../lib/versions';
@@ -132,11 +134,6 @@ function EditTools({ onUse }: { onUse?: () => void }) {
           </Toggle>
         ))}
       </div>
-      {gen?.textLayer && !isLayerTool(ws.tool) && (
-        <div className="mb-2 [&>button]:w-full">
-          <MergeTextButton onMerge={() => ws.mergeText(gen.id)} />
-        </div>
-      )}
     </>
   );
 }
@@ -145,6 +142,7 @@ function EditTab({ gen, onEdited }: { gen: Generation; onEdited?: () => void }) 
   const t = useT();
   const { generations, select, edit, tool, hasMask, jobs } = useWorkspace();
   const [instruction, setInstruction] = useState('');
+  const [showPrompt, setShowPrompt] = useState(false);
   const root = rootOf(generations, gen.id) ?? gen;
   const versions = versionTree(generations, root.id);
   const lines = treeLines(versions);
@@ -218,9 +216,23 @@ function EditTab({ gen, onEdited }: { gen: Generation; onEdited?: () => void }) 
               }
             }}
             placeholder={region ? t('iterate.regionPlaceholder') : t('iterate.editPlaceholder')}
-            className="min-h-20 resize-none pr-11"
+            className="min-h-20 resize-none pr-20"
             aria-label={t('iterate.edit')}
           />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                className="absolute right-11 bottom-2 rounded-full border border-yellow-500/25 bg-yellow-500/10 hover:bg-yellow-500/15 dark:hover:bg-yellow-500/15"
+                onClick={() => setShowPrompt(true)}
+                aria-label={t('editPrompt.open')}
+              >
+                <Eye />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('editPrompt.open')}</TooltipContent>
+          </Tooltip>
           <Button
             size="icon-sm"
             className="absolute right-2 bottom-2 rounded-full"
@@ -232,6 +244,7 @@ function EditTab({ gen, onEdited }: { gen: Generation; onEdited?: () => void }) 
           </Button>
         </div>
       </div>
+      <EditPromptDialog open={showPrompt} onOpenChange={setShowPrompt} instruction={instruction} />
     </div>
   );
 }

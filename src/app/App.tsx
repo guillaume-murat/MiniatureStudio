@@ -4,7 +4,6 @@ import { Toaster } from './components/ui/sonner';
 import { TooltipProvider } from './components/ui/tooltip';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from './components/ui/resizable';
 import { TopBar } from './components/TopBar';
-import { ReframeTextDialog } from './components/canvas/ReframeTextDialog';
 import { runShortcut } from './commands';
 import { BlockingJobOverlay, runningJobs } from './components/canvas/BlockingJob';
 import { BriefPanel } from './components/brief/BriefPanel';
@@ -178,7 +177,6 @@ export default function App() {
       <CommandMenu />
       <AgentDialog />
       <PromptDialog />
-      <ReframeTextDialog />
       <NewProjectDialog />
       <BlockingJobOverlay />
       {/* Bottom-right would cover the mobile tab bar */}

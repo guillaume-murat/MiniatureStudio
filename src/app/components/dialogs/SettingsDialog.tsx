@@ -1,6 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { CircleAlert, CircleCheck, Download, ExternalLink, Eye, EyeOff, Loader2, ShieldCheck, Upload } from 'lucide-react';
+import { CircleAlert, CircleCheck, Download, ExternalLink, Eye, EyeOff, Loader2, ShieldCheck, TriangleAlert, Upload } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -12,6 +22,7 @@ import { useSettings, type KeyPersistence, type Theme } from '../../stores/setti
 import { useWorkspace } from '../../stores/workspace';
 import { exportBackup, importBackup } from '../../lib/backup';
 import { storageEstimate } from '../../lib/db';
+import { resetApp } from '../../lib/reset';
 import { downloadBlob } from '../../lib/images';
 import { explainError } from '../../lib/errors';
 import { useT } from '../../i18n';
@@ -63,7 +74,8 @@ export function SettingsDialog() {
   const s = useSettings();
   const [reveal, setReveal] = useState(false);
   const [usage, setUsage] = useState<{ usage: number; quota: number } | null>(null);
-  const [busy, setBusy] = useState<'export' | 'import' | null>(null);
+  const [busy, setBusy] = useState<'export' | 'import' | 'reset' | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
   const vertex = useVertexStatus(open && s.provider === 'vertex');
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -93,6 +105,17 @@ export function SettingsDialog() {
       toast.error(explainError(error).message);
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function doReset() {
+    setBusy('reset');
+    try {
+      await resetApp();
+    } catch (error) {
+      setBusy(null);
+      const info = explainError(error);
+      toast.error(t(info.key), { description: info.message });
     }
   }
 
@@ -239,8 +262,31 @@ export function SettingsDialog() {
               />
             </div>
           </Field>
+
+          <Field label={t('settings.reset')} hint={t('settings.resetHint')}>
+            <Button variant="destructive" size="lg" className="w-full" onClick={() => setConfirmReset(true)} disabled={!!busy}>
+              {busy === 'reset' ? <Loader2 className="animate-spin" /> : <TriangleAlert />} {t('settings.resetButton')}
+            </Button>
+          </Field>
         </div>
       </DialogContent>
+
+      <AlertDialog open={confirmReset} onOpenChange={setConfirmReset}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <TriangleAlert className="size-5 text-destructive" /> {t('settings.resetConfirmTitle')}
+            </AlertDialogTitle>
+            <AlertDialogDescription>{t('settings.resetConfirm')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={doReset}>
+              {t('settings.resetAction')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

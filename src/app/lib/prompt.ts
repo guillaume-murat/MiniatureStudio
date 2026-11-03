@@ -127,7 +127,10 @@ export function sceneLine(brief: string): string {
 /** With `people` (how many are attached), says who the style's people are when that differs from what it describes. */
 export function styleLine(style?: string, people?: number): string {
   if (!style?.trim()) return 'Direction artistique : baser la direction artistique de l’image sur les informations fournies dans la scène.';
-  return [`Direction artistique : ${style.trim()}`, people === undefined ? '' : peopleNote(style, people)].filter(Boolean).join(' ');
+  const note = people === undefined ? '' : peopleNote(style, people);
+  // A list keeps its lines; a user's style may be a plain sentence.
+  if (style.trim().startsWith('- ')) return [`Direction artistique :\n${style.trim()}`, note && `- ${note}`].filter(Boolean).join('\n');
+  return [`Direction artistique : ${style.trim()}`, note].filter(Boolean).join(' ');
 }
 
 function peopleNote(style: string, people: number): string {

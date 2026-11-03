@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { layerSteps } from '../textLayer';
+import { textSteps } from '../textLayer';
 import { arrowGeometry, bendThrough, boxRadius, clamp01, cssFont, isVisible, newArrowBlock, newTextBlock, rotationTowards } from '../textBlocks';
 
 describe('rotationTowards', () => {
@@ -73,24 +73,17 @@ describe('arrows', () => {
   });
 });
 
-describe('layerSteps', () => {
+describe('textSteps', () => {
   const text = newTextBlock();
   const arrow = newArrowBlock();
   const secondText = newTextBlock();
 
-  it('adds no version when nothing is new', () => {
-    expect(layerSteps([text], [{ ...text, text: 'edited' }])).toEqual([]);
-    expect(layerSteps([text, arrow], [arrow])).toEqual([]);
+  it('makes one version for the texts, then one for the arrows', () => {
+    expect(textSteps([arrow, text, secondText])).toEqual([[text, secondText], [arrow]]);
   });
 
-  it('adds a version for an arrow over a text', () => {
-    expect(layerSteps([text], [text, arrow])).toEqual([{ added: [arrow], blocks: [text, arrow] }]);
-  });
-
-  it('adds one version per kind, texts first, keeping the stacking order', () => {
-    expect(layerSteps([], [text, arrow, secondText])).toEqual([
-      { added: [text, secondText], blocks: [text, secondText] },
-      { added: [arrow], blocks: [text, arrow, secondText] },
-    ]);
+  it('skips a kind that is absent', () => {
+    expect(textSteps([arrow])).toEqual([[arrow]]);
+    expect(textSteps([])).toEqual([]);
   });
 });

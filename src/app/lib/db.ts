@@ -1,4 +1,4 @@
-import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import { deleteDB, openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { BrandKit, CustomStyle, Generation, LibraryImage, Persona, Project } from './types';
 
 interface NanoDB extends DBSchema {
@@ -34,8 +34,30 @@ export function getDB(): Promise<IDBPDatabase<NanoDB>> {
       }
       if (oldVersion < 2) db.createObjectStore('styles', { keyPath: 'id' });
     },
+    // Another tab is deleting the database: let it.
+    blocking(_version, _blocked, event) {
+      (event.target as IDBDatabase).close();
+      dbPromise = null;
+    },
   });
   return dbPromise;
+}
+
+/**
+ * Deletes every database of the app, the v1 one included (it would be imported
+ * again otherwise). The caller reloads the page: until then nothing can write,
+ * so a pending save cannot bring the database back.
+ */
+export async function deleteAllData(): Promise<void> {
+  const open = dbPromise;
+  dbPromise = new Promise(() => {});
+  try {
+    (await open)?.close();
+    await Promise.all([deleteDB(DB_NAME), deleteDB('NanoThumbnailDB')]);
+  } catch (error) {
+    dbPromise = null;
+    throw error;
+  }
 }
 
 export function uid(prefix = ''): string {

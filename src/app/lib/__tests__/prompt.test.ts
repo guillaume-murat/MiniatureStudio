@@ -75,6 +75,8 @@ describe('buildGenerationPrompt', () => {
     expect(styleLine(one, 2)).toContain('les désigne toutes');
     expect(styleLine('Deux personnes face à face.', 1)).toContain('Une seule personne');
     expect(styleLine('Un paysage.', 0)).toBe('Direction artistique : Un paysage.');
+    expect(styleLine('- Un paysage\n- Fond clair', 0)).toBe('Direction artistique :\n- Un paysage\n- Fond clair');
+    expect(styleLine('- La personne\n- Fond clair', 0)).toMatch(/Fond clair\n- Aucune photo de personne/);
   });
 
   it('states the format and the scene', () => {

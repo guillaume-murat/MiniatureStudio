@@ -236,11 +236,12 @@ export const handlers: Record<string, Handler> = {
   suggest_concepts: async (args) => {
     const apiKey = requireKey();
     const { provider, lang } = useSettings.getState();
+    const videoTitle = str(args, 'videoTitle') ?? ws().brief.videoTitle;
+    if (!videoTitle.trim()) throw new ToolError('The video title is empty: pass "videoTitle".');
     const concepts = await suggestConcepts(
       { provider, apiKey },
       {
-        videoTitle: str(args, 'videoTitle') ?? ws().brief.videoTitle,
-        idea: str(args, 'idea') ?? ws().brief.brief,
+        videoTitle,
         lang,
         styles: conceptStyles(ws().customStyles),
       },

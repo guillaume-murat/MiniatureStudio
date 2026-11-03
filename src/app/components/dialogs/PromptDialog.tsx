@@ -8,7 +8,7 @@ import { useUI } from '../../stores/ui';
 import { useWorkspace } from '../../stores/workspace';
 import { useT } from '../../i18n';
 
-function PromptText({ text }: { text: string }) {
+export function PromptText({ text }: { text: string }) {
   const t = useT();
   const [copied, setCopied] = useState(false);
   return (

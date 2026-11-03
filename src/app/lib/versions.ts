@@ -104,7 +104,6 @@ export interface VersionInput {
   blob: Blob;
   width: number;
   height: number;
-  textLayer?: Generation['textLayer'];
 }
 
 /** A new version (or an original, without a parent). */
@@ -128,6 +127,5 @@ export function newGeneration(input: VersionInput, id: string, createdAt: number
     width: input.width,
     height: input.height,
     createdAt,
-    ...(input.textLayer ? { textLayer: input.textLayer } : {}),
   };
 }

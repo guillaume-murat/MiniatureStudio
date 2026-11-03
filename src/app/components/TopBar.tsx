@@ -116,7 +116,7 @@ function ProjectSwitcher() {
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-white hover:bg-destructive/90"
+              variant="destructive"
               onClick={() => current && removeProject(current.id)}
             >
               {t('common.delete')}

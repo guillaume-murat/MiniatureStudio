@@ -1,17 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowBigRight, Bold, Check, CircleDashed, Layers, Loader2, Merge, MoveHorizontal, MoveRight, PaintBucket, Plus, RotateCw, Square, Trash2, X } from 'lucide-react';
+import { ArrowBigRight, Bold, Check, CircleDashed, Layers, Loader2, MoveHorizontal, MoveRight, PaintBucket, Plus, RotateCw, Square, Trash2, X } from 'lucide-react';
 import { Button } from '../ui/button';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '../ui/alert-dialog';
 import { Slider } from '../ui/slider';
 import { Toggle } from '../ui/toggle';
 import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group';
@@ -245,30 +234,6 @@ function ColorSwatch({ value, onChange, label }: { value: string; onChange: (hex
   );
 }
 
-/** Asks before making a text version's text final (it can't be edited afterwards). */
-export function MergeTextButton({ onMerge, disabled }: { onMerge: () => void; disabled?: boolean }) {
-  const t = useT();
-  return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button variant="outline" size="sm" disabled={disabled} title={t('text.merge')} aria-label={t('text.merge')}>
-          <Merge /> <span className="hidden md:inline">{t('text.merge')}</span>
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{t('text.merge')}</AlertDialogTitle>
-          <AlertDialogDescription>{t('text.mergeConfirm')}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-          <AlertDialogAction onClick={onMerge}>{t('text.mergeAction')}</AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
-
 function IconToggle({ pressed, onPressedChange, label, children }: { pressed: boolean; onPressedChange: (on: boolean) => void; label: string; children: React.ReactNode }) {
   return (
     <Tooltip>
@@ -337,17 +302,11 @@ function ArrowControls({ block }: { block: ArrowBlock }) {
   );
 }
 
-/**
- * Add text blocks and arrows, style the selected one, then apply them. On a
- * text version the blocks are its saved ones: applying updates it in place,
- * and new blocks add a version (`layerSteps`).
- */
+/** Add text blocks and arrows, style the selected one, then apply them: they become part of the image, in a new version. */
 export function TextToolbar({ kind }: { kind: 'text' | 'arrow' }) {
   const t = useT();
   const { blocks, selectedId, update, remove } = useText();
   const { applyText, setTool, addBlock } = useWorkspace();
-  const gen = useWorkspace(selectedGeneration);
-  const editing = !!gen?.textLayer;
   const [applying, setApplying] = useState(false);
   const selected = blocks.find((b) => b.id === selectedId);
   const block = selected && !isArrow(selected) ? selected : undefined;
@@ -464,20 +423,9 @@ export function TextToolbar({ kind }: { kind: 'text' | 'arrow' }) {
         <Button variant="ghost" size="sm" onClick={() => setTool(null)}>
           <X /> {t('common.cancel')}
         </Button>
-        {editing && (
-          <MergeTextButton
-            disabled={applying}
-            onMerge={async () => {
-              setApplying(true);
-              // Merge what is on screen, including unapplied changes.
-              await applyText(blocks, { merge: true });
-              setApplying(false);
-            }}
-          />
-        )}
         <Button
           size="sm"
-          disabled={applying || (!editing && !blocks.some(isVisible))}
+          disabled={applying || !blocks.some(isVisible)}
           onClick={async () => {
             setApplying(true);
             await applyText(blocks);

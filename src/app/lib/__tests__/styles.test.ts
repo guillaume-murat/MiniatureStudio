@@ -11,6 +11,10 @@ describe('styles', () => {
     expect(new Set(emojis).size).toBe(STYLES.length);
   });
 
+  it('writes each preset as a list', () => {
+    for (const style of STYLES) expect(style.prompt.split('\n').every((line) => line.startsWith('- '))).toBe(true);
+  });
+
   it('lists the user’s styles first, in the presets’ shape', () => {
     const [first, ...rest] = allStyles([mine]);
     expect(first).toMatchObject({ id: 'st_1', custom: true, emoji: '🔥', name: { fr: 'Signature' }, hint: { en: '' } });
