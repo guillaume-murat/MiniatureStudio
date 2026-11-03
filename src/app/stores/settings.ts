@@ -96,7 +96,7 @@ function load() {
     provider: (PROVIDERS.includes(prefs.provider) ? prefs.provider : 'replicate') as Provider,
     keys: Object.fromEntries(PROVIDERS.map((p) => [p, safeGet(store, KEY_PREFIX + p) ?? ''])) as Record<Provider, string>,
     keyPersistence,
-    model: (prefs.model === 'nano-banana-2' ? 'nano-banana-2' : 'nano-banana-pro') as ModelId,
+    model: (['nano-banana-pro', 'nano-banana-2'].includes(prefs.model) ? prefs.model : 'nano-banana-2-lite') as ModelId,
     aspectRatio: outputRatio(prefs.aspectRatio),
     resolution: (prefs.resolution ?? '1K') as Resolution,
     format: (prefs.format ?? 'png') as OutputFormat,
@@ -134,7 +134,8 @@ export const useSettings = create<SettingsState>((set, get) => ({
   },
   params: () => {
     const { provider, model, aspectRatio, resolution, format, safety } = get();
-    return { provider, model, aspectRatio, resolution, format: provider === 'replicate' ? format : 'png', safety };
+    // Lite only exists in 1K.
+    return { provider, model, aspectRatio, resolution: model === 'nano-banana-2-lite' ? '1K' : resolution, format: provider === 'replicate' ? format : 'png', safety };
   },
   // Vertex works without a key: the local helper authenticates with gcloud.
   apiKey: () => get().keys[get().provider] || (get().provider === 'vertex' ? VERTEX_GCLOUD : ''),

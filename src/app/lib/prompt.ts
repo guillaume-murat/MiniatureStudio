@@ -1,4 +1,4 @@
-import type { AspectRatio, OutputRatio, Guideline, PromptOptions, ReferenceUse, ResolvedPromptOptions, TitleZone } from './types';
+import type { AspectRatio, OutputRatio, PromptOptions, ReferenceUse, ResolvedPromptOptions, TitleZone } from './types';
 
 /**
  * Prompt construction for Nano Banana Pro / Nano Banana 2.
@@ -35,9 +35,7 @@ interface BriefInput {
 export const DEFAULT_PROMPT_OPTIONS: ResolvedPromptOptions = {
   text: 'none',
   titleZone: 'none',
-  guidelines: { focal: true, background: true, colors: true, emotion: true },
   brandWeight: 'accents',
-  likeness: 'exact',
 };
 
 const FORMAT_HINT: Record<OutputRatio, string> = {
@@ -71,7 +69,7 @@ function ofName(name: string): string {
 }
 
 /** "Images 1–3 : photos d’Alex…" — consecutive photos of the same person are grouped. */
-export function describeImages(roles: ImageRole[], offset = 0, likeness: PromptOptions['likeness'] = 'exact'): string[] {
+export function describeImages(roles: ImageRole[], offset = 0): string[] {
   if (roles.length === 0) return [];
   const lines: string[] = [];
 
@@ -93,9 +91,7 @@ export function describeImages(roles: ImageRole[], offset = 0, likeness: PromptO
           .filter(Boolean);
         lines.push(
           `- ${label} : photos ${ofName(role.name)}${role.description ? ` (${role.description})` : ''}. ` +
-            (likeness === 'exact'
-              ? `Garde les traits du visage ${ofName(role.name)} exactement identiques à ces photos : forme du visage, yeux, nez, teint, cheveux.`
-              : `Garde ${role.name} reconnaissable à ses traits (forme du visage, yeux, nez, cheveux), en les adaptant au rendu demandé par la direction artistique.`) +
+            `Garde les traits du visage ${ofName(role.name)} exactement identiques à ces photos : forme du visage, yeux, nez, teint, cheveux.` +
             (expressions.length ? ` Elles montrent aussi ses expressions typiques : ${expressions.join(', ')}.` : ''),
         );
         break;
@@ -130,7 +126,7 @@ export function sceneLine(brief: string): string {
 
 /** With `people` (how many are attached), says who the style's people are when that differs from what it describes. */
 export function styleLine(style?: string, people?: number): string {
-  if (!style?.trim()) return '';
+  if (!style?.trim()) return 'Direction artistique : baser la direction artistique de l’image sur les informations fournies dans la scène.';
   return [`Direction artistique : ${style.trim()}`, people === undefined ? '' : peopleNote(style, people)].filter(Boolean).join(' ');
 }
 
@@ -150,6 +146,11 @@ const BRAND_WEIGHTS: Record<ResolvedPromptOptions['brandWeight'], string> = {
 
 export function colorsLine(colors: string[], weight: ResolvedPromptOptions['brandWeight'] = 'accents'): string {
   return colors.length ? `Couleurs de marque : ${colors.join(', ')}. ${BRAND_WEIGHTS[weight]}` : '';
+}
+
+/** What the brand weight option asks, added to the colours when there are some. */
+export function brandWeightLine(weight: ResolvedPromptOptions['brandWeight'] = 'accents'): string {
+  return BRAND_WEIGHTS[weight];
 }
 
 export function formatLine(aspectRatio: OutputRatio): string {
@@ -183,16 +184,8 @@ export function titleZoneLine(zone: TitleZone = DEFAULT_PROMPT_OPTIONS.titleZone
 /** Comes first among the descriptions of the attached images. */
 export const IMAGES_HEADER = 'Images jointes, dans l’ordre :';
 
-const GUIDELINES: Record<Guideline, string> = {
-  focal: 'un seul point focal',
-  background: 'une forte séparation entre le sujet et un fond simple',
-  colors: 'un fort contraste et des couleurs percutantes',
-  emotion: 'des visages à l’émotion claire et lisible',
-};
-
-export function guidelinesLine(guidelines: Record<Guideline, boolean> = DEFAULT_PROMPT_OPTIONS.guidelines): string {
-  const list = (Object.keys(GUIDELINES) as Guideline[]).filter((g) => guidelines[g]).map((g) => GUIDELINES[g]).join(', ');
-  return `Fais-en une miniature efficace, comprise en une fraction de seconde à la taille d’un fil sur téléphone${list ? ` : ${list}` : ''}.`;
+export function qualityLine(): string {
+  return 'Fais-en une miniature efficace, comprise en une fraction de seconde sur youtube version mobile : des éléments qui ressortent, un fond simple, un fort contraste et des couleurs percutantes.';
 }
 
 export function marginLine(): string {
@@ -210,18 +203,18 @@ export function buildGenerationPrompt(input: BriefInput): string {
 
   sections.push([formatLine(aspectRatio), titleLine(videoTitle)].filter(Boolean).join(' '));
   sections.push(sceneLine(brief));
-  if (style?.trim()) sections.push(styleLine(style, people));
+  sections.push(styleLine(style, people));
   sections.push(textLine(options.text));
 
   const zone = titleZoneLine(options.titleZone);
   if (zone) sections.push(zone);
 
-  const imageLines = describeImages(roles, 0, options.likeness);
+  const imageLines = describeImages(roles);
   if (imageLines.length) sections.push([IMAGES_HEADER, ...imageLines].join('\n'));
 
   if (colors.length) sections.push(colorsLine(colors, options.brandWeight));
 
-  sections.push(guidelinesLine(options.guidelines), marginLine(), priorityLine());
+  sections.push(qualityLine(), marginLine(), priorityLine());
 
   return sections.join('\n\n');
 }

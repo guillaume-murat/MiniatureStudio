@@ -26,6 +26,7 @@ import { Kbd } from '../ui/kbd';
 import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { ImageMenu } from '../ImageMenu';
 import { SafeZones } from './SafeZones';
 import { MaskLayer, type MaskTool } from './MaskLayer';
 import { ViewSwitcher } from './ViewSwitcher';
@@ -97,7 +98,7 @@ function EmptyState({ running }: { running: number }) {
 }
 
 function ImageView({ gen, tool, brushSize, clearSignal }: { gen: Generation; tool: MaskTool; brushSize: number; clearSignal: number }) {
-  const { safeZones, tool: active } = useWorkspace();
+  const { safeZones, tool: active, duplicateSelected } = useWorkspace();
   // While its text is being edited, a text version shows its image without the text.
   const url = useBlobUrl(isLayerTool(active) && gen.textLayer ? gen.textLayer.base : gen.blob);
   const [ref, box] = useElementSize<HTMLDivElement>();
@@ -129,6 +130,7 @@ function ImageView({ gen, tool, brushSize, clearSignal }: { gen: Generation; too
         </Button>
       )}
       {size.width > 0 && (
+        <ImageMenu onDuplicate={() => void duplicateSelected()} disabled={!!active}>
         <div
           className="relative overflow-hidden rounded-lg shadow-lg ring-1 ring-border"
           style={{ ...size, transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.z})` }}
@@ -138,6 +140,7 @@ function ImageView({ gen, tool, brushSize, clearSignal }: { gen: Generation; too
           {active === 'mask' && <MaskLayer width={gen.width} height={gen.height} tool={tool} brushSize={brushSize} clearSignal={clearSignal} />}
           {isLayerTool(active) && <TextOverlay width={size.width} height={size.height} kind={active} />}
         </div>
+        </ImageMenu>
       )}
     </div>
   );

@@ -11,14 +11,14 @@ const TEXT = 'block whitespace-pre-wrap italic';
  * A block of the prompt; nothing when it is empty. Folded to two lines until
  * clicked, or always `full` (inside something that is already clickable).
  */
-export function PromptCode({ text, full }: { text: string; full?: boolean }) {
+export function PromptCode({ text, full, heading }: { text: string; full?: boolean; heading?: string }) {
   const t = useT();
   const [open, setOpen] = useState(false);
   if (!text) return null;
   if (full) {
     return (
       <code className={BLOCK}>
-        <span className={cn('mb-1 block', HEADING)}>{t('brief.promptAdded')}</span>
+        <span className={cn('mb-1 block', HEADING)}>{heading ?? t('brief.promptAdded')}</span>
         <span className={TEXT}>{text}</span>
       </code>
     );

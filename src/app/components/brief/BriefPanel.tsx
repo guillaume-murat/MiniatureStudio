@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { Field, Section } from '../Section';
 import { ReferencesSection } from './ReferencesSection';
 import { StylePicker } from './StylePicker';
+import { GeneratedTextField } from './GeneratedTextField';
 import { TitleZonePicker } from './TitleZonePicker';
 import { OutputSection } from './OutputSection';
 import { ChannelSection } from './ChannelSection';
@@ -155,6 +156,7 @@ export function BriefPanel({ onGenerated }: { onGenerated?: () => void }) {
             <Field label={t('brief.style')}>
               <StylePicker />
             </Field>
+            <GeneratedTextField />
             <TitleZonePicker />
           </Section>
 

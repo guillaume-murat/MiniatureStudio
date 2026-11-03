@@ -139,8 +139,8 @@ export const STUDIO_TOOLS: ToolDef[] = [
     name: 'set_output',
     description: 'Output settings for the next generations.',
     inputSchema: obj({
-      model: str('"nano-banana-pro" (best quality, text) or "nano-banana-2" (faster, cheaper).', {
-        enum: ['nano-banana-pro', 'nano-banana-2'],
+      model: str('"nano-banana-pro" (best quality, text), "nano-banana-2" (faster, cheaper) or "nano-banana-2-lite" (cheapest, 1K only).', {
+        enum: ['nano-banana-pro', 'nano-banana-2', 'nano-banana-2-lite'],
       }),
       aspectRatio: str('16:9 for YouTube thumbnails.', { enum: ['16:9', '9:16'] }),
       resolution: str('Output resolution.', { enum: ['1K', '2K', '4K'] }),

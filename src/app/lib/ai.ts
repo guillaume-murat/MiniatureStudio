@@ -1,4 +1,4 @@
-import { generateJSON, type TextRequest } from './providers';
+import { generateJSON, generateText, type TextRequest } from './providers';
 import { prepareReference } from './images';
 
 type Auth = Pick<TextRequest, 'provider' | 'apiKey' | 'signal'>;
@@ -49,25 +49,108 @@ export interface Concept {
   styleId?: string;
 }
 
-export async function suggestConcepts(
-  auth: Auth,
-  input: { videoTitle: string; idea: string; lang: Lang; styles: Array<{ id: string; name: string }> },
-): Promise<Concept[]> {
-  const prompt = `Titre de la vidéo : "${input.videoTitle || '(pas encore de titre)'}"
+/** A style of the library, as the model chooses among them. */
+export interface ConceptStyle {
+  id: string;
+  name: string;
+  hint: string;
+  prompt: string;
+}
+
+function styleEntry({ id, name, hint, prompt }: ConceptStyle): string {
+  return `- ${id} : ${name}${hint ? ` (${hint})` : ''}. ${prompt}`;
+}
+
+export interface ConceptsInput {
+  videoTitle: string;
+  idea: string;
+  lang: Lang;
+  styles: ConceptStyle[];
+}
+
+const CONCEPTS_SYSTEM = 'Tu es un grand stratège des miniatures YouTube. Tu raisonnes en termes de curiosité, d’enjeux et de visuels lisibles au premier regard.';
+
+function conceptsUserPrompt(input: ConceptsInput): string {
+  return `Titre de la vidéo : "${input.videoTitle || '(pas encore de titre)'}"
 Idée de départ du créateur : "${input.idea || '(aucune)'}"
 
 Propose 3 concepts de miniature aux angles vraiment différents (par exemple réaction émotionnelle, résultat ou transformation, mystère ou objet). Pour chacun :
 - name : 2 à 4 mots
 - brief : une description de scène vivante pour un modèle d’image (sujet, action, émotion, composition, fond, lumière), en 2 ou 3 phrases, rédigée en ${LANG_NAME[input.lang]}
 - why : une phrase en ${LANG_NAME[input.lang]} expliquant pourquoi elle donnerait envie de cliquer
-- styleId : l’identifiant le plus adapté dans cette liste, ou "" : ${input.styles.map((s) => `${s.id} (${s.name})`).join(', ')}
+- styleId : l’identifiant du style le plus adapté dans la liste ci-dessous, ou "" si aucun ne convient
+
+Styles disponibles (identifiant : nom, usages, direction artistique) :
+${input.styles.map(styleEntry).join('\n')}
 
 Réponds uniquement en JSON : {"concepts": [{"name": "", "brief": "", "why": "", "styleId": ""}]}`;
+}
 
+/** A concept's composition, to draw it without generating an image. Positions and sizes in % of the frame. */
+export interface ConceptLayout {
+  background: string;
+  elements: Array<{ label: string; kind: 'person' | 'object' | 'text' | 'shape'; x: number; y: number; w: number; h: number; color: string }>;
+}
+
+const KINDS = ['person', 'object', 'text', 'shape'] as const;
+const hexOr = (value: unknown, fallback: string) => (typeof value === 'string' && /^#[0-9a-f]{3,8}$/i.test(value) ? value : fallback);
+const percent = (value: unknown) => Math.min(100, Math.max(0, Number(value) || 0));
+
+/** What the model answered, made safe to draw: unknown colours and kinds replaced, boxes kept in the frame. */
+export function cleanLayout(raw: Partial<ConceptLayout> | undefined): ConceptLayout {
+  return {
+    background: hexOr(raw?.background, '#334155'),
+    elements: (Array.isArray(raw?.elements) ? raw.elements : []).slice(0, 8).map((e) => {
+      const [x, y] = [percent(e?.x), percent(e?.y)];
+      return {
+        label: String(e?.label ?? '').slice(0, 24),
+        kind: KINDS.includes(e?.kind) ? e.kind : 'shape',
+        x,
+        y,
+        w: Math.min(percent(e?.w), 100 - x),
+        h: Math.min(percent(e?.h), 100 - y),
+        color: hexOr(e?.color, '#64748b'),
+      };
+    }),
+  };
+}
+
+const describeConcept = (concept: Concept) => `Concept de miniature YouTube « ${concept.name} » : ${concept.brief}`;
+
+export async function conceptLayout(auth: Auth, concept: Concept): Promise<ConceptLayout> {
+  const raw = await generateJSON<Partial<ConceptLayout>>({
+    ...auth,
+    prompt: `${describeConcept(concept)}
+
+Décris sa composition sous forme de maquette, avec 2 à 6 éléments.
+- background : couleur dominante du fond, en hexadécimal
+- elements : pour chaque élément, label (1 à 3 mots en français), kind ("person", "object", "text" ou "shape"), x et y (coin haut gauche) et w et h (taille), en pourcentage du cadre de 0 à 100, et color (couleur dominante en hexadécimal)
+
+Réponds uniquement en JSON : {"background": "", "elements": [{"label": "", "kind": "", "x": 0, "y": 0, "w": 0, "h": 0, "color": ""}]}`,
+  });
+  return cleanLayout(raw);
+}
+
+export async function conceptAscii(auth: Auth, concept: Concept): Promise<string> {
+  const raw = await generateText({
+    ...auth,
+    prompt: `${describeConcept(concept)}
+
+Dessine sa composition en ASCII art : 64 colonnes sur 18 lignes, pour une image horizontale. Réponds uniquement avec le dessin, sans explication.`,
+  });
+  return raw.replace(/^\s*```\w*\n?/, '').replace(/```\s*$/, '').trimEnd();
+}
+
+/** The whole text sent for the concepts, as the assistant shows it. */
+export function conceptsPrompt(input: ConceptsInput): string {
+  return `${CONCEPTS_SYSTEM}\n\n${conceptsUserPrompt(input)}`;
+}
+
+export async function suggestConcepts(auth: Auth, input: ConceptsInput): Promise<Concept[]> {
   const raw = await generateJSON<{ concepts: Concept[] }>({
     ...auth,
-    system: 'Tu es un grand stratège des miniatures YouTube. Tu raisonnes en termes de curiosité, d’enjeux et de visuels lisibles au premier regard.',
-    prompt,
+    system: CONCEPTS_SYSTEM,
+    prompt: conceptsUserPrompt(input),
   });
   return (raw.concepts ?? []).slice(0, 3);
 }

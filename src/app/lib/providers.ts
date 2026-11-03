@@ -13,12 +13,14 @@ const PROXY_URL = '/.netlify/functions/replicate-proxy?url=';
 const REPLICATE_IMAGE_MODELS: Record<ModelId, string> = {
   'nano-banana-pro': 'google/nano-banana-pro',
   'nano-banana-2': 'google/nano-banana-2',
+  'nano-banana-2-lite': 'google/nano-banana-2-lite',
 };
 const REPLICATE_TEXT_MODEL = 'google/gemini-3-flash';
 
 const GEMINI_IMAGE_MODELS: Record<ModelId, string> = {
   'nano-banana-pro': 'gemini-3-pro-image',
   'nano-banana-2': 'gemini-3.1-flash-image',
+  'nano-banana-2-lite': 'gemini-3.1-flash-lite-image',
 };
 const GEMINI_TEXT_MODEL = 'gemini-3.8-flash';
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -31,6 +33,7 @@ export const VERTEX_GCLOUD = 'gcloud';
 const OPENROUTER_IMAGE_MODELS: Record<ModelId, string> = {
   'nano-banana-pro': 'google/gemini-3-pro-image',
   'nano-banana-2': 'google/gemini-3.1-flash-image',
+  'nano-banana-2-lite': 'google/gemini-3.1-flash-lite-image',
 };
 const OPENROUTER_TEXT_MODEL = 'google/gemini-3.8-flash';
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -39,6 +42,7 @@ const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MAMMOUTH_IMAGE_MODELS: Record<ModelId, string> = {
   'nano-banana-pro': 'gemini-3-pro-image-preview',
   'nano-banana-2': 'gemini-3.1-flash-image-preview',
+  'nano-banana-2-lite': 'gemini-3.1-flash-lite-image',
 };
 const MAMMOUTH_TEXT_MODEL = 'gemini-3.8-flash';
 const MAMMOUTH_URL = 'https://api.mammouth.ai/v1/chat/completions';
@@ -190,9 +194,10 @@ async function replicateImage(req: ImageRequest, signal: AbortSignal): Promise<B
     prompt: req.prompt,
     image_input: req.images,
     aspect_ratio: params.aspectRatio,
-    resolution: params.resolution,
     output_format: params.format,
   };
+  // Lite is always 1K.
+  if (params.model !== 'nano-banana-2-lite') input.resolution = params.resolution;
   // Only Nano Banana Pro exposes a safety level.
   if (params.model === 'nano-banana-pro') input.safety_filter_level = params.safety;
 

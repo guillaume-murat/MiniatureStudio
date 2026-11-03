@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { buildEditPrompt, buildGenerationPrompt, buildOutpaintPrompt, buildRegionEditPrompt, buildUpscalePrompt, colorsLine, DEFAULT_PROMPT_OPTIONS, describeImages, formatLine, guidelinesLine, IMAGES_HEADER, marginLine, outputRatio, priorityLine, sceneLine, styleLine, textLine, titleLine, titlePreviewLine, titleZoneLine } from '../prompt';
+import { brandWeightLine, buildEditPrompt, buildGenerationPrompt, buildOutpaintPrompt, buildRegionEditPrompt, buildUpscalePrompt, colorsLine, DEFAULT_PROMPT_OPTIONS, describeImages, formatLine, IMAGES_HEADER, marginLine, outputRatio, priorityLine, qualityLine, sceneLine, styleLine, textLine, titleLine, titlePreviewLine, titleZoneLine } from '../prompt';
 
 const base = { brief: 'Une développeuse sur Mars', aspectRatio: '16:9' as const, roles: [] };
+
+describe('option previews', () => {
+  it('shows the text sent for the brand weight', () => {
+    expect(colorsLine(['#ff0000'], 'dominant')).toContain(brandWeightLine('dominant'));
+  });
+});
 
 describe('outputRatio', () => {
   it('keeps the two formats and falls back to 16:9 for the others', () => {
@@ -19,18 +25,25 @@ describe('buildGenerationPrompt', () => {
     for (const line of [formatLine('16:9'), titleLine('Mars'), styleLine('Flat'), textLine(), titleZoneLine(), colorsLine(['#ff0000'])]) {
       expect(p).toContain(line);
     }
-    expect([titleLine(' '), styleLine(''), colorsLine([])]).toEqual(['', '', '']);
+    expect([titleLine(' '), colorsLine([])]).toEqual(['', '']);
+    expect(buildGenerationPrompt(base)).toContain(styleLine());
+    expect(styleLine()).toContain('informations fournies dans la scène');
   });
 
   it('sends nothing beyond the blocks shown in the brief panel', () => {
     const roles = [{ kind: 'persona', name: 'Alex' }, { kind: 'reference' }] as const;
     let p = buildGenerationPrompt({ ...base, roles: [...roles], videoTitle: 'Mars', style: 'Flat', colors: ['#ff0000'] });
-    const shown = [formatLine('16:9'), titleLine('Mars'), sceneLine(base.brief), styleLine('Flat', 1), textLine(), titleZoneLine(), IMAGES_HEADER, ...describeImages([...roles]), colorsLine(['#ff0000']), guidelinesLine(), marginLine(), priorityLine()];
+    const shown = [formatLine('16:9'), titleLine('Mars'), sceneLine(base.brief), styleLine('Flat', 1), textLine(), titleZoneLine(), IMAGES_HEADER, ...describeImages([...roles]), colorsLine(['#ff0000']), qualityLine(), marginLine(), priorityLine()];
     for (const block of shown) {
       expect(p).toContain(block);
       p = p.replace(block, '');
     }
     expect(p.trim()).toBe('');
+  });
+
+  it('always asks for an efficient thumbnail', () => {
+    expect(buildGenerationPrompt(base)).toContain(qualityLine());
+    expect(qualityLine()).toContain('sur youtube version mobile');
   });
 
   it('asks for margins rather than a centred subject', () => {
@@ -40,14 +53,11 @@ describe('buildGenerationPrompt', () => {
   });
 
   it('follows the advanced options', () => {
-    const options = { ...DEFAULT_PROMPT_OPTIONS, text: 'style', titleZone: 'none', brandWeight: 'dominant', likeness: 'style', guidelines: { focal: false, background: false, colors: true, emotion: false } } as const;
-    const p = buildGenerationPrompt({ ...base, roles: [{ kind: 'persona', name: 'Alex' }], colors: ['#ff0000'], options });
+    const options = { ...DEFAULT_PROMPT_OPTIONS, text: 'style', titleZone: 'none', brandWeight: 'dominant' } as const;
+    const p = buildGenerationPrompt({ ...base, colors: ['#ff0000'], options });
     expect(p).toContain('uniquement les éléments courts');
     expect(p).not.toContain('zone dégagée');
     expect(p).toContain('couleurs dominantes de l’image');
-    expect(p).toContain('Garde Alex reconnaissable');
-    expect(p).not.toContain('exactement identiques');
-    expect(p).toContain('téléphone : un fort contraste et des couleurs percutantes.');
     expect(p).not.toContain('point focal');
   });
 
@@ -56,10 +66,6 @@ describe('buildGenerationPrompt', () => {
     expect(titleZoneLine('center')).toContain('au centre');
     expect(titleZoneLine('bottom-right')).toContain('au-dessus du coin où s’affiche la durée');
     expect(titleZoneLine('none')).toBe('');
-  });
-
-  it('lists no guideline when all are off', () => {
-    expect(guidelinesLine({ focal: false, background: false, colors: false, emotion: false })).toMatch(/téléphone\.$/);
   });
 
   it('explains the style’s people when they differ from who is attached', () => {

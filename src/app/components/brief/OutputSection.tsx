@@ -5,10 +5,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group';
 import { useSettings } from '../../stores/settings';
 import { useT } from '../../i18n';
-import type { ModelId, OutputFormat, Resolution, SafetyLevel } from '../../lib/types';
+import type { OutputFormat, SafetyLevel } from '../../lib/types';
 import { cn } from '../../lib/utils';
 
-const RESOLUTIONS: Resolution[] = ['1K', '2K', '4K'];
 
 export function OutputSection({ number }: { number: number }) {
   const t = useT();
@@ -17,31 +16,6 @@ export function OutputSection({ number }: { number: number }) {
 
   return (
     <Section title={`${number}. ${t('brief.settings')}`}>
-      <Field label={t('brief.model')} htmlFor="model">
-        <Select value={s.model} onValueChange={(v) => s.set({ model: v as ModelId })}>
-          <SelectTrigger id="model" className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="nano-banana-pro">
-              {t('brief.modelPro')} <span className="text-muted-foreground">· {t('brief.modelProHint')}</span>
-            </SelectItem>
-            <SelectItem value="nano-banana-2">
-              {t('brief.model2')} <span className="text-muted-foreground">· {t('brief.model2Hint')}</span>
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </Field>
-
-      <Field label={t('brief.resolution')}>
-        <ToggleGroup type="single" variant="outline" className="w-full" value={s.resolution} onValueChange={(v) => v && s.set({ resolution: v as Resolution })}>
-          {RESOLUTIONS.map((r) => (
-            <ToggleGroupItem key={r} value={r} className="flex-1">
-              {r}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-      </Field>
       <Field label={t('brief.count')}>
         <ToggleGroup
           type="single"

@@ -22,7 +22,7 @@ The tools come from the `nanothumbnail` MCP server (`get_state`, `generate`, `ed
 Each image costs the user real API credits (more with `nano-banana-pro` and higher resolutions).
 
 - Explore with `count: 1` or `2`. Ask before `count: 4`, 4K, or more than ~6 generations in a row.
-- `nano-banana-2` is cheaper and faster for exploring; `nano-banana-pro` renders text and fine detail best — switch to it (`set_output`) for the final round.
+- `nano-banana-2-lite` is the cheapest (1K only); `nano-banana-2` is cheaper and faster for exploring; `nano-banana-pro` renders text and fine detail best — switch to it (`set_output`) for the final round.
 - `rank_thumbnails` and `suggest_concepts` are cheap text/vision calls; use them freely.
 - Never loop "generate until it's good". After 2 rounds without progress, stop and ask the user.
 

@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { Check, Copy, Download, GitBranch, Grid2x2, Plus, Square, Star, X } from 'lucide-react';
+import { Check, Download, GitBranch, Grid2x2, Star, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from './ui/button';
 import { Toggle } from './ui/toggle';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
-import { useSettings } from '../stores/settings';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import { ImageMenu } from './ImageMenu';
 import { useBlobUrl } from '../hooks/use-blob-url';
 import { useWorkspace } from '../stores/workspace';
 import { exportTestCompare } from '../lib/exporting';
@@ -26,6 +25,7 @@ function Tile({
   picked,
   onSelect,
   onPick,
+  onDuplicate,
   pickLabel,
 }: {
   gen: Generation;
@@ -36,6 +36,7 @@ function Tile({
   picked: boolean;
   onSelect: (e: React.MouseEvent | React.KeyboardEvent) => void;
   onPick: () => void;
+  onDuplicate: () => void;
   pickLabel: string;
 }) {
   const t = useT();
@@ -45,6 +46,7 @@ function Tile({
   return (
     <div className="flex shrink-0 flex-col gap-1" style={{ width }}>
       <p className={cn('truncate text-[10px] leading-3', title ? 'text-foreground/80' : 'text-muted-foreground italic')}>{title || t('filmstrip.untitled')}</p>
+      <ImageMenu onDuplicate={onDuplicate}>
       <Tooltip>
         <TooltipTrigger asChild>
           <div
@@ -87,20 +89,20 @@ function Tile({
         </TooltipTrigger>
         <TooltipContent className="max-w-72">{title || t('filmstrip.untitled')}</TooltipContent>
       </Tooltip>
+      </ImageMenu>
     </div>
   );
 }
 
 export function Filmstrip() {
   const t = useT();
-  const { generations, selectedId, pickedIds, jobs, select, togglePick, clearPicks, setView } = useWorkspace();
+  const { generations, selectedId, pickedIds, jobs, select, togglePick, clearPicks, setView, duplicateSelected } = useWorkspace();
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const all = thumbnails(generations);
   const isFavorite = (th: (typeof all)[number]) => th.versions.some((g) => g.favorite);
   const favorites = all.filter(isFavorite).length;
   const shown = favoritesOnly ? all.filter(isFavorite) : all;
   const projectName = useWorkspace((s) => s.projects.find((p) => p.id === s.projectId)?.name ?? '');
-  const [adding, setAdding] = useState(false);
   const pending = jobs.filter((j) => j.status === 'running' && j.kind === 'generate').length;
 
   return (
@@ -150,20 +152,6 @@ export function Filmstrip() {
         )}
       </div>
       <div className="flex gap-2 overflow-x-auto px-3 pt-1 pb-3">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              onClick={() => setAdding(true)}
-              aria-label={t('filmstrip.add')}
-              className="mt-4 flex shrink-0 items-center justify-center rounded-md border-2 border-dashed border-muted-foreground/30 text-muted-foreground transition-colors hover:border-primary/50 hover:bg-accent hover:text-foreground"
-              style={{ width: Math.round((TILE_HEIGHT * 16) / 9), height: TILE_HEIGHT }}
-            >
-              <Plus className="size-5" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>{t('filmstrip.add')}</TooltipContent>
-        </Tooltip>
         {Array.from({ length: pending }).map((_, i) => (
           <div key={`p${i}`} className="mt-4 aspect-video shrink-0 animate-pulse rounded-md bg-muted" style={{ height: TILE_HEIGHT }} />
         ))}
@@ -188,52 +176,15 @@ export function Filmstrip() {
               picked={picked.length > 0}
               onSelect={(e) => (e.shiftKey || e.metaKey || e.ctrlKey ? pick() : select(shownVersion.id))}
               onPick={pick}
+              onDuplicate={() => {
+                select(shownVersion.id);
+                void duplicateSelected();
+              }}
               pickLabel={t('filmstrip.selectForExport')}
             />
           );
         })}
       </div>
-      <AddThumbnailDialog open={adding} onOpenChange={setAdding} />
     </div>
-  );
-}
-
-/** The + tile: a blank image or a copy of the selected one, as a new thumbnail. */
-function AddThumbnailDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const t = useT();
-  const { addBlankImage, duplicateSelected } = useWorkspace();
-  const hasSelection = useWorkspace((s) => !!s.selectedId);
-  const ratio = useSettings((s) => s.aspectRatio);
-  const run = async (action: () => Promise<unknown>) => {
-    onOpenChange(false);
-    await action();
-  };
-  const option =
-    'flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors hover:border-primary/50 hover:bg-accent disabled:pointer-events-none disabled:opacity-50';
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{t('filmstrip.addTitle')}</DialogTitle>
-          <DialogDescription>{t('filmstrip.addDescription')}</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-2">
-          <button type="button" className={option} onClick={() => run(addBlankImage)}>
-            <Square className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-            <span>
-              <span className="block text-sm font-medium">{t('filmstrip.blank')}</span>
-              <span className="block text-xs text-muted-foreground">{t('filmstrip.blankDescription', { ratio })}</span>
-            </span>
-          </button>
-          <button type="button" className={option} disabled={!hasSelection} onClick={() => run(duplicateSelected)}>
-            <Copy className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-            <span>
-              <span className="block text-sm font-medium">{t('filmstrip.duplicate')}</span>
-              <span className="block text-xs text-muted-foreground">{hasSelection ? t('filmstrip.duplicateDescription') : t('filmstrip.duplicateNone')}</span>
-            </span>
-          </button>
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 }

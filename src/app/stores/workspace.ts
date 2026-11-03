@@ -22,9 +22,9 @@ import { smoothRegion } from '../lib/smooth';
 import { randomSeed } from '../lib/channel';
 import { newGeneration, type VersionInput } from '../lib/versions';
 import { findStyle, optionsForNewStyle, resolveOptions } from '../lib/styles';
+import type { Concept } from '../lib/ai';
 import { rankThumbnails, type Ranking } from '../lib/ai';
 import type {
-  OutputRatio,
   BrandKit,
   ChannelPage,
   Generation,
@@ -128,6 +128,8 @@ interface WorkspaceState {
   togglePersona: (id: string) => void;
   // generation
   generate: () => Promise<Outcome<Generation>[]>;
+  /** A cheap image of a concept with the current brief's settings, not saved anywhere (it stays in the assistant). */
+  previewConcept: (concept: Concept) => Promise<Blob>;
   /** The prompt `generate` would send for the current brief, without sending anything. */
   previewPrompt: () => string;
   /** The lines the selected people and the references add to that prompt, numbered as sent. */
@@ -138,8 +140,6 @@ interface WorkspaceState {
   edit: (instruction: string, opts?: { mask?: HTMLCanvasElement }) => Promise<Outcome<Generation>[]>;
   /** Healing brush: the painted area is repainted to erase seams and hard edges. */
   heal: () => Promise<Outcome<Generation> | null>;
-  /** A plain white image in the output format, as a new thumbnail of the project. */
-  addBlankImage: () => Promise<Generation | null>;
   /** The selected version copied as a new, independent thumbnail (its text layer included). */
   duplicateSelected: () => Promise<Generation | null>;
   /** « Lisser »: the painted area is refilled from its surroundings, locally, without AI. */
@@ -242,19 +242,13 @@ function migrateBrand(saved: (BrandKit & { avatar?: Blob }) | undefined): BrandK
   return { id: 'default', channelName, colors, logo: saved.avatar ?? saved.logo, banner, handle, subscribers, videoCount, description, verified, updatedAt };
 }
 
-/** Size of a blank image per output format (the edits keep it). */
-const BLANK_SIZES: Record<OutputRatio, { width: number; height: number }> = {
-  '16:9': { width: 1920, height: 1080 },
-  '9:16': { width: 1080, height: 1920 },
-};
-
 /** The name a new project gets, in either language: a project still named so was never renamed. */
 const DEFAULT_PROJECT_NAMES = new Set([translate('fr', 'topbar.untitled'), translate('en', 'topbar.untitled')]);
 
 const EMPTY_BRIEF: Brief = { videoTitle: '', brief: '', styleId: '' };
 
 /** A new project's output settings. */
-const DEFAULT_OUTPUT: ProjectOutput = { model: 'nano-banana-pro', aspectRatio: '16:9', resolution: '1K', format: 'png', safety: 'block_only_high', count: 1 };
+const DEFAULT_OUTPUT: ProjectOutput = { model: 'nano-banana-2-lite', aspectRatio: '16:9', resolution: '1K', format: 'png', safety: 'block_only_high', count: 1 };
 const OUTPUT_KEYS = ['model', 'aspectRatio', 'resolution', 'format', 'safety', 'count'] as const;
 
 function currentOutput(): ProjectOutput {
@@ -395,17 +389,18 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
   }
 
   /** Images and full prompt for the current brief, shared by `generate` and `previewPrompt`. */
-  function generationRequest() {
+  function generationRequest(concept?: Concept) {
     const { brief } = get();
+    const style = findStyle(concept?.styleId ?? brief.styleId, get().customStyles);
     const attached = [...personaImages(), ...referenceImages()];
     const fullPrompt = buildGenerationPrompt({
-      brief: brief.brief,
+      brief: concept?.brief ?? brief.brief,
       videoTitle: brief.videoTitle,
       aspectRatio: useSettings.getState().aspectRatio,
-      style: findStyle(brief.styleId, get().customStyles)?.prompt,
+      style: style?.prompt,
       roles: attached.map((a) => a.role),
       colors: get().brand.colors,
-      options: get().promptOptions(),
+      options: resolveOptions(style, brief.options),
     });
     return { attached, fullPrompt };
   }
@@ -688,19 +683,6 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       return regionEdit({ ...source, blob: patched }, mask, t('heal.done'), buildHealPrompt(), apiKey, 'heal', 'nano-banana-2');
     },
 
-    addBlankImage: async () => {
-      const settings = useSettings.getState();
-      const { width, height } = BLANK_SIZES[settings.aspectRatio];
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d')!;
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, width, height);
-      const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas export failed'))), 'image/png'));
-      return saveVersion({ kind: 'import', prompt: t('filmstrip.blankImage'), videoTitle: get().brief.videoTitle || undefined, params: settings.params(), blob });
-    },
-
     duplicateSelected: async () => {
       const source = selectedGeneration(get());
       if (!source) return null;
@@ -738,9 +720,22 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       const people = personaImages().map((a) => a.role);
       const references = referenceImages().map((a) => a.role);
       return {
-        people: (people.length ? [IMAGES_HEADER, ...describeImages(people, 0, get().promptOptions().likeness)] : []).join('\n'),
+        people: (people.length ? [IMAGES_HEADER, ...describeImages(people)] : []).join('\n'),
         references: (references.length && !people.length ? [IMAGES_HEADER] : []).concat(describeImages(references, people.length)).join('\n'),
       };
+    },
+
+    // Not a job: it would lock the studio behind the dialog, and nothing joins the project.
+    previewConcept: async (concept) => {
+      const settings = useSettings.getState();
+      const { attached, fullPrompt } = generationRequest(concept);
+      if (attached.length > MAX_IMAGES) throw new Error(t('brief.tooManyRefs'));
+      return generateImage({
+        prompt: fullPrompt,
+        images: await Promise.all(attached.map((a) => prepareReference(a.blob))),
+        params: { ...settings.params(), model: 'nano-banana-2-lite', resolution: '1K' },
+        apiKey: settings.apiKey(),
+      });
     },
 
     generate: async () => {
@@ -782,8 +777,13 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         prompt: t('export.upscaled'),
         fullPrompt: buildUpscalePrompt(),
         images: [source.textLayer?.base ?? source.blob],
-        // 2K is above 1920×1080 at every aspect ratio.
-        params: { ...useSettings.getState().params(), aspectRatio: source.params.aspectRatio, resolution: '2K' },
+        // 2K is above 1920×1080 at every aspect ratio, and Lite does not reach it.
+        params: {
+          ...useSettings.getState().params(),
+          aspectRatio: source.params.aspectRatio,
+          resolution: '2K',
+          ...(useSettings.getState().model === 'nano-banana-2-lite' ? { model: 'nano-banana-2' as const } : {}),
+        },
         parent: source,
         apiKey,
         textBlocks: source.textLayer?.blocks,

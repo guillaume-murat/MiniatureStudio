@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from 'react';
-import { ArrowLeft, Check, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Check, Pencil, Plus, RemoveFormatting, Trash2, Type } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { Switch } from '../ui/switch';
 import { Textarea } from '../ui/textarea';
 import { Field } from '../Section';
 import { PromptCode } from '../brief/PromptCode';
@@ -24,6 +25,7 @@ function Editor({ initial, onDone }: { initial?: CustomStyle; onDone: () => void
   const [name, setName] = useState(initial?.name ?? '');
   const [hint, setHint] = useState(initial?.hint ?? '');
   const [prompt, setPrompt] = useState(initial?.prompt ?? '');
+  const [addsText, setAddsText] = useState(initial?.addsText ?? false);
 
   async function save() {
     if (!name.trim()) return void toast.error(t('styles.needName'));
@@ -35,6 +37,7 @@ function Editor({ initial, onDone }: { initial?: CustomStyle; onDone: () => void
       hint: hint.trim() || undefined,
       emoji: emoji || STYLE_EMOJIS[0],
       prompt: prompt.trim(),
+      addsText,
       createdAt: initial?.createdAt ?? Date.now(),
     });
     await reloadStyles();
@@ -72,6 +75,13 @@ function Editor({ initial, onDone }: { initial?: CustomStyle; onDone: () => void
       <Field label={t('styles.prompt')} htmlFor="stylePrompt" hint={t('styles.promptHint')}>
         <Textarea id="stylePrompt" value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder={t('styles.promptPlaceholder')} className="min-h-32 resize-y" />
       </Field>
+      <div className="flex items-start justify-between gap-3">
+        <label htmlFor="styleAddsText" className="text-sm font-medium">
+          {t('styles.addsText')}
+          <span className="mt-0.5 block text-xs font-normal text-muted-foreground">{t('styles.addsTextHint')}</span>
+        </label>
+        <Switch id="styleAddsText" checked={addsText} onCheckedChange={setAddsText} />
+      </div>
       <DialogFooter>
         <Button variant="ghost" onClick={onDone}>
           {t('common.cancel')}
@@ -82,11 +92,24 @@ function Editor({ initial, onDone }: { initial?: CustomStyle; onDone: () => void
   );
 }
 
+/** Whether the style itself puts text in the image. */
+function TextBadge({ addsText }: { addsText: boolean }) {
+  const t = useT();
+  const Icon = addsText ? Type : RemoveFormatting;
+  return (
+    <span className={cn('flex w-fit items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] leading-none', addsText ? 'border-primary/40 bg-primary/10 text-foreground' : 'text-muted-foreground')}>
+      <Icon className="size-3 shrink-0" />
+      {addsText ? t('styles.withText') : t('styles.withoutText')}
+    </span>
+  );
+}
+
 function StyleOption({
   active,
   emoji,
   title,
   hint,
+  addsText = false,
   prompt = '',
   actions,
   onClick,
@@ -95,6 +118,7 @@ function StyleOption({
   emoji: string;
   title: string;
   hint: string;
+  addsText?: boolean;
   prompt?: string;
   actions?: ReactNode;
   onClick: () => void;
@@ -112,6 +136,7 @@ function StyleOption({
           </span>
           {active && <Check className="mt-0.5 size-4 shrink-0 text-primary" />}
         </span>
+        <TextBadge addsText={addsText} />
         <PromptCode text={prompt} full />
       </button>
       {actions && <div className="absolute top-1.5 right-7 flex gap-0.5 rounded-md bg-card opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100">{actions}</div>}
@@ -129,6 +154,7 @@ function CustomStyleOption({ style, active, onChoose, onEdit }: { style: CustomS
       emoji={style.emoji}
       title={style.name}
       hint={style.hint ?? ''}
+      addsText={style.addsText}
       prompt={styleLine(style.prompt)}
       onClick={onChoose}
       actions={
@@ -227,9 +253,9 @@ export function StyleDialog() {
             <section className="space-y-2">
               <h3 className="text-sm font-medium">{t('styles.presets')}</h3>
               <div className="grid gap-2 sm:grid-cols-2">
-                <StyleOption active={!hasStyle} emoji={NO_STYLE_EMOJI} title={t('brief.styleNone')} hint="—" onClick={() => choose('')} />
+                <StyleOption active={!hasStyle} emoji={NO_STYLE_EMOJI} title={t('brief.styleNone')} hint="—" prompt={styleLine()} onClick={() => choose('')} />
                 {STYLES.map((s) => (
-                  <StyleOption key={s.id} active={s.id === styleId} emoji={s.emoji} title={s.name[lang]} hint={s.hint[lang]} prompt={styleLine(s.prompt)} onClick={() => choose(s.id)} />
+                  <StyleOption key={s.id} active={s.id === styleId} emoji={s.emoji} title={s.name[lang]} hint={s.hint[lang]} addsText={s.preset?.text === 'style'} prompt={styleLine(s.prompt)} onClick={() => choose(s.id)} />
                 ))}
               </div>
             </section>

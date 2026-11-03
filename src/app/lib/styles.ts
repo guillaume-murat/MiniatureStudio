@@ -1,5 +1,6 @@
+import type { ConceptStyle } from './ai';
 import { DEFAULT_PROMPT_OPTIONS } from './prompt';
-import type { CustomStyle, Guideline, PromptOptions, ResolvedPromptOptions } from './types';
+import type { CustomStyle, PromptOptions, ResolvedPromptOptions } from './types';
 
 /**
  * Thumbnail style presets. Each injects an art-direction fragment into the prompt.
@@ -18,15 +19,14 @@ export interface StylePreset {
   prompt: string;
   /** Written by the user, in the shared style library. */
   custom?: boolean;
-  /** Where the general instructions would fight the style: what its advanced options start at. */
-  preset?: { text?: 'style'; off?: Guideline[]; likeness?: 'style' };
+  /** `text`: the style itself writes in the image. */
+  preset?: { text?: 'style' };
 }
 
 export const STYLES: StylePreset[] = [
   {
     id: 'reaction',
     emoji: '😲',
-    preset: { off: ['focal'] },
     name: { en: 'Reaction + object', fr: 'Réaction + objet' },
     hint: { en: 'Entertainment, reviews', fr: 'Divertissement, tests' },
     prompt:
@@ -35,7 +35,7 @@ export const STYLES: StylePreset[] = [
   {
     id: 'versus',
     emoji: '🆚',
-    preset: { text: 'style', off: ['focal'] },
+    preset: { text: 'style' },
     name: { en: 'Versus', fr: 'Versus' },
     hint: { en: 'Comparisons, debates', fr: 'Comparatifs, débats' },
     prompt:
@@ -44,7 +44,6 @@ export const STYLES: StylePreset[] = [
   {
     id: 'before-after',
     emoji: '🔄',
-    preset: { off: ['focal'] },
     name: { en: 'Before / after', fr: 'Avant / après' },
     hint: { en: 'Transformations, results', fr: 'Transformations, résultats' },
     prompt:
@@ -53,7 +52,7 @@ export const STYLES: StylePreset[] = [
   {
     id: 'tech',
     emoji: '💻',
-    preset: { text: 'style', off: ['focal'] },
+    preset: { text: 'style' },
     name: { en: 'Tech tutorial', fr: 'Tuto tech' },
     hint: { en: 'Dev, software, how-to', fr: 'Dev, logiciels, tutos' },
     prompt:
@@ -62,7 +61,6 @@ export const STYLES: StylePreset[] = [
   {
     id: 'cinematic',
     emoji: '🎬',
-    preset: { off: ['background', 'colors'] },
     name: { en: 'Cinematic documentary', fr: 'Documentaire cinéma' },
     hint: { en: 'History, true crime, essays', fr: 'Histoire, faits divers, essais' },
     prompt:
@@ -71,7 +69,6 @@ export const STYLES: StylePreset[] = [
   {
     id: 'minimal',
     emoji: '⬜',
-    preset: { off: ['emotion'] },
     name: { en: 'Minimal bold', fr: 'Minimaliste' },
     hint: { en: 'Commentary, business', fr: 'Opinion, business' },
     prompt:
@@ -88,7 +85,7 @@ export const STYLES: StylePreset[] = [
   {
     id: 'ranking',
     emoji: '🏆',
-    preset: { text: 'style', off: ['focal', 'background'] },
+    preset: { text: 'style' },
     name: { en: 'List / ranking', fr: 'Classement / top' },
     hint: { en: 'Top N, mistakes, tips', fr: 'Tops, erreurs, astuces' },
     prompt:
@@ -97,7 +94,6 @@ export const STYLES: StylePreset[] = [
   {
     id: 'gaming',
     emoji: '🎮',
-    preset: { off: ['background'] },
     name: { en: 'Gaming', fr: 'Gaming' },
     hint: { en: "Let's plays, highlights", fr: 'Let’s play, highlights' },
     prompt:
@@ -106,7 +102,6 @@ export const STYLES: StylePreset[] = [
   {
     id: 'finance',
     emoji: '💰',
-    preset: { off: ['focal'] },
     name: { en: 'Money / finance', fr: 'Argent / finance' },
     hint: { en: 'Finance, crypto, business', fr: 'Finance, crypto, business' },
     prompt:
@@ -115,7 +110,6 @@ export const STYLES: StylePreset[] = [
   {
     id: 'vlog',
     emoji: '✈️',
-    preset: { off: ['background', 'colors'] },
     name: { en: 'Vlog / travel', fr: 'Vlog / voyage' },
     hint: { en: 'Travel, lifestyle', fr: 'Voyage, lifestyle' },
     prompt:
@@ -132,7 +126,6 @@ export const STYLES: StylePreset[] = [
   {
     id: 'clay',
     emoji: '🧸',
-    preset: { off: ['colors', 'emotion'], likeness: 'style' },
     name: { en: '3D / clay', fr: '3D / pâte à modeler' },
     hint: { en: 'Explainers, faceless channels', fr: 'Vulgarisation, chaînes sans visage' },
     prompt:
@@ -141,7 +134,6 @@ export const STYLES: StylePreset[] = [
   {
     id: 'podcast',
     emoji: '🎙️',
-    preset: { off: ['focal', 'colors'] },
     name: { en: 'Podcast / interview', fr: 'Podcast / interview' },
     hint: { en: 'Interviews, talk shows', fr: 'Interviews, talk-shows' },
     prompt:
@@ -164,8 +156,14 @@ export function allStyles(custom: CustomStyle[]): StylePreset[] {
     emoji: s.emoji,
     prompt: s.prompt,
     custom: true,
+    preset: s.addsText ? ({ text: 'style' } as const) : undefined,
   }));
   return [...own, ...STYLES];
+}
+
+/** The whole library, as the concepts prompt lists it. In French, like every prompt. */
+export function conceptStyles(custom: CustomStyle[]): ConceptStyle[] {
+  return allStyles(custom).map((s) => ({ id: s.id, name: s.name.fr, hint: s.hint.fr, prompt: s.prompt }));
 }
 
 export function findStyle(id: string | undefined, custom: CustomStyle[] = []): StylePreset | undefined {
@@ -174,13 +172,11 @@ export function findStyle(id: string | undefined, custom: CustomStyle[] = []): S
 
 /** The advanced options in effect: the user's choices over the style's preset. */
 export function resolveOptions(style: StylePreset | undefined, options: PromptOptions = {}): ResolvedPromptOptions {
-  const off = Object.fromEntries((style?.preset?.off ?? []).map((g) => [g, false]));
   return {
-    text: options.text ?? style?.preset?.text ?? DEFAULT_PROMPT_OPTIONS.text,
+    // A style that adds text cannot go without it, whatever was chosen before.
+    text: style?.preset?.text ?? options.text ?? DEFAULT_PROMPT_OPTIONS.text,
     titleZone: options.titleZone ?? DEFAULT_PROMPT_OPTIONS.titleZone,
-    guidelines: { ...DEFAULT_PROMPT_OPTIONS.guidelines, ...off, ...options.guidelines },
     brandWeight: options.brandWeight ?? DEFAULT_PROMPT_OPTIONS.brandWeight,
-    likeness: options.likeness ?? style?.preset?.likeness ?? DEFAULT_PROMPT_OPTIONS.likeness,
   };
 }
 

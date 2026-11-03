@@ -5,7 +5,7 @@
  */
 import { useWorkspace, MAX_PERSONAS, type Brief, type Outcome, type ViewMode } from '../stores/workspace';
 import { useSettings } from '../stores/settings';
-import { allStyles, findStyle } from '../lib/styles';
+import { allStyles, conceptStyles, findStyle } from '../lib/styles';
 import { suggestConcepts } from '../lib/ai';
 import { blobToBase64, exportForYouTube, extensionFor, FULL_HD_SIZE, normaliseUpload, prepareReference, rectMask, YOUTUBE_SIZE } from '../lib/images';
 import { extractVideoId, fetchThumbnail, fetchVideoTitle } from '../lib/youtube';
@@ -184,7 +184,7 @@ export const handlers: Record<string, Handler> = {
 
   set_output: async (args) => {
     const patch = {
-      model: oneOf<ModelId>(args, 'model', ['nano-banana-pro', 'nano-banana-2']),
+      model: oneOf<ModelId>(args, 'model', ['nano-banana-pro', 'nano-banana-2', 'nano-banana-2-lite']),
       aspectRatio: oneOf<OutputRatio>(args, 'aspectRatio', ['16:9', '9:16']),
       resolution: oneOf<Resolution>(args, 'resolution', ['1K', '2K', '4K']),
       count: oneOf(args, 'count', [1, 2, 4] as const),
@@ -242,7 +242,7 @@ export const handlers: Record<string, Handler> = {
         videoTitle: str(args, 'videoTitle') ?? ws().brief.videoTitle,
         idea: str(args, 'idea') ?? ws().brief.brief,
         lang,
-        styles: allStyles(ws().customStyles).map((st) => ({ id: st.id, name: st.name.en })),
+        styles: conceptStyles(ws().customStyles),
       },
     );
     return ok({ concepts, hint: 'Apply one with generate({ brief, styleId }).' });

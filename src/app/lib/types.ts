@@ -1,7 +1,7 @@
 import type { LayerBlock } from './textBlocks';
 
 export type Provider = 'replicate' | 'gemini' | 'openrouter' | 'mammouth' | 'vertex';
-export type ModelId = 'nano-banana-pro' | 'nano-banana-2';
+export type ModelId = 'nano-banana-pro' | 'nano-banana-2' | 'nano-banana-2-lite';
 /** The ratio of an existing image: older ones may be in a format the studio no longer generates, and their edits keep it. */
 export type AspectRatio = '16:9' | '9:16' | '4:3' | '1:1' | '21:9';
 /** The formats a new image can have. */
@@ -63,18 +63,14 @@ export interface Project {
 
 export type TitleZone = 'top-left' | 'top' | 'top-right' | 'left' | 'center' | 'right' | 'bottom-left' | 'bottom' | 'bottom-right' | 'none';
 
-export type Guideline = 'focal' | 'background' | 'colors' | 'emotion';
-
 /** The advanced options of the brief panel. Absent values come from the style's preset. */
 export interface PromptOptions {
   text?: 'none' | 'style';
   titleZone?: TitleZone;
-  guidelines?: Partial<Record<Guideline, boolean>>;
   brandWeight?: 'subtle' | 'accents' | 'dominant';
-  likeness?: 'exact' | 'style';
 }
 
-export type ResolvedPromptOptions = Required<Omit<PromptOptions, 'guidelines'>> & { guidelines: Record<Guideline, boolean> };
+export type ResolvedPromptOptions = Required<PromptOptions>;
 
 /** The brief panel of a project: each project starts empty and keeps its own. Only app settings (provider, keys, theme, language) are shared. */
 export interface ProjectInputs {
@@ -114,6 +110,8 @@ export interface CustomStyle {
   hint?: string;
   emoji: string;
   prompt: string;
+  /** The style itself puts text in the image: the prompt then allows it (`text` preset). */
+  addsText?: boolean;
   createdAt: number;
 }
 
