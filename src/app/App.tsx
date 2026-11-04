@@ -144,11 +144,11 @@ export default function App() {
                 <BriefPanel onGenerated={() => setMobileTab('canvas')} />
               </div>
               <div className={cn('absolute inset-0 flex flex-col', mobileTab !== 'canvas' && 'invisible')}>
-                <CanvasArea onDescribeRegion={() => setMobileTab('iterate')} />
+                <CanvasArea />
                 <Filmstrip />
               </div>
               <div className={cn('absolute inset-0', mobileTab !== 'iterate' && 'invisible')}>
-                <IteratePanel onEdited={() => setMobileTab('canvas')} />
+                <IteratePanel onToolUsed={() => setMobileTab('canvas')} />
               </div>
             </div>
             <nav className="grid grid-cols-3 border-t bg-sidebar pb-[env(safe-area-inset-bottom)]">

@@ -30,6 +30,7 @@ import { ImageMenu } from '../ImageMenu';
 import { SafeZones } from './SafeZones';
 import { MaskLayer, type MaskTool } from './MaskLayer';
 import { ViewSwitcher } from './ViewSwitcher';
+import { EditBar } from './EditBar';
 import { ChannelPreview } from './ChannelPreview';
 import { TextOverlay, TextToolbar } from './TextLayer';
 import { ReframeToolbar, ReframeView } from './ReframeLayer';
@@ -229,8 +230,7 @@ function ImageActions({ gen }: { gen: Generation }) {
   );
 }
 
-/** `onDescribeRegion` (mobile): the instruction field lives in another tab, offer a way to it. */
-export function CanvasArea({ onDescribeRegion }: { onDescribeRegion?: () => void }) {
+export function CanvasArea() {
   const t = useT();
   const ws = useWorkspace();
   const reframeTarget = useReframe((s) => s.target);
@@ -239,10 +239,13 @@ export function CanvasArea({ onDescribeRegion }: { onDescribeRegion?: () => void
   const [tool, setTool] = useState<MaskTool>('brush');
   const [brushSize, setBrushSize] = useState(0.05);
   const [clearSignal, setClearSignal] = useState(0);
+  const [instruction, setInstruction] = useState('');
   const running = ws.jobs.filter((j) => j.status === 'running' && j.kind === 'generate').length;
   // Blurred while Nano Banana works (BlockingJobOverlay locks the studio); failed calls stay readable.
   const busy = runningJobs(ws.jobs).length > 0;
   const failed = ws.jobs.filter((j) => j.status === 'failed');
+  // Text, arrow and reframe don't take an instruction: their controls come instead.
+  const showBar = !!gen && ws.view === 'image' && ws.tool !== 'reframe' && !isLayerTool(ws.tool);
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col bg-canvas">
@@ -251,65 +254,68 @@ export function CanvasArea({ onDescribeRegion }: { onDescribeRegion?: () => void
         <ViewSwitcher />
       </div>
 
-      {/* Body */}
-      <div className={cn('relative min-h-0 flex-1 transition-[filter] duration-300', busy && 'pointer-events-none blur-md')}>
-        {ws.view === 'compare' ? (
-          <CompareView />
-        ) : ws.view === 'feed' && gen ? (
-          <FeedPreview generation={gen} />
-        ) : ws.view === 'channel' ? (
-          <ChannelPreview />
-        ) : gen && ws.tool === 'reframe' ? (
-          <ReframeView gen={gen} />
-        ) : gen ? (
-          <ImageView gen={gen} tool={tool} brushSize={brushSize} clearSignal={clearSignal} />
-        ) : (
-          <div className="flex size-full items-center justify-center">
-            <EmptyState running={running} />
-          </div>
-        )}
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        {/* Body. On desktop it keeps clear of the edit bar, floating below it. */}
+        <div className={cn('relative min-h-0 flex-1 transition-[filter] duration-300', showBar && 'lg:mb-28', busy && 'pointer-events-none blur-md')}>
+          {ws.view === 'compare' ? (
+            <CompareView />
+          ) : ws.view === 'feed' && gen ? (
+            <FeedPreview generation={gen} />
+          ) : ws.view === 'channel' ? (
+            <ChannelPreview />
+          ) : gen && ws.tool === 'reframe' ? (
+            <ReframeView gen={gen} />
+          ) : gen ? (
+            <ImageView gen={gen} tool={tool} brushSize={brushSize} clearSignal={clearSignal} />
+          ) : (
+            <div className="flex size-full items-center justify-center">
+              <EmptyState running={running} />
+            </div>
+          )}
 
-        {ws.tool === 'reframe' && ws.view === 'image' && (
-          <p className="pointer-events-none absolute top-3 left-1/2 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-2xl bg-foreground px-3 py-1 text-xs text-background shadow sm:rounded-full">
-            {reframeTarget === 'zone' && !reframeZone ? t('reframe.zoneHint') : t('canvas.reframeHint')}
-          </p>
-        )}
+          {ws.tool === 'reframe' && ws.view === 'image' && (
+            <p className="pointer-events-none absolute top-3 left-1/2 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-2xl bg-foreground px-3 py-1 text-xs text-background shadow sm:rounded-full">
+              {reframeTarget === 'zone' && !reframeZone ? t('reframe.zoneHint') : t('canvas.reframeHint')}
+            </p>
+          )}
 
-        {isLayerTool(ws.tool) && ws.view === 'image' && (
-          <p className="pointer-events-none absolute top-3 left-1/2 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-2xl bg-foreground px-3 py-1 text-xs text-background shadow sm:rounded-full">
-            {ws.tool === 'arrow' ? t('arrow.hint') : t('canvas.textHint')}
-          </p>
-        )}
+          {isLayerTool(ws.tool) && ws.view === 'image' && (
+            <p className="pointer-events-none absolute top-14 left-1/2 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-2xl bg-foreground px-3 py-1 text-xs text-background shadow sm:rounded-full">
+              {ws.tool === 'arrow' ? t('arrow.hint') : t('canvas.textHint')}
+            </p>
+          )}
 
-        {ws.tool === 'mask' && ws.view === 'image' && (
-          <p className="pointer-events-none absolute top-3 left-1/2 flex w-max max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-2 rounded-2xl bg-foreground px-3 py-1 text-xs text-background shadow sm:rounded-full sm:whitespace-nowrap">
-            <span className="sm:truncate">{onDescribeRegion ? t('canvas.maskHintMobile') : t('canvas.maskHint')}</span>
-            <Kbd className="shrink-0 [@media(pointer:coarse)]:hidden">Esc</Kbd>
-          </p>
-        )}
+          {ws.tool === 'mask' && ws.view === 'image' && (
+            <p className="pointer-events-none absolute top-14 left-1/2 flex w-max max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-2 rounded-2xl bg-foreground px-3 py-1 text-xs text-background shadow sm:rounded-full sm:whitespace-nowrap">
+              <span className="sm:truncate">{t('canvas.maskHint')}</span>
+              <Kbd className="shrink-0 [@media(pointer:coarse)]:hidden">Esc</Kbd>
+            </p>
+          )}
 
-        {ws.tool === 'mask' && ws.view === 'image' && (
-          // Bottom left, clear of the image actions on the right.
-          <p className="pointer-events-none absolute bottom-3 left-3 flex max-w-[calc(100%-10rem)] items-start gap-2 rounded-lg border bg-background/90 px-3 py-2 text-xs shadow-sm backdrop-blur">
-            <Bandage className="mt-px size-3.5 shrink-0 text-muted-foreground" />
-            {t('heal.context')}
-          </p>
-        )}
+          {ws.tool === 'mask' && ws.view === 'image' && (
+            <p className="pointer-events-none absolute bottom-3 left-3 flex max-w-[calc(100%-1.5rem)] items-start gap-2 rounded-lg border bg-background/90 px-3 py-2 text-xs shadow-sm backdrop-blur">
+              <Bandage className="mt-px size-3.5 shrink-0 text-muted-foreground" />
+              {t('heal.context')}
+            </p>
+          )}
 
-        {/* Over the image rather than in a toolbar row: the image gets the height. */}
-        {gen && ws.view === 'image' && ws.tool !== 'reframe' && (
-          <div className="absolute right-3 bottom-3 z-10 flex items-center gap-0.5 rounded-lg border bg-background/85 p-0.5 shadow-sm backdrop-blur">
-            <ImageActions gen={gen} />
-          </div>
-        )}
+          {/* Over the image rather than in a toolbar row: the image gets the height. */}
+          {gen && ws.view === 'image' && ws.tool !== 'reframe' && (
+            <div className="absolute top-3 right-3 z-10 flex items-center gap-0.5 rounded-lg border bg-background/85 p-0.5 shadow-sm backdrop-blur">
+              <ImageActions gen={gen} />
+            </div>
+          )}
 
-        {failed.length > 0 && !busy && (
-          <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1.5">
-            {failed.map((j) => (
-              <FailedJob key={j.id} job={j} />
-            ))}
-          </div>
-        )}
+          {failed.length > 0 && !busy && (
+            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1.5">
+              {failed.map((j) => (
+                <FailedJob key={j.id} job={j} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {showBar && <EditBar gen={gen} instruction={instruction} onInstruction={setInstruction} />}
       </div>
 
       {/* The active tool's controls, under the image. */}
@@ -351,11 +357,6 @@ export function CanvasArea({ onDescribeRegion }: { onDescribeRegion?: () => void
             </TooltipTrigger>
             <TooltipContent className="max-w-64">{t('heal.hint')}</TooltipContent>
           </Tooltip>
-          {onDescribeRegion && ws.hasMask && (
-            <Button size="xs" onClick={onDescribeRegion}>
-              {t('canvas.describeRegion')}
-            </Button>
-          )}
         </div>
       )}
 

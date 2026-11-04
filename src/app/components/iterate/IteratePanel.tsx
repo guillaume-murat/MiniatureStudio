@@ -1,38 +1,28 @@
-import { useRef, useState } from 'react';
 import {
-  ArrowUp,
   ArrowUpRight,
   Bandage,
   Blend,
   Crop,
   GitBranch,
   ImageUp,
-  Loader2,
   Maximize2,
   Paintbrush,
   Sparkles,
   SquareDashedMousePointer,
   Type,
   Wand2,
-  Eye,
 } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Textarea } from '../ui/textarea';
 import { ScrollArea } from '../ui/scroll-area';
-import { Field, Section } from '../Section';
+import { Section } from '../Section';
 import { Toggle } from '../ui/toggle';
 import { Kbd } from '../ui/kbd';
 import { COMMANDS, isAvailable } from '../../commands';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
-import { EditPromptDialog } from '../dialogs/EditPromptDialog';
 import { useBlobUrl } from '../../hooks/use-blob-url';
-import { isLayerTool, selectedGeneration, useWorkspace } from '../../stores/workspace';
+import { selectedGeneration, useWorkspace } from '../../stores/workspace';
 import { rootOf, treeLines, versionTree } from '../../lib/versions';
-import { useT, type TKey } from '../../i18n';
+import { useT } from '../../i18n';
 import type { Generation } from '../../lib/types';
 import { cn } from '../../lib/utils';
-
-const QUICK_EDITS = ['emotion', 'contrast', 'background', 'zoom', 'text', 'noText'] as const;
 
 const STEP_ICONS = {
   generate: Sparkles,
@@ -138,132 +128,42 @@ function EditTools({ onUse }: { onUse?: () => void }) {
   );
 }
 
-function EditTab({ gen, onEdited }: { gen: Generation; onEdited?: () => void }) {
+function EditTab({ gen, onToolUsed }: { gen: Generation; onToolUsed?: () => void }) {
   const t = useT();
-  const { generations, select, edit, tool, hasMask, jobs } = useWorkspace();
-  const [instruction, setInstruction] = useState('');
-  const [showPrompt, setShowPrompt] = useState(false);
-  const field = useRef<HTMLTextAreaElement>(null);
+  const { generations, select } = useWorkspace();
   const root = rootOf(generations, gen.id) ?? gen;
   const versions = versionTree(generations, root.id);
   const lines = treeLines(versions);
-  const editing = jobs.some((j) => j.status === 'running' && j.parentId === gen.id);
-  const region = tool === 'mask' && hasMask;
-
-  const submit = () => {
-    if (!instruction.trim()) return;
-    edit(instruction);
-    setInstruction('');
-    onEdited?.();
-  };
-
-  /** Puts a suggestion in the instruction, to reread or complete before sending. */
-  const suggest = (text: string) => {
-    setInstruction(text);
-    field.current?.focus();
-  };
 
   return (
-    <div className="flex h-full flex-col">
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="space-y-6 p-4">
-          {/* Always shown: with no edit yet, it holds the original, selected. */}
-          <Section
-            title={
-              <span className="flex items-center gap-1.5">
-                <GitBranch className="size-3.5" /> {t('iterate.versions')} <span className="tabular font-normal">· {versions.length}</span>
-              </span>
-            }
-          >
-            <p className="-mt-1 text-xs text-muted-foreground">{versions.length > 1 ? t('versions.hint') : t('versions.first')}</p>
-            <div>
-              {versions.map(({ item, depth }, i) => (
-                <VersionRow key={item.id} gen={item} depth={depth} lines={lines[i]} active={item.id === gen.id} onClick={() => select(item.id)} />
-              ))}
-            </div>
-          </Section>
-
-          <Section title={t('iterate.quick')}>
-            <EditTools onUse={onEdited} />
-          </Section>
-        </div>
-      </ScrollArea>
-
-      <div className="space-y-3 p-3">
-        <Field label={t('iterate.suggestions')}>
-          <div className="flex flex-wrap gap-1.5">
-            {QUICK_EDITS.map((key) => {
-              const text = t(`iterate.quickEdits.${key}` as TKey);
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => suggest(text)}
-                  className="rounded-full border px-2.5 py-1 text-left text-xs italic transition-colors hover:border-primary/50 hover:bg-accent"
-                >
-                  {text}
-                </button>
-              );
-            })}
+    <ScrollArea className="h-full">
+      <div className="space-y-6 p-4">
+        {/* Always shown: with no edit yet, it holds the original, selected. */}
+        <Section
+          title={
+            <span className="flex items-center gap-1.5">
+              <GitBranch className="size-3.5" /> {t('iterate.versions')} <span className="tabular font-normal">· {versions.length}</span>
+            </span>
+          }
+        >
+          <p className="-mt-1 text-xs text-muted-foreground">{versions.length > 1 ? t('versions.hint') : t('versions.first')}</p>
+          <div>
+            {versions.map(({ item, depth }, i) => (
+              <VersionRow key={item.id} gen={item} depth={depth} lines={lines[i]} active={item.id === gen.id} onClick={() => select(item.id)} />
+            ))}
           </div>
-        </Field>
-        <Field label={t('iterate.instruction')} htmlFor="editInstruction">
-          {region && (
-            <p className="flex items-center gap-1.5 rounded-md bg-primary/10 px-2 py-1.5 text-xs text-primary">
-              <SquareDashedMousePointer className="size-3.5" /> {t('iterate.regionActive')}
-            </p>
-          )}
-          <div className="flex items-end gap-2">
-            <div className="relative min-w-0 flex-1">
-              <Textarea
-                id="editInstruction"
-                ref={field}
-                value={instruction}
-                onChange={(e) => setInstruction(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey || !e.shiftKey)) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    submit();
-                  }
-                }}
-                placeholder={region ? t('iterate.regionPlaceholder') : t('iterate.editPlaceholder')}
-                className="max-h-40 min-h-20 resize-none pr-11"
-              />
-              <Button
-                size="icon-sm"
-                className="absolute right-2 bottom-2 rounded-full"
-                onClick={() => submit()}
-                disabled={!instruction.trim()}
-                aria-label={t('iterate.send')}
-              >
-                {editing ? <Loader2 className="animate-spin" /> : <ArrowUp />}
-              </Button>
-            </div>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="icon-lg"
-                  variant="ghost"
-                  className="border border-yellow-500/25 bg-yellow-500/10 hover:bg-yellow-500/15 dark:hover:bg-yellow-500/15"
-                  onClick={() => setShowPrompt(true)}
-                  aria-label={t('editPrompt.open')}
-                >
-                  <Eye />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t('editPrompt.open')}</TooltipContent>
-            </Tooltip>
-          </div>
-        </Field>
+        </Section>
+
+        <Section title={t('iterate.quick')}>
+          <EditTools onUse={onToolUsed} />
+        </Section>
       </div>
-      <EditPromptDialog open={showPrompt} onOpenChange={setShowPrompt} instruction={instruction} />
-    </div>
+    </ScrollArea>
   );
 }
 
-/** `onEdited` fires once an edit is launched (mobile: jump back to the image to follow it). */
-export function IteratePanel({ onEdited }: { onEdited?: () => void }) {
+/** `onToolUsed` fires once a tool is chosen (mobile: jump back to the image, where it works). */
+export function IteratePanel({ onToolUsed }: { onToolUsed?: () => void }) {
   const t = useT();
   const gen = useWorkspace(selectedGeneration);
 
@@ -271,5 +171,5 @@ export function IteratePanel({ onEdited }: { onEdited?: () => void }) {
     return <div className="flex h-full items-center justify-center p-8 text-center text-sm text-muted-foreground">{t('iterate.noImage')}</div>;
   }
 
-  return <EditTab gen={gen} onEdited={onEdited} />;
+  return <EditTab gen={gen} onToolUsed={onToolUsed} />;
 }
