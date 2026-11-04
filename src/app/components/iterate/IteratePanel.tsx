@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import {
   ArrowUpRight,
   Bandage,
@@ -33,11 +34,15 @@ const STEP_ICONS = {
   arrow: ArrowUpRight,
 } as const;
 
-/** Indent per tree level, and where a level's line runs: under the left part of its thumbnail. */
-const TREE_INDENT = 20;
+/**
+ * Indent per tree level, and where a level's line runs: under the left part of its thumbnail,
+ * less far in than the indent, so that it stays beside the next level's thumbnail.
+ */
+const TREE_INDENT = 5;
 const TREE_PAD = 6;
-const lineX = (depth: number) => TREE_PAD + depth * TREE_INDENT + 10;
-const LINE = 'pointer-events-none absolute border-dashed border-muted-foreground/60';
+const LINE_INSET = 1;
+const lineX = (depth: number) => TREE_PAD + depth * TREE_INDENT + LINE_INSET;
+const LINE = 'pointer-events-none absolute border-dashed border-muted-foreground';
 
 /** One step of the thumbnail's history, under the version it was made from, linked to it by a dashed line. */
 function VersionRow({
@@ -69,11 +74,11 @@ function VersionRow({
     >
       {lines.through.map((on, k) =>
         k === depth - 1 ? (
-          <span key={k}>
+          <Fragment key={k}>
             {/* The elbow into this version's thumbnail, then on to its next sibling. */}
-            <span className={cn(LINE, 'top-0 h-1/2 rounded-bl-md border-b border-l')} style={{ left: lineX(k), width: TREE_INDENT - 12 }} />
+            <span className={cn(LINE, 'top-0 h-1/2 rounded-bl-md border-b border-l')} style={{ left: lineX(k), width: TREE_INDENT - LINE_INSET }} />
             {on && <span className={cn(LINE, 'top-1/2 bottom-0 border-l')} style={{ left: lineX(k) }} />}
-          </span>
+          </Fragment>
         ) : (
           on && <span key={k} className={cn(LINE, 'top-0 bottom-0 border-l')} style={{ left: lineX(k) }} />
         ),
