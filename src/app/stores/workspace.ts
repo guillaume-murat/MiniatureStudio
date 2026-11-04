@@ -305,7 +305,7 @@ function reportError(error: unknown, set: (s: Partial<WorkspaceState>) => void):
   return t(info.key);
 }
 
-/** What the next edit sends, for the eye button of the edit bar. */
+/** What the next edit sends, for the eye of the edit bar. */
 export interface EditPreview {
   region: boolean;
   prompt: string;

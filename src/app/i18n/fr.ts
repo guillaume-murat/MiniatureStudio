@@ -481,10 +481,7 @@ export const fr: Dict = {
     apply: 'Appliquer',
   },
   editPrompt: {
-    open: 'Voir le prompt de la retouche',
     title: 'Prompt de la retouche',
-    description: 'Ce qui sera envoyé au modèle en appliquant cette retouche.',
-    area: 'Zone modifiée',
     areaPainted: 'Zone peinte : seule cette zone sera modifiée',
     areaWhole: 'Aucune zone peinte : toute l’image peut changer',
     model: 'Modèle',

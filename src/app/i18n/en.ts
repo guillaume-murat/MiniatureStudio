@@ -479,10 +479,7 @@ export const en = {
     apply: 'Apply',
   },
   editPrompt: {
-    open: 'See the prompt of this edit',
     title: 'Edit prompt',
-    description: 'What will be sent to the model when you apply this edit.',
-    area: 'Area changed',
     areaPainted: 'Painted area: only this area will change',
     areaWhole: 'No painted area: the whole image may change',
     model: 'Model',

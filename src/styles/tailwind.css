@@ -4,3 +4,8 @@
 @import '@fontsource-variable/geist';
 @import '@fontsource-variable/geist-mono';
 @import './tokens.css';
+
+/* Radix wraps a popup in a box of its size, which would take the pointer from what the popup covers. */
+[data-radix-popper-content-wrapper]:has(> .prompt-eye-popup) {
+  pointer-events: none;
+}

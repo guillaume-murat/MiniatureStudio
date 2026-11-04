@@ -1,12 +1,12 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { ArrowUp, ChevronUp, Eye, GripVertical, Lightbulb, Loader2, SquareDashedMousePointer } from 'lucide-react';
+import { ArrowUp, ChevronUp, GripVertical, Lightbulb, Loader2, SquareDashedMousePointer } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Kbd } from '../ui/kbd';
 import { Textarea } from '../ui/textarea';
 import { Toggle } from '../ui/toggle';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
-import { EditPromptDialog } from '../dialogs/EditPromptDialog';
+import { EditPromptEye } from './EditPromptEye';
 import { runningJobs } from './BlockingJob';
 import { COMMANDS, isAvailable } from '../../commands';
 import { usePinch } from '../../hooks/use-pinch';
@@ -139,7 +139,6 @@ export function EditBar({
 }) {
   const t = useT();
   const { edit, tool, setTool, hasMask, jobs } = useWorkspace();
-  const [showPrompt, setShowPrompt] = useState(false);
   const field = useRef<HTMLTextAreaElement>(null);
   const refocusField = useRef(false);
   const editing = jobs.some((j) => j.status === 'running' && j.parentId === gen.id);
@@ -217,26 +216,13 @@ export function EditBar({
             <SquareDashedMousePointer className="size-3.5 shrink-0" /> <span className="truncate">{t('iterate.regionActive')}</span>
           </p>
         )}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              size="icon-lg"
-              variant="ghost"
-              className="ml-auto border border-yellow-500/25 bg-yellow-500/10 hover:bg-yellow-500/15 dark:hover:bg-yellow-500/15"
-              disabled={locked}
-              onClick={() => setShowPrompt(true)}
-              aria-label={t('editPrompt.open')}
-            >
-              <Eye />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{t('editPrompt.open')}</TooltipContent>
-        </Tooltip>
+        <span className="ml-auto flex">
+          <EditPromptEye instruction={instruction} />
+        </span>
         <Button size="icon-lg" onClick={submit} disabled={locked || !instruction.trim()} aria-label={t('iterate.send')}>
           {editing ? <Loader2 className="animate-spin" /> : <ArrowUp />}
         </Button>
       </div>
-      <EditPromptDialog open={showPrompt} onOpenChange={setShowPrompt} instruction={instruction} />
     </div>
   );
 }
