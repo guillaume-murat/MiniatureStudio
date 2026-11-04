@@ -20,7 +20,7 @@ import { dimensions, highlightRegion, mergeWithMask, normaliseUpload, prepareRef
 import { explainError } from '../lib/errors';
 import { smoothRegion } from '../lib/smooth';
 import { randomSeed } from '../lib/channel';
-import { newGeneration, type VersionInput } from '../lib/versions';
+import { newGeneration, type VersionInput, selectionAfterRemoval, versionsRemovedWith } from '../lib/versions';
 import { findStyle, optionsForNewStyle, resolveOptions } from '../lib/styles';
 import type { Concept } from '../lib/ai';
 import { rankThumbnails, type Ranking } from '../lib/ai';
@@ -167,7 +167,8 @@ interface WorkspaceState {
   togglePick: (id: string) => void;
   clearPicks: () => void;
   toggleFavorite: (id: string) => Promise<void>;
-  removeGeneration: (id: string) => Promise<void>;
+  /** Removes a version and everything made from it, unless a call to the model is running. */
+  removeVersion: (id: string) => Promise<void>;
   reuse: (gen: Generation) => void;
   rankPicked: () => Promise<Outcome<Ranking>>;
   // assets
@@ -896,17 +897,30 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       await replaceVersion({ ...gen, favorite: !gen.favorite });
     },
 
-    removeGeneration: async (id) => {
-      const gen = get().generations.find((g) => g.id === id);
-      await db.deleteGeneration(id);
-      const generations = get().generations.filter((g) => g.id !== id);
+    removeVersion: async (id) => {
+      // The result of a call needs the version it was made from.
+      if (get().jobs.some((j) => j.status === 'running')) return;
+      const removed = versionsRemovedWith(get().generations, id);
+      if (!removed.length) return;
+      await db.deleteGenerations(removed.map((g) => g.id));
+      // Read after the wait: a favourite may have changed meanwhile.
+      const { generations, selectedId, pickedIds, ranking, projects, projectId } = get();
+      const isRemoved = (versionId?: string) => removed.some((g) => g.id === versionId);
+      const remaining = generations.filter((g) => !isRemoved(g.id));
       // Versions can share a Blob in memory: only free it once unused.
-      if (gen && !generations.some((g) => g.blob === gen.blob)) revoke(gen.blob);
+      for (const { blob } of removed) if (!remaining.some((g) => g.blob === blob)) revoke(blob);
+      const next = selectionAfterRemoval(generations, id, selectedId);
+      if (next !== selectedId) get().setTool(null);
       set({
-        generations,
-        selectedId: get().selectedId === id ? (generations[0]?.id ?? null) : get().selectedId,
-        pickedIds: get().pickedIds.filter((x) => x !== id),
+        generations: remaining,
+        selectedId: next,
+        pickedIds: pickedIds.filter((picked) => !isRemoved(picked)),
+        // It was made from a set that no longer exists.
+        ranking: pickedIds.some(isRemoved) ? null : ranking,
       });
+      // A channel page's video goes with its title, or the next image placed there would inherit it.
+      const slots = projects.find((p) => p.id === projectId)?.channelPage?.slots;
+      if (slots?.some((slot) => isRemoved(slot?.id))) await get().updateChannelPage({ slots: slots.map((slot) => (isRemoved(slot?.id) ? {} : slot)) });
     },
 
     reuse: (gen) => {

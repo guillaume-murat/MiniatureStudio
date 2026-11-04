@@ -112,8 +112,10 @@ export async function putGeneration(generation: Generation): Promise<void> {
   });
 }
 
-export async function deleteGeneration(id: string): Promise<void> {
-  await (await getDB()).delete('generations', id);
+/** All or none, in one transaction: a version never outlives the one it was made from. */
+export async function deleteGenerations(ids: string[]): Promise<void> {
+  const tx = (await getDB()).transaction('generations', 'readwrite');
+  await Promise.all([...ids.map((id) => tx.store.delete(id)), tx.done]);
 }
 
 // ─── Personas / styles / library / brand ─────────────────

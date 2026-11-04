@@ -167,6 +167,18 @@ export const fr: Dict = {
   versions: {
     hint: 'Cliquez sur une version pour la reprendre : la prochaine retouche partira d’elle.',
     first: 'Chaque retouche de cette image ajoutera une version ici.',
+    branches: '{n} branches',
+    branchesOpen: 'Voir les {n} branches qui partent de cette version',
+    branchCount: 'Versions : {n}',
+    branchShown: 'Branche affichée',
+    remove: 'Supprimer cette version',
+    removeOne: 'Supprimer cette version ?',
+    removeWithNext: 'Supprimer cette version et ses suites ?',
+    removeOriginal: 'Supprimer toute cette miniature ?',
+    removeCount: 'Versions supprimées : {n}. Cette action est définitive.',
+    groupName: '{step} × {n}',
+    unfold: 'Déplier les étapes {step}',
+    fold: 'Replier les étapes {step}',
     steps: {
       generate: 'Génération',
       import: 'Image importée',

@@ -24,8 +24,14 @@ _À éviter : variante, quand il s'agit de l'ensemble._
 
 **Variante** (variant) : une des miniatures obtenues par une même génération, quand on en demande plusieurs.
 
-**Historique** (history) : l'arbre des versions d'une miniature, dans le panneau de droite. La prochaine retouche part de la version sélectionnée.
+**Historique** (history) : les versions d'une miniature, montrées branche par branche dans le panneau de droite. La prochaine retouche part de la version sélectionnée.
 _À éviter : versions, comme nom du panneau._
+
+**Branche** (branch) : une suite de versions, de l'originale jusqu'à une version sans suite. Une miniature en a plusieurs dès qu'une retouche repart d'une ancienne version.
+
+**Embranchement** (fork) : une version d'où partent au moins deux suites.
+
+**Groupe** (group) : plusieurs étapes consécutives du même outil, réunies en une ligne dépliable de l'historique. Ce n'est qu'un affichage : chaque étape reste une version.
 
 ## La retouche
 

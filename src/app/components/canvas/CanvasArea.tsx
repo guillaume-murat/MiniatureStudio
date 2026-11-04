@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { RemoveVersionDialog } from '../iterate/RemoveVersionDialog';
 import {
   Bandage,
   Check,
@@ -163,7 +164,8 @@ async function exportFullHd(gen: Generation, t: ReturnType<typeof useT>) {
 
 function ImageActions({ gen }: { gen: Generation }) {
   const t = useT();
-  const { toggleFavorite, removeGeneration, addRef, saveToLibrary, reuse, view, safeZones, setSafeZones } = useWorkspace();
+  const [removing, setRemoving] = useState(false);
+  const { toggleFavorite, addRef, saveToLibrary, reuse, view, safeZones, setSafeZones } = useWorkspace();
   return (
     <>
       <IconTip label={gen.favorite ? t('canvas.unfavorite') : t('canvas.favorite')}>
@@ -221,11 +223,12 @@ function ImageActions({ gen }: { gen: Generation }) {
             <Copy /> {t('canvas.copyPrompt')}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" onSelect={() => removeGeneration(gen.id)}>
+          <DropdownMenuItem variant="destructive" onSelect={() => setRemoving(true)}>
             <Trash2 /> {t('canvas.deleteImage')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <RemoveVersionDialog gen={gen} open={removing} onOpenChange={setRemoving} />
     </>
   );
 }

@@ -165,6 +165,18 @@ export const en = {
   versions: {
     hint: 'Click a version to go back to it: the next edit starts from it.',
     first: 'Each edit of this image will add a version here.',
+    branches: '{n} branches',
+    branchesOpen: 'See the {n} branches leaving this version',
+    branchCount: 'Versions: {n}',
+    branchShown: 'Branch shown',
+    remove: 'Delete this version',
+    removeOne: 'Delete this version?',
+    removeWithNext: 'Delete this version and what follows it?',
+    removeOriginal: 'Delete this whole thumbnail?',
+    removeCount: 'Versions deleted: {n}. This can’t be undone.',
+    groupName: '{step} × {n}',
+    unfold: 'Unfold the {step} steps',
+    fold: 'Fold the {step} steps',
     steps: {
       generate: 'Generation',
       import: 'Imported image',
