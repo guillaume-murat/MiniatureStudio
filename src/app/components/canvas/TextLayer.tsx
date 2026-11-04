@@ -314,7 +314,7 @@ export function TextToolbar({ kind }: { kind: 'text' | 'arrow' }) {
   const patch = (p: Partial<Omit<TextBlock, 'id' | 'kind'>>) => block && update(block.id, p);
 
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-t bg-background px-2 py-1.5">
+    <div className="flex flex-wrap items-center gap-1.5">
       {kind === 'text' ? (
         <Button size="sm" variant="outline" onClick={() => addBlock('text')}>
           <Plus /> {t('text.add')}

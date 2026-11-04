@@ -154,7 +154,7 @@ export function ReframeToolbar() {
   const ready = !isIdentity(value) && (!byZone || isZone(zone));
 
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-2 border-t bg-background px-2 py-1.5">
+    <div className="flex flex-wrap items-center gap-2">
       <ToggleGroup type="single" size="sm" variant="outline" value={target} onValueChange={(v) => v && setTarget(v as typeof target)}>
         <ToggleGroupItem value="image" className="px-2.5 text-xs">
           {t('reframe.wholeImage')}

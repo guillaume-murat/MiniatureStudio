@@ -181,17 +181,16 @@ export const fr: Dict = {
     },
   },
   iterate: {
-    title: 'Itérer',
+    title: 'Historique',
     instruction: 'Prompter une retouche',
     suggestions: 'Suggestions',
     editPlaceholder: 'Ex. : visage plus surpris, ajoute une flèche rouge vers l’ordinateur…',
     regionPlaceholder: 'Que faut-il changer dans la zone sélectionnée ?',
     regionActive: 'Retouche de zone — seule la zone sélectionnée sera modifiée',
     send: 'Appliquer',
-    versions: 'Versions',
+    versions: 'Historique',
     noImage: 'Générez ou sélectionnez une image pour itérer dessus.',
     original: 'Originale',
-    quick: 'Outils',
     quickEdits: {
       emotion: 'Rends l’expression du visage beaucoup plus intense',
       contrast: 'Augmente le contraste et la saturation, fais ressortir le sujet',
@@ -395,6 +394,7 @@ export const fr: Dict = {
     generic: 'Le fournisseur a renvoyé une erreur.',
     vertexLocal: 'Vertex AI ne fonctionne qu’en local : ouvrez l’app macOS NanoThumbnail ou lancez npm run dev.',
   },
+  tools: { text: 'Texte', arrow: 'Flèche', mask: 'Zone', reframe: 'Recadrer' },
   commands: {
     placeholder: 'Tapez une commande…',
     empty: 'Aucun résultat',

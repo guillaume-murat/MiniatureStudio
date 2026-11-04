@@ -30,7 +30,7 @@ import { ImageMenu } from '../ImageMenu';
 import { SafeZones } from './SafeZones';
 import { MaskLayer, type MaskTool } from './MaskLayer';
 import { ViewSwitcher } from './ViewSwitcher';
-import { EditBar } from './EditBar';
+import { EditBar, EditBarShell } from './EditBar';
 import { ChannelPreview } from './ChannelPreview';
 import { TextOverlay, TextToolbar } from './TextLayer';
 import { ReframeToolbar, ReframeView } from './ReframeLayer';
@@ -244,8 +244,7 @@ export function CanvasArea() {
   // Blurred while Nano Banana works (BlockingJobOverlay locks the studio); failed calls stay readable.
   const busy = runningJobs(ws.jobs).length > 0;
   const failed = ws.jobs.filter((j) => j.status === 'failed');
-  // Text, arrow and reframe don't take an instruction: their controls come instead.
-  const showBar = !!gen && ws.view === 'image' && ws.tool !== 'reframe' && !isLayerTool(ws.tool);
+  const onImage = !!gen && ws.view === 'image';
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col bg-canvas">
@@ -256,7 +255,7 @@ export function CanvasArea() {
 
       <div className="relative flex min-h-0 flex-1 flex-col">
         {/* Body. On desktop it keeps clear of the edit bar, floating below it. */}
-        <div className={cn('relative min-h-0 flex-1 transition-[filter] duration-300', showBar && 'lg:mb-28', busy && 'pointer-events-none blur-md')}>
+        <div className={cn('relative min-h-0 flex-1 transition-[filter] duration-300', onImage && (isLayerTool(ws.tool) ? 'lg:mb-36' : 'lg:mb-28'), busy && 'pointer-events-none blur-md')}>
           {ws.view === 'compare' ? (
             <CompareView />
           ) : ws.view === 'feed' && gen ? (
@@ -315,7 +314,18 @@ export function CanvasArea() {
           )}
         </div>
 
-        {showBar && <EditBar gen={gen} instruction={instruction} onInstruction={setInstruction} />}
+        {/* Text, arrow and reframe don't take an instruction: their controls come instead. */}
+        {onImage && (
+          <EditBarShell>
+            {isLayerTool(ws.tool) ? (
+              <TextToolbar kind={ws.tool} />
+            ) : ws.tool === 'reframe' ? (
+              <ReframeToolbar />
+            ) : (
+              <EditBar gen={gen} instruction={instruction} onInstruction={setInstruction} />
+            )}
+          </EditBarShell>
+        )}
       </div>
 
       {/* The active tool's controls, under the image. */}
@@ -359,9 +369,6 @@ export function CanvasArea() {
           </Tooltip>
         </div>
       )}
-
-      {isLayerTool(ws.tool) && ws.view === 'image' && gen && <TextToolbar kind={ws.tool} />}
-      {ws.tool === 'reframe' && ws.view === 'image' && gen && <ReframeToolbar />}
     </div>
   );
 }

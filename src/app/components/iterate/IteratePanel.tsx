@@ -6,7 +6,6 @@ import {
   GitBranch,
   ImageUp,
   Maximize2,
-  Paintbrush,
   Sparkles,
   SquareDashedMousePointer,
   Type,
@@ -14,9 +13,6 @@ import {
 } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import { Section } from '../Section';
-import { Toggle } from '../ui/toggle';
-import { Kbd } from '../ui/kbd';
-import { COMMANDS, isAvailable } from '../../commands';
 import { useBlobUrl } from '../../hooks/use-blob-url';
 import { selectedGeneration, useWorkspace } from '../../stores/workspace';
 import { rootOf, treeLines, versionTree } from '../../lib/versions';
@@ -95,40 +91,7 @@ function VersionRow({
   );
 }
 
-/** The image tools (they work on the canvas), first in the edits panel. */
-function EditTools({ onUse }: { onUse?: () => void }) {
-  const t = useT();
-  const ws = useWorkspace();
-  const gen = useWorkspace(selectedGeneration);
-  // Mobile: the tools work on the canvas, in another tab.
-  const use = (action: () => void) => () => {
-    action();
-    onUse?.();
-  };
-  const tools = COMMANDS.filter((c) => c.group === 'tool');
-  return (
-    <>
-      <div className="mb-2 grid gap-1.5">
-        {tools.map((c) => (
-          <Toggle
-            key={c.id}
-            variant="outline"
-            size="sm"
-            pressed={c.active?.(ws) ?? false}
-            disabled={!isAvailable(c, ws)}
-            onPressedChange={use(() => c.run(useWorkspace.getState()))}
-            className="justify-start gap-2 px-2.5 text-xs"
-          >
-            <c.icon /> <span className="truncate">{t(c.label(ws))}</span>
-            <Kbd className="ml-auto hidden sm:inline-flex">{c.key.toUpperCase()}</Kbd>
-          </Toggle>
-        ))}
-      </div>
-    </>
-  );
-}
-
-function EditTab({ gen, onToolUsed }: { gen: Generation; onToolUsed?: () => void }) {
+function HistoryTab({ gen }: { gen: Generation }) {
   const t = useT();
   const { generations, select } = useWorkspace();
   const root = rootOf(generations, gen.id) ?? gen;
@@ -153,17 +116,12 @@ function EditTab({ gen, onToolUsed }: { gen: Generation; onToolUsed?: () => void
             ))}
           </div>
         </Section>
-
-        <Section title={t('iterate.quick')}>
-          <EditTools onUse={onToolUsed} />
-        </Section>
       </div>
     </ScrollArea>
   );
 }
 
-/** `onToolUsed` fires once a tool is chosen (mobile: jump back to the image, where it works). */
-export function IteratePanel({ onToolUsed }: { onToolUsed?: () => void }) {
+export function IteratePanel() {
   const t = useT();
   const gen = useWorkspace(selectedGeneration);
 
@@ -171,5 +129,5 @@ export function IteratePanel({ onToolUsed }: { onToolUsed?: () => void }) {
     return <div className="flex h-full items-center justify-center p-8 text-center text-sm text-muted-foreground">{t('iterate.noImage')}</div>;
   }
 
-  return <EditTab gen={gen} onToolUsed={onToolUsed} />;
+  return <HistoryTab gen={gen} />;
 }

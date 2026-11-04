@@ -1,6 +1,6 @@
 /**
  * The studio's single-letter commands: the keyboard shortcuts (App.tsx), the
- * command palette and the edits panel's tools all come from this list, so a
+ * command palette and the edit bar's tools all come from this list, so a
  * letter, a label or a condition can't differ between them.
  */
 import { ArrowUpRight, Crop, Paintbrush, PanelsTopLeft, ScanLine, Tv, Type, type LucideIcon } from 'lucide-react';
@@ -14,9 +14,11 @@ export interface Command {
   /** Its letter, lowercase (shown uppercase). One letter per command. */
   key: string;
   icon: LucideIcon;
-  /** Views and overlays, or the image tools (also listed in the edits panel). */
+  /** Views and overlays, or the image tools (also listed in the edit bar). */
   group: 'view' | 'tool';
   label: (ws: Workspace) => TKey;
+  /** An image tool's name in the edit bar. */
+  shortLabel?: TKey;
   /** Works on the selected image: unavailable without one. */
   needsImage: boolean;
   /** Shown as pressed while on. */
@@ -46,6 +48,7 @@ export const COMMANDS: Command[] = [
     icon: Type,
     group: 'tool',
     label: () => 'canvas.textTool',
+    shortLabel: 'tools.text',
     needsImage: true,
     active: (ws) => ws.tool === 'text',
     run: (ws) => toggleTool(ws, 'text'),
@@ -56,6 +59,7 @@ export const COMMANDS: Command[] = [
     icon: ArrowUpRight,
     group: 'tool',
     label: () => 'arrow.addTool',
+    shortLabel: 'tools.arrow',
     needsImage: true,
     active: (ws) => ws.tool === 'arrow',
     run: (ws) => toggleTool(ws, 'arrow'),
@@ -66,6 +70,7 @@ export const COMMANDS: Command[] = [
     icon: Paintbrush,
     group: 'tool',
     label: () => 'canvas.maskTool',
+    shortLabel: 'tools.mask',
     needsImage: true,
     active: (ws) => ws.tool === 'mask',
     run: (ws) => toggleTool(ws, 'mask'),
@@ -76,6 +81,7 @@ export const COMMANDS: Command[] = [
     icon: Crop,
     group: 'tool',
     label: () => 'canvas.reframeTool',
+    shortLabel: 'tools.reframe',
     needsImage: true,
     active: (ws) => ws.tool === 'reframe',
     run: (ws) => toggleTool(ws, 'reframe'),

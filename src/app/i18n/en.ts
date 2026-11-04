@@ -179,17 +179,16 @@ export const en = {
     },
   },
   iterate: {
-    title: 'Iterate',
+    title: 'History',
     instruction: 'Prompt an edit',
     suggestions: 'Suggestions',
     editPlaceholder: 'e.g. make the face more surprised, add a red arrow pointing at the laptop…',
     regionPlaceholder: 'What should change in the selected area?',
     regionActive: 'Area edit — only the selected area will change',
     send: 'Apply',
-    versions: 'Versions',
+    versions: 'History',
     noImage: 'Generate or select an image to iterate on it.',
     original: 'Original',
-    quick: 'Tools',
     quickEdits: {
       emotion: 'Make the facial expression much more intense',
       contrast: 'Increase contrast and colour saturation, make the subject pop',
@@ -393,6 +392,7 @@ export const en = {
     generic: 'The provider returned an error.',
     vertexLocal: 'Vertex AI only works locally: open the NanoThumbnail macOS app or run npm run dev.',
   },
+  tools: { text: 'Text', arrow: 'Arrow', mask: 'Area', reframe: 'Reframe' },
   commands: {
     placeholder: 'Type a command…',
     empty: 'No results',

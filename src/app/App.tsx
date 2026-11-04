@@ -87,7 +87,7 @@ export default function App() {
         ui.dialog === 'commands' ? ui.close() : ui.open('commands');
       } else if (!mod && !isTyping(e.target) && !useUI.getState().dialog) {
         const ws = useWorkspace.getState();
-        // Letters (any case) come from the command list, shared with the palette and the edits panel.
+        // Letters (any case) come from the command list, shared with the palette and the edit bar.
         if (e.key.length === 1) runShortcut(e.key);
         else if (e.key === 'Escape' && ws.tool) ws.setTool(null);
         else if ((e.key === 'Delete' || e.key === 'Backspace') && isLayerTool(ws.tool)) {
@@ -148,7 +148,7 @@ export default function App() {
                 <Filmstrip />
               </div>
               <div className={cn('absolute inset-0', mobileTab !== 'iterate' && 'invisible')}>
-                <IteratePanel onToolUsed={() => setMobileTab('canvas')} />
+                <IteratePanel />
               </div>
             </div>
             <nav className="grid grid-cols-3 border-t bg-sidebar pb-[env(safe-area-inset-bottom)]">

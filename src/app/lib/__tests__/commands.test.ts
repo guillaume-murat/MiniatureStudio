@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { COMMANDS } from '../../commands';
+import { translate } from '../../i18n';
 
 describe('commands', () => {
   it('gives each command its own single lowercase letter', () => {
@@ -11,5 +12,11 @@ describe('commands', () => {
   it('binds the letters documented in CLAUDE.md', () => {
     // ⌘↵, ⌘K, Esc and Delete stay in App.tsx: they aren't single letters.
     expect(COMMANDS.map((c) => c.key).sort()).toEqual(['a', 'c', 'm', 'p', 'r', 't', 'z']);
+  });
+
+  it('gives each image tool a short label for the edit bar', () => {
+    const short = (lang: 'fr' | 'en') => COMMANDS.filter((c) => c.group === 'tool').map((c) => translate(lang, c.shortLabel!));
+    expect(short('fr')).toEqual(['Texte', 'Flèche', 'Zone', 'Recadrer']);
+    expect(short('en')).toEqual(['Text', 'Arrow', 'Area', 'Reframe']);
   });
 });
