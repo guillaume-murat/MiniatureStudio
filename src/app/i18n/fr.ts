@@ -184,6 +184,7 @@ export const fr: Dict = {
     title: 'Historique',
     instruction: 'Prompter une retouche',
     suggestions: 'Suggestions',
+    moveBar: 'Déplacer la barre (double-clic : la remettre à sa place)',
     editPlaceholder: 'Ex. : visage plus surpris, ajoute une flèche rouge vers l’ordinateur…',
     regionPlaceholder: 'Que faut-il changer dans la zone sélectionnée ?',
     regionActive: 'Retouche de zone — seule la zone sélectionnée sera modifiée',

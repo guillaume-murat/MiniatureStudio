@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { VERTEX_GCLOUD } from '../lib/providers';
+import { parseBarOffset, type BarOffset } from '../lib/editBar';
 import { outputRatio } from '../lib/prompt';
 import type { OutputRatio, GenerationParams, ModelId, OutputFormat, Provider, Resolution, SafetyLevel } from '../lib/types';
 
@@ -20,6 +21,8 @@ interface SettingsState {
   count: 1 | 2 | 4;
   theme: Theme;
   lang: Lang;
+  /** Where the edit bar was moved to on this device; null at its default place. */
+  editBarOffset: BarOffset | null;
 
   set: (patch: Partial<Omit<SettingsState, 'set' | 'setKey' | 'params' | 'apiKey'>>) => void;
   setKey: (provider: Provider, key: string) => void;
@@ -104,12 +107,13 @@ function load() {
     count: ([1, 2, 4].includes(prefs.count) ? prefs.count : 1) as 1 | 2 | 4,
     theme: (['light', 'dark', 'system'].includes(prefs.theme) ? prefs.theme : 'system') as Theme,
     lang: detectLang(),
+    editBarOffset: parseBarOffset(prefs.editBarOffset),
   };
 }
 
 function persistPrefs(s: SettingsState): void {
-  const { provider, keyPersistence, model, aspectRatio, resolution, format, safety, count, theme } = s;
-  safeSet(local, PREFS_KEY, JSON.stringify({ provider, keyPersistence, model, aspectRatio, resolution, format, safety, count, theme }));
+  const { provider, keyPersistence, model, aspectRatio, resolution, format, safety, count, theme, editBarOffset } = s;
+  safeSet(local, PREFS_KEY, JSON.stringify({ provider, keyPersistence, model, aspectRatio, resolution, format, safety, count, theme, editBarOffset }));
   safeSet(local, 'nano_lang', s.lang);
 }
 

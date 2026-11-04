@@ -1,5 +1,5 @@
-import { useRef, useState, type ReactNode } from 'react';
-import { ArrowUp, ChevronUp, Eye, Lightbulb, Loader2, SquareDashedMousePointer } from 'lucide-react';
+import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { ArrowUp, ChevronUp, Eye, GripVertical, Lightbulb, Loader2, SquareDashedMousePointer } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Kbd } from '../ui/kbd';
 import { Textarea } from '../ui/textarea';
@@ -9,7 +9,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { EditPromptDialog } from '../dialogs/EditPromptDialog';
 import { runningJobs } from './BlockingJob';
 import { COMMANDS, isAvailable } from '../../commands';
+import { usePinch } from '../../hooks/use-pinch';
+import { useSettings } from '../../stores/settings';
 import { useWorkspace } from '../../stores/workspace';
+import { clampBarOffset, type BarOffset, type Size } from '../../lib/editBar';
 import { useT, type TKey } from '../../i18n';
 import type { Generation } from '../../lib/types';
 
@@ -17,10 +20,72 @@ const SUGGESTIONS = ['emotion', 'contrast', 'background', 'zoom', 'text', 'noTex
 
 const TOOLS = COMMANDS.filter((c) => c.group === 'tool');
 
-/** Floating below the image on desktop, with room kept for it by the canvas; under it on mobile. */
-export function EditBarShell({ children }: { children: ReactNode }) {
+/**
+ * On desktop it floats below the image, with room kept for it by the canvas, and its
+ * handle moves it around `area`, the space it floats in; under the image on mobile.
+ */
+export function EditBarShell({ area, children }: { area: Size; children: ReactNode }) {
+  const t = useT();
+  const saved = useSettings((s) => s.editBarOffset);
+  const set = useSettings((s) => s.set);
+  const ref = useRef<HTMLDivElement>(null);
+  const [bar, setBar] = useState({ width: 0, height: 0 });
+  const [moved, setMoved] = useState<BarOffset | null>(null);
+  const grab = useRef<{ pointerX: number; pointerY: number; from: BarOffset; to?: BarOffset } | null>(null);
+  const offset = clampBarOffset(moved ?? saved, area, bar);
+
+  // Before painting, so that a bar at its limit never shows past it.
+  useLayoutEffect(() => {
+    const el = ref.current!;
+    // Its whole box, padding included, unlike useElementSize.
+    const measure = () => setBar({ width: el.offsetWidth, height: el.offsetHeight });
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // A pinch over the bar does nothing, rather than zooming the whole page.
+  usePinch(ref, { onZoom: () => {} });
+
+  const drop = () => {
+    const to = grab.current?.to;
+    grab.current = null;
+    if (to) set({ editBarOffset: to });
+    setMoved(null);
+  };
+
   return (
-    <div className="@container shrink-0 border-t bg-background p-2 lg:absolute lg:bottom-2 lg:left-1/2 lg:z-10 lg:w-[min(42rem,calc(100%-1.5rem))] lg:-translate-x-1/2 lg:rounded-xl lg:border lg:shadow-lg">
+    <div
+      ref={ref}
+      style={{ '--bar-x': `${offset.x}px`, '--bar-y': `${offset.y}px` } as CSSProperties}
+      className="@container shrink-0 border-t bg-background p-2 lg:absolute lg:bottom-2 lg:left-1/2 lg:z-10 lg:w-[min(42rem,calc(100%-1.5rem))] lg:translate-x-[calc(var(--bar-x)-50%)] lg:translate-y-(--bar-y) lg:rounded-xl lg:border lg:pl-5 lg:shadow-lg"
+    >
+      <button
+        type="button"
+        aria-label={t('iterate.moveBar')}
+        title={t('iterate.moveBar')}
+        className="absolute inset-y-0 left-0 hidden w-5 cursor-grab touch-none items-center justify-center rounded-l-xl text-muted-foreground hover:bg-accent active:cursor-grabbing lg:flex"
+        onPointerDown={(e) => {
+          if (e.button !== 0) return;
+          e.currentTarget.setPointerCapture(e.pointerId);
+          grab.current = { pointerX: e.clientX, pointerY: e.clientY, from: offset };
+        }}
+        onPointerMove={(e) => {
+          const g = grab.current;
+          if (!g) return;
+          // The button came up where we couldn't see it: the bar must not follow the pointer.
+          if (e.buttons === 0) return drop();
+          g.to = clampBarOffset({ x: g.from.x + e.clientX - g.pointerX, y: g.from.y + e.clientY - g.pointerY }, area, bar);
+          setMoved(g.to);
+        }}
+        onPointerUp={drop}
+        onPointerCancel={drop}
+        onLostPointerCapture={drop}
+        onDoubleClick={() => set({ editBarOffset: null })}
+      >
+        <GripVertical className="size-3.5" />
+      </button>
       {children}
     </div>
   );

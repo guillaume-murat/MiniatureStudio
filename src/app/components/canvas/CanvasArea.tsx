@@ -240,6 +240,7 @@ export function CanvasArea() {
   const [brushSize, setBrushSize] = useState(0.05);
   const [clearSignal, setClearSignal] = useState(0);
   const [instruction, setInstruction] = useState('');
+  const [areaRef, area] = useElementSize<HTMLDivElement>();
   const running = ws.jobs.filter((j) => j.status === 'running' && j.kind === 'generate').length;
   // Blurred while Nano Banana works (BlockingJobOverlay locks the studio); failed calls stay readable.
   const busy = runningJobs(ws.jobs).length > 0;
@@ -298,7 +299,7 @@ export function CanvasArea() {
         <ViewSwitcher />
       </div>
 
-      <div className="relative flex min-h-0 flex-1 flex-col">
+      <div ref={areaRef} className="relative flex min-h-0 flex-1 flex-col">
         {/* Body. On desktop it keeps clear of the edit bar, floating below it. */}
         <div className={cn('relative min-h-0 flex-1 transition-[filter] duration-300', onImage && (ws.tool === 'mask' ? 'lg:mb-38' : isLayerTool(ws.tool) ? 'lg:mb-36' : 'lg:mb-28'), busy && 'pointer-events-none blur-md')}>
           {ws.view === 'compare' ? (
@@ -361,7 +362,7 @@ export function CanvasArea() {
 
         {/* Text, arrow and reframe don't take an instruction: their controls come instead. */}
         {onImage && (
-          <EditBarShell>
+          <EditBarShell area={area}>
             {isLayerTool(ws.tool) ? (
               <TextToolbar kind={ws.tool} />
             ) : ws.tool === 'reframe' ? (
