@@ -14,12 +14,13 @@ const MODEL_NAMES: Record<ModelId, TKey> = {
 };
 
 function SentImage({ blob, label, position }: { blob: Blob; label: string; position: number }) {
+  const t = useT();
   const url = useBlobUrl(blob);
   return (
     <li className="flex items-center gap-2">
       <img src={url} alt="" className="h-7 w-12 shrink-0 rounded border object-cover" />
       <span className="min-w-0">
-        <span className="font-medium text-foreground">Image {position}</span> · {label}
+        <span className="font-medium text-foreground">{t('editPrompt.imageNumber', { n: position })}</span> · {label}
       </span>
     </li>
   );
@@ -32,11 +33,20 @@ export function EditPromptEye({ instruction }: { instruction: string }) {
   const previewEdit = useWorkspace((s) => s.previewEdit);
   const [open, setOpen] = useState(false);
   const [preview, setPreview] = useState<EditPreview | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
+    setFailed(false);
     if (!open) return setPreview(null);
     let current = true;
-    void previewEdit(instruction).then((result) => current && setPreview(result));
+    previewEdit(instruction).then(
+      (result) => current && setPreview(result),
+      () => {
+        if (!current) return;
+        setPreview(null);
+        setFailed(true);
+      },
+    );
     return () => {
       current = false;
     };
@@ -44,11 +54,12 @@ export function EditPromptEye({ instruction }: { instruction: string }) {
 
   return (
     <PromptEye title={t('editPrompt.title')} side="top" onOpenChange={setOpen}>
+      {failed && <p className="font-sans">{t('editPrompt.unavailable')}</p>}
       {preview && (
         <div className="space-y-2 font-sans">
           <p>{preview.region ? t('editPrompt.areaPainted') : t('editPrompt.areaWhole')}</p>
           <p>
-            {t('editPrompt.model')} : {t(MODEL_NAMES[preview.params.model])} · {preview.params.resolution} · {imagePrice(preview.params.model, preview.params.resolution, lang)}
+            {t('editPrompt.model', { name: t(MODEL_NAMES[preview.params.model]) })} · {preview.params.resolution} · {imagePrice(preview.params.model, preview.params.resolution, lang)}
           </p>
           <div className="space-y-1">
             <p className="font-medium text-foreground">{t('editPrompt.images', { n: preview.images.length })}</p>

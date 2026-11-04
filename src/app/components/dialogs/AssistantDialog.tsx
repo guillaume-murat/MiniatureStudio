@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ArrowRight, Check, ChevronLeft, ChevronRight, Loader2, Plus, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
@@ -10,11 +10,12 @@ import { Field } from '../Section';
 import { PromptCode } from '../brief/PromptCode';
 import { useBlobUrl } from '../../hooks/use-blob-url';
 import { useUI } from '../../stores/ui';
-import { useWorkspace } from '../../stores/workspace';
+import { useWorkspace, type ConceptPreview } from '../../stores/workspace';
 import { useSettings } from '../../stores/settings';
 import { conceptIdea, conceptPoints, conceptsPrompt, suggestConcepts, type Concept, type ConceptsInput } from '../../lib/ai';
 import { conceptStyles, findStyle } from '../../lib/styles';
 import { explainError } from '../../lib/errors';
+import { isAbort } from '../../lib/providers';
 import { useT } from '../../i18n';
 import { cn } from '../../lib/utils';
 
@@ -25,7 +26,7 @@ function ConceptImage({ blob, name, onOpen }: { blob?: Blob; name: string; onOpe
   const vertical = useSettings((s) => s.aspectRatio === '9:16');
   if (!url) return <div className={cn('w-full animate-pulse rounded-md bg-muted', vertical ? 'aspect-[9/16]' : 'aspect-video')} />;
   return (
-    <button type="button" onClick={onOpen} aria-label={`${t('assistant.enlarge')} : ${name}`} className="cursor-zoom-in overflow-hidden rounded-md border transition-opacity hover:opacity-90">
+    <button type="button" onClick={onOpen} aria-label={t('assistant.enlarge', { name })} className="cursor-zoom-in overflow-hidden rounded-md border transition-opacity hover:opacity-90">
       <img src={url} alt="" className="w-full" />
     </button>
   );
@@ -105,10 +106,11 @@ export function AssistantDialog() {
   const [concepts, setConcepts] = useState<Concept[]>([]);
   const [busy, setBusy] = useState(false);
   const [withImages, setWithImages] = useState(false);
-  /** By concept: a blob, null while it is generated. A concept without an entry has no preview. */
-  const [images, setImages] = useState<Record<number, Blob | null>>({});
+  /** By concept: its preview, null while it is generated. A concept without an entry has no preview. */
+  const [images, setImages] = useState<Record<number, ConceptPreview | null>>({});
   // The results of an earlier run must not land on newer concepts.
   const runId = useRef(0);
+  const previews = useRef<AbortController | null>(null);
   /** By concept: how many copies of its image joined the project. */
   const [added, setAdded] = useState<Record<number, number>>({});
   const [viewing, setViewing] = useState<number | null>(null);
@@ -118,15 +120,21 @@ export function AssistantDialog() {
     styles: conceptStyles(customStyles),
   };
 
-  async function preview(concept: Concept, index: number, id: number) {
-    const done = (update: (all: Record<number, Blob | null>) => Record<number, Blob | null>) => {
+  // Closing the window stops the previews still running: nobody is waiting for them.
+  useEffect(() => {
+    if (!open) previews.current?.abort();
+  }, [open]);
+
+  async function preview(concept: Concept, index: number, id: number, signal: AbortSignal) {
+    const done = (update: (all: Record<number, ConceptPreview | null>) => Record<number, ConceptPreview | null>) => {
       if (id === runId.current) setImages(update);
     };
     try {
-      const blob = await previewConcept(concept);
-      done((all) => ({ ...all, [index]: blob }));
+      const image = await previewConcept(concept, signal);
+      done((all) => ({ ...all, [index]: image }));
     } catch (error) {
       done(({ [index]: _, ...others }) => others);
+      if (isAbort(error)) return;
       const info = explainError(error);
       toast.error(t(info.key), { description: info.message });
     }
@@ -165,7 +173,7 @@ export function AssistantDialog() {
     );
   };
   const ready = concepts.flatMap((concept, index) => {
-    const blob = images[index];
+    const blob = images[index]?.blob;
     return blob ? [{ index, blob, concept }] : [];
   });
 
@@ -177,6 +185,9 @@ export function AssistantDialog() {
     setBusy(true);
     try {
       const id = ++runId.current;
+      previews.current?.abort();
+      const controller = new AbortController();
+      previews.current = controller;
       setImages({});
       setAdded({});
       setViewing(null);
@@ -184,7 +195,7 @@ export function AssistantDialog() {
       setConcepts(result);
       if (withImages) {
         setImages(Object.fromEntries(result.map((_, i) => [i, null])));
-        result.forEach((concept, i) => void preview(concept, i, id));
+        result.forEach((concept, i) => void preview(concept, i, id, controller.signal));
       }
     } catch (error) {
       const info = explainError(error);
@@ -241,7 +252,7 @@ export function AssistantDialog() {
               const style = findStyle(c.styleId, customStyles);
               return (
                 <div key={i} className="flex flex-col gap-2 rounded-lg border bg-card p-3">
-                  {i in images && <ConceptImage blob={images[i] ?? undefined} name={c.name} onOpen={() => setViewing(i)} />}
+                  {i in images && <ConceptImage blob={images[i]?.blob} name={c.name} onOpen={() => setViewing(i)} />}
                   <p className="font-medium">{c.name}</p>
                   {style && <Badge variant="secondary" className="w-fit">{style.name[lang]}</Badge>}
                   <ul className="list-disc space-y-1 pl-4 text-sm text-muted-foreground">

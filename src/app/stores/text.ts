@@ -13,7 +13,6 @@ interface TextState {
   remove: (id: string) => void;
   select: (id: string | null) => void;
   clear: () => void;
-  /** Reopens the blocks saved on a text version. */
 }
 
 export const useText = create<TextState>((set, get) => ({

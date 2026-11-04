@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { ArrowUp, ChevronUp, GripVertical, Lightbulb, Loader2, SquareDashedMousePointer } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '../ui/button';
 import { Kbd } from '../ui/kbd';
 import { Textarea } from '../ui/textarea';
@@ -13,6 +14,7 @@ import { usePinch } from '../../hooks/use-pinch';
 import { useSettings } from '../../stores/settings';
 import { useWorkspace } from '../../stores/workspace';
 import { clampBarOffset, type BarOffset, type Size } from '../../lib/editBar';
+import { explainError } from '../../lib/errors';
 import { useT, type TKey } from '../../i18n';
 import type { Generation } from '../../lib/types';
 
@@ -145,10 +147,18 @@ export function EditBar({
   // The overlay only stops the pointer: Enter and Tab would still reach the bar during a call.
   const locked = runningJobs(jobs).length > 0;
 
-  const submit = () => {
+  const submit = async () => {
     if (locked || !instruction.trim()) return;
-    edit(instruction);
+    // Emptied at once, so that a second Enter can't pay for it twice; back if nothing came of it.
     onInstruction('');
+    try {
+      const outcomes = await edit(instruction);
+      if (outcomes.some((o) => o.error !== undefined)) onInstruction(instruction);
+    } catch (error) {
+      onInstruction(instruction);
+      const info = explainError(error);
+      toast.error(t(info.key), { description: info.message });
+    }
   };
 
   return (
@@ -161,7 +171,7 @@ export function EditBar({
         onChange={(e) => onInstruction(e.target.value)}
         onKeyDown={(e) => {
           // The global Esc ignores a field being typed in, where the area tool is mostly used.
-          if (e.key === 'Escape') setTool(null);
+          if (e.key === 'Escape' && !locked) setTool(null);
           if (e.key === 'Enter' && (e.metaKey || e.ctrlKey || !e.shiftKey)) {
             e.preventDefault();
             e.stopPropagation();

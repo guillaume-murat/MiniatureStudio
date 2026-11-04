@@ -179,7 +179,7 @@ const TITLE_ZONES: Record<Exclude<TitleZone, 'none'>, string> = {
   'bottom-right': 'en bas à droite, juste au-dessus du coin où s’affiche la durée,',
 };
 
-/** The headline is added afterwards with the studio's text tool, where it stays editable and exact. */
+/** The headline is added afterwards with the studio's text tool. */
 export function titleZoneLine(zone: TitleZone = DEFAULT_PROMPT_OPTIONS.titleZone): string {
   return zone === 'none' ? '' : `Un court texte sera ajouté ensuite : garde une zone dégagée et épurée ${TITLE_ZONES[zone]} pour l’accueillir.`;
 }

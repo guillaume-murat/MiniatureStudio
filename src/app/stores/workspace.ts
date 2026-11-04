@@ -70,6 +70,13 @@ export interface Job {
 export type Brief = ProjectInputs['brief'];
 
 /** What an action produced, for callers that need it (the agent bridge); the UI ignores it. */
+/** A concept's image, with what was actually sent to make it: the brief may change before it is added. */
+export interface ConceptPreview {
+  blob: Blob;
+  fullPrompt: string;
+  params: GenerationParams;
+}
+
 export interface Outcome<T> {
   value?: T;
   error?: string;
@@ -129,9 +136,9 @@ interface WorkspaceState {
   // generation
   generate: () => Promise<Outcome<Generation>[]>;
   /** A cheap image of a concept with the current brief's settings, not saved until `addConceptImage`. */
-  previewConcept: (concept: Concept) => Promise<Blob>;
+  previewConcept: (concept: Concept, signal?: AbortSignal) => Promise<ConceptPreview>;
   /** That image as a new thumbnail of the open project. */
-  addConceptImage: (concept: Concept, blob: Blob) => Promise<Generation>;
+  addConceptImage: (concept: Concept, preview: ConceptPreview) => Promise<Generation>;
   /** The prompt `generate` would send for the current brief, without sending anything. */
   previewPrompt: () => string;
   /** The lines the selected people and the references add to that prompt, numbered as sent. */
@@ -144,14 +151,11 @@ interface WorkspaceState {
   edit: (instruction: string, opts?: { mask?: HTMLCanvasElement }) => Promise<Outcome<Generation>[]>;
   /** Healing brush: the painted area is repainted to erase seams and hard edges. */
   heal: () => Promise<Outcome<Generation> | null>;
-  /** The selected version copied as a new, independent thumbnail (its text layer included). */
+  /** The selected version copied as a new, independent thumbnail. */
   duplicateSelected: () => Promise<Generation | null>;
   /** « Lisser »: the painted area is refilled from its surroundings, locally, without AI. */
   smooth: () => Promise<Generation | null>;
-  /**
-   * AI upscale: a 2K version of the image with finer detail, saved as a new
-   * version. Editable text is kept as text and redrawn on the upscaled image.
-   */
+  /** AI upscale: a 2K version of the image with finer detail, saved as a new version. */
   upscale: (id: string) => Promise<Outcome<Generation> | null>;
   dismissJob: (id: string) => void;
   cancelAll: () => void;
@@ -742,23 +746,21 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     },
 
     // Not a job: it would lock the studio behind the dialog, and nothing joins the project yet.
-    previewConcept: async (concept) => {
+    previewConcept: async (concept, signal) => {
       const settings = useSettings.getState();
-      return generateImage({
-        prompt: generationRequest(concept).fullPrompt,
-        images: [],
-        params: conceptParams(),
-        apiKey: settings.apiKey(),
-      });
+      const { fullPrompt } = generationRequest(concept);
+      const params = conceptParams();
+      const blob = await generateImage({ prompt: fullPrompt, images: [], params, apiKey: settings.apiKey(), signal });
+      return { blob, fullPrompt, params };
     },
 
-    addConceptImage: (concept, blob) =>
+    addConceptImage: (concept, { blob, fullPrompt, params }) =>
       saveVersion({
         kind: 'generate',
         prompt: concept.brief,
-        fullPrompt: generationRequest(concept).fullPrompt,
+        fullPrompt,
         videoTitle: get().brief.videoTitle || undefined,
-        params: conceptParams(),
+        params,
         // Its own Blob: each click is an independent thumbnail, as with `duplicateSelected`.
         blob: new Blob([blob], { type: blob.type }),
       }),
@@ -894,7 +896,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       const gen = get().generations.find((g) => g.id === id);
       await db.deleteGeneration(id);
       const generations = get().generations.filter((g) => g.id !== id);
-      // Versions can share a Blob in memory (a copy, a text version's base): only free it once unused.
+      // Versions can share a Blob in memory: only free it once unused.
       if (gen && !generations.some((g) => g.blob === gen.blob)) revoke(gen.blob);
       set({
         generations,

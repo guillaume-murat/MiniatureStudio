@@ -34,10 +34,6 @@ export interface Generation {
   prompt: string;
   /** Exact prompt sent to the model, kept for transparency and reuse. */
   fullPrompt: string;
-  /**
-   * Editable text added with the text tool: `blob` is `base` with the blocks drawn
-   * on it. Dropped when the user merges the text into the image.
-   */
   videoTitle?: string;
   params: GenerationParams;
   blob: Blob;
