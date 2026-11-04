@@ -101,7 +101,7 @@ Quand un outil est actif, ses réglages s'affichent dans cette même barre. Le p
 ### Comportements
 
 - **Position** : par défaut, centrée en bas de la zone centrale. Elle est stockée dans les préférences de l'appareil (`nt_prefs`), donc commune à tous les projets et absente des sauvegardes. La réinitialisation de l'app l'efface déjà avec ces préférences.
-- **Place de l'image** : le calcul d'ajustement de l'image et du recadrage réserve une hauteur fixe pour la barre, qu'elle ait été déplacée ou non, afin que l'image ne change pas de taille pendant un déplacement. La barre peut donc couvrir l'image uniquement si le créateur l'y a déplacée.
+- **Place de l'image** : le calcul d'ajustement de l'image et du recadrage réserve une hauteur pour la barre, qu'elle ait été déplacée ou non, afin que l'image ne change pas de taille pendant un déplacement. Cette hauteur dépend de l'outil actif, plus grande pour les outils Texte et Zone : l'image peut donc changer de taille quand un outil s'ouvre ou se ferme. La barre peut couvrir l'image si le créateur l'y a déplacée, mais aussi sans déplacement, quand une longue instruction fait grandir le champ vers le haut ou quand une barre d'outil passe à la ligne dans une fenêtre étroite.
 - **Déplacement** : par la poignée seule, avec les événements de pointeur. La barre capte ses propres événements (peinture, pincement, molette) et ne les transmet pas à l'image.
 - **Instruction** : son texte non envoyé vit hors de la barre, pour survivre à un changement de vue ou d'outil, mais il n'est pas sauvegardé au rechargement. L'envoi passe toujours par l'action de retouche existante.
 - **Outil actif** : Texte, Flèche et Recadrer remplacent la barre entière. Zone garde le champ et remplace la ligne des outils par ses réglages. Esc reste le moyen de quitter un outil.
@@ -152,8 +152,8 @@ Quand un outil est actif, ses réglages s'affichent dans cette même barre. Le p
 
 ## Further Notes
 
-- **Décisions prises sans validation explicite**, faute de tour de questions supplémentaire : l'adaptation mobile, la position des actions sur l'image (en haut à droite), la mémorisation de la position par appareil et la réservation de hauteur fixe pour l'image. Elles restent à relire.
+- **Décisions validées** : l'adaptation mobile, la position des actions sur l'image (en haut à droite), la mémorisation de la position par appareil et la réservation de hauteur pour l'image sont acquises depuis la validation de la barre dans l'app.
 - **Conséquence de la vue Image seule** : il faudra revenir à cette vue pour lancer une retouche depuis un aperçu.
-- **Conséquence de la réservation** : l'image perd de la hauteur en permanence, environ 90 px à confirmer une fois la barre construite, plus la marge. Les rangées de réglages supprimées en rendent une partie quand un outil est actif.
+- **Conséquence de la réservation** : l'image perd de la hauteur en permanence : 112 px sans outil de Texte ou de Zone, jusqu'à 152 px avec.
 - **Largeur** : la barre Texte contient beaucoup de réglages. Dans une zone centrale étroite, elle doit passer à la ligne, sans déborder.
 - **Lien avec le travail récent** : ces changements annulent les titres et l'emplacement ajoutés récemment dans le panneau de droite, encore non commités. Il vaut mieux commiter cet état d'abord, pour que cette évolution ait son propre diff.
