@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { ArrowUp, ChevronUp, GripVertical, Lightbulb, Loader2, SquareDashedMousePointer } from 'lucide-react';
+import { ArrowUp, ChevronUp, GripVertical, History, Lightbulb, Loader2, SquareDashedMousePointer, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
 import { Kbd } from '../ui/kbd';
@@ -8,12 +8,14 @@ import { Toggle } from '../ui/toggle';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { EditPromptEye } from './EditPromptEye';
+import { RevertDialog } from '../iterate/VersionDialogs';
 import { runningJobs } from './BlockingJob';
 import { COMMANDS, isAvailable } from '../../commands';
 import { usePinch } from '../../hooks/use-pinch';
 import { useSettings } from '../../stores/settings';
-import { useWorkspace } from '../../stores/workspace';
+import { useWorkspace, viewingOlder } from '../../stores/workspace';
 import { clampBarOffset, type BarOffset, type Size } from '../../lib/editBar';
+import { historyOf } from '../../lib/versions';
 import { explainError } from '../../lib/errors';
 import { useT, type TKey } from '../../i18n';
 import type { Generation } from '../../lib/types';
@@ -92,6 +94,28 @@ export function EditBarShell({ area, children }: { area: Size; children: ReactNo
   );
 }
 
+/** An older version is only looked at: the way on from it, in place of what edits it. */
+function OlderVersionNotice({ gen }: { gen: Generation }) {
+  const t = useT();
+  const { generations, jobs, select } = useWorkspace();
+  const [reverting, setReverting] = useState(false);
+  const running = runningJobs(jobs).length > 0;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 text-xs">
+      <span className="mr-auto flex items-center gap-1.5 font-medium">
+        <History className="size-3.5 text-muted-foreground" /> {t('versions.older')}
+      </span>
+      <Button variant="outline" size="xs" disabled={running} onClick={() => select(historyOf(generations, gen.id).at(-1)!.id)}>
+        {t('versions.showLatest')}
+      </Button>
+      <Button size="xs" disabled={running} onClick={() => setReverting(true)}>
+        <Undo2 /> {t('versions.revert')}
+      </Button>
+      <RevertDialog gen={gen} open={reverting} onOpenChange={setReverting} />
+    </div>
+  );
+}
+
 /** The image tools, with their names as long as the bar has room for them. */
 function ToolButtons({ locked }: { locked: boolean }) {
   const t = useT();
@@ -145,7 +169,9 @@ export function EditBar({
   const editing = jobs.some((j) => j.status === 'running' && j.parentId === gen.id);
   const region = tool === 'mask' && hasMask;
   // The overlay only stops the pointer: Enter and Tab would still reach the bar during a call.
-  const locked = runningJobs(jobs).length > 0;
+  const running = runningJobs(jobs).length > 0;
+  const older = useWorkspace(viewingOlder);
+  const locked = running || older;
 
   const submit = async () => {
     if (locked || !instruction.trim()) return;
@@ -163,6 +189,7 @@ export function EditBar({
 
   return (
     <div className="space-y-1.5">
+      {older && <OlderVersionNotice gen={gen} />}
       <Textarea
         ref={field}
         rows={1}
@@ -171,7 +198,7 @@ export function EditBar({
         onChange={(e) => onInstruction(e.target.value)}
         onKeyDown={(e) => {
           // The global Esc ignores a field being typed in, where the area tool is mostly used.
-          if (e.key === 'Escape' && !locked) setTool(null);
+          if (e.key === 'Escape' && !running) setTool(null);
           if (e.key === 'Enter' && (e.metaKey || e.ctrlKey || !e.shiftKey)) {
             e.preventDefault();
             e.stopPropagation();

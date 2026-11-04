@@ -7,6 +7,7 @@ import { useWorkspace, MAX_PERSONAS, type Brief, type Outcome, type ViewMode } f
 import { useSettings } from '../stores/settings';
 import { allStyles, conceptStyles, findStyle } from '../lib/styles';
 import { suggestConcepts } from '../lib/ai';
+import { isOlderVersion } from '../lib/versions';
 import { blobToBase64, exportForYouTube, extensionFor, FULL_HD_SIZE, normaliseUpload, prepareReference, rectMask, YOUTUBE_SIZE } from '../lib/images';
 import { extractVideoId, fetchThumbnail, fetchVideoTitle } from '../lib/youtube';
 import { listProjects } from '../lib/db';
@@ -263,6 +264,7 @@ export const handlers: Record<string, Handler> = {
     const instruction = str(args, 'instruction')?.trim();
     if (!instruction) throw new ToolError('"instruction" is required');
     const gen = target(args);
+    if (isOlderVersion(ws().generations, gen.id)) throw new ToolError(`"${gen.id}" is an older version: only the latest version of a thumbnail can be edited. Only the user can go back to an older one.`);
     requireKey();
     if (gen.id !== ws().selectedId) ws().select(gen.id);
     const region = args.region as { x: number; y: number; width: number; height: number } | undefined;
@@ -286,7 +288,7 @@ export const handlers: Record<string, Handler> = {
         fullPrompt: gen.fullPrompt,
         videoTitle: gen.videoTitle,
         lineage: ancestors,
-        children: ws().generations.filter((g) => g.parentId === gen.id).map((g) => g.id),
+        next: ws().generations.find((g) => g.parentId === gen.id)?.id,
       },
       [await preview(gen.blob, full)],
     );

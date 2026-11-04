@@ -26,7 +26,6 @@ import { isLayerTool, useWorkspace } from './stores/workspace';
 import { useText } from './stores/text';
 import { useUI } from './stores/ui';
 import { useSettings } from './stores/settings';
-import { migrateFromV1 } from './lib/migrate';
 import { requestPersistence } from './lib/db';
 import { useT } from './i18n';
 import { cn } from './lib/utils';
@@ -47,12 +46,10 @@ export default function App() {
 
   useEffect(() => {
     (async () => {
-      const migrated = await migrateFromV1();
       await useWorkspace.getState().init();
       requestPersistence();
       // After init: agent tools act on a loaded workspace.
       useAgent.getState().init();
-      if (migrated?.imported) toast.success(`v1 → v2 : ${migrated.imported} ✓`);
       if (!useSettings.getState().apiKey()) useUI.getState().open('settings');
     })();
 

@@ -1,6 +1,6 @@
 import { deleteDB, openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { putWithBlobRetry } from './blobStore';
-import type { BrandKit, CustomStyle, Generation, LibraryImage, Persona, Project } from './types';
+import type { CustomStyle, Generation, LibraryImage, Persona, Project } from './types';
 
 interface NanoDB extends DBSchema {
   generations: {
@@ -11,29 +11,28 @@ interface NanoDB extends DBSchema {
   projects: { key: string; value: Project; indexes: { byUpdatedAt: number } };
   personas: { key: string; value: Persona };
   library: { key: string; value: LibraryImage };
-  brand: { key: string; value: BrandKit };
   styles: { key: string; value: CustomStyle };
 }
 
-const DB_NAME = 'NanoThumbnail';
-const DB_VERSION = 2;
+/** A new name for the single line of versions: the data of the earlier databases is left as it is, unread. */
+const DB_NAME = 'NanoThumbnailStudio';
+const DB_VERSION = 1;
+/** Only ever deleted, by the app's reset. */
+const OLD_DB_NAMES = ['NanoThumbnail', 'NanoThumbnailDB'];
 
 let dbPromise: Promise<IDBPDatabase<NanoDB>> | null = null;
 
 export function getDB(): Promise<IDBPDatabase<NanoDB>> {
   dbPromise ??= openDB<NanoDB>(DB_NAME, DB_VERSION, {
-    upgrade(db, oldVersion) {
-      if (oldVersion < 1) {
-        const generations = db.createObjectStore('generations', { keyPath: 'id' });
-        generations.createIndex('byProject', 'projectId');
-        generations.createIndex('byCreatedAt', 'createdAt');
-        const projects = db.createObjectStore('projects', { keyPath: 'id' });
-        projects.createIndex('byUpdatedAt', 'updatedAt');
-        db.createObjectStore('personas', { keyPath: 'id' });
-        db.createObjectStore('library', { keyPath: 'id' });
-        db.createObjectStore('brand', { keyPath: 'id' });
-      }
-      if (oldVersion < 2) db.createObjectStore('styles', { keyPath: 'id' });
+    upgrade(db) {
+      const generations = db.createObjectStore('generations', { keyPath: 'id' });
+      generations.createIndex('byProject', 'projectId');
+      generations.createIndex('byCreatedAt', 'createdAt');
+      const projects = db.createObjectStore('projects', { keyPath: 'id' });
+      projects.createIndex('byUpdatedAt', 'updatedAt');
+      db.createObjectStore('personas', { keyPath: 'id' });
+      db.createObjectStore('library', { keyPath: 'id' });
+      db.createObjectStore('styles', { keyPath: 'id' });
     },
     // Another tab is deleting the database: let it.
     blocking(_version, _blocked, event) {
@@ -45,8 +44,7 @@ export function getDB(): Promise<IDBPDatabase<NanoDB>> {
 }
 
 /**
- * Deletes every database of the app, the v1 one included (it would be imported
- * again otherwise). The caller reloads the page: until then nothing can write,
+ * Deletes every database of the app, the earlier ones included. The caller reloads the page: until then nothing can write,
  * so a pending save cannot bring the database back.
  */
 export async function deleteAllData(): Promise<void> {
@@ -54,7 +52,7 @@ export async function deleteAllData(): Promise<void> {
   dbPromise = new Promise(() => {});
   try {
     (await open)?.close();
-    await Promise.all([deleteDB(DB_NAME), deleteDB('NanoThumbnailDB')]);
+    await Promise.all([DB_NAME, ...OLD_DB_NAMES].map((name) => deleteDB(name)));
   } catch (error) {
     dbPromise = null;
     throw error;
@@ -151,11 +149,6 @@ export async function putLibraryImage(image: LibraryImage): Promise<void> {
 }
 export async function deleteLibraryImage(id: string): Promise<void> {
   await (await getDB()).delete('library', id);
-}
-
-/** The brand kit shared by all projects before each project had its own (read once per older project). */
-export async function getBrandKit(): Promise<BrandKit | undefined> {
-  return (await getDB()).get('brand', 'default');
 }
 
 /** Ask the browser not to evict our data under storage pressure. */

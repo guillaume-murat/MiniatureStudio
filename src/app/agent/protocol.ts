@@ -193,7 +193,7 @@ export const STUDIO_TOOLS: ToolDef[] = [
   {
     name: 'edit_thumbnail',
     description:
-      'Edit a thumbnail with a plain instruction ("make the background red", "remove the text"). Everything else is kept. With region, only that rectangle changes. Creates a new thumbnail linked to its parent.',
+      'Edit the latest version of a thumbnail with a plain instruction ("make the background red", "remove the text"). Everything else is kept. An older version can be viewed, not edited. With region, only that rectangle changes. Creates a new version linked to its parent.',
     inputSchema: obj(
       {
         id,

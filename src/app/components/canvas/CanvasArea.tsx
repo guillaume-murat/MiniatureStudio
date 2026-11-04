@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { RemoveVersionDialog } from '../iterate/RemoveVersionDialog';
+import { RemoveThumbnailDialog } from '../iterate/VersionDialogs';
 import {
   Bandage,
   Check,
@@ -43,7 +43,7 @@ import { useBlobUrl } from '../../hooks/use-blob-url';
 import { fit, useElementSize } from '../../hooks/use-element-size';
 import { usePinch } from '../../hooks/use-pinch';
 import { clampPan, NO_ZOOM, zoomAt, type ViewZoom } from '../../lib/zoom';
-import { isLayerTool, selectedGeneration, useWorkspace, type Job } from '../../stores/workspace';
+import { isLayerTool, selectedGeneration, useWorkspace, viewingOlder, type Job } from '../../stores/workspace';
 import { useReframe } from '../../stores/reframe';
 import { downloadForYouTube } from '../../lib/exporting';
 import { downloadBlob, extensionFor, FULL_HD_SIZE } from '../../lib/images';
@@ -100,7 +100,7 @@ function EmptyState({ running }: { running: number }) {
 }
 
 function ImageView({ gen, tool, brushSize, clearSignal }: { gen: Generation; tool: MaskTool; brushSize: number; clearSignal: number }) {
-  const { safeZones, tool: active, duplicateSelected } = useWorkspace();
+  const { safeZones, tool: active } = useWorkspace();
   const url = useBlobUrl(gen.blob);
   const [ref, box] = useElementSize<HTMLDivElement>();
   const size = fit(gen.width / gen.height, { width: box.width - 48, height: box.height - 48 });
@@ -131,7 +131,7 @@ function ImageView({ gen, tool, brushSize, clearSignal }: { gen: Generation; too
         </Button>
       )}
       {size.width > 0 && (
-        <ImageMenu onDuplicate={() => void duplicateSelected()} disabled={!!active}>
+        <ImageMenu gen={gen} disabled={!!active}>
         <div
           className="relative overflow-hidden rounded-lg shadow-lg ring-1 ring-border"
           style={{ ...size, transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.z})` }}
@@ -147,12 +147,14 @@ function ImageView({ gen, tool, brushSize, clearSignal }: { gen: Generation; too
   );
 }
 
+const coversFullHd = (gen: Generation) => gen.width >= FULL_HD_SIZE.width && gen.height >= FULL_HD_SIZE.height;
+
 /**
  * 1920×1080 export. Smaller images are first upscaled by the model (a new
  * version, so it is visible and paid once), then exported from that version.
  */
 async function exportFullHd(gen: Generation, t: ReturnType<typeof useT>) {
-  if (gen.width >= FULL_HD_SIZE.width && gen.height >= FULL_HD_SIZE.height) return downloadForYouTube(gen, FULL_HD_SIZE);
+  if (coversFullHd(gen)) return downloadForYouTube(gen, FULL_HD_SIZE);
   toast.info(t('export.upscaleStarted'));
   const outcome = await useWorkspace.getState().upscale(gen.id);
   if (outcome?.value) return downloadForYouTube(outcome.value, FULL_HD_SIZE, gen);
@@ -166,6 +168,8 @@ function ImageActions({ gen }: { gen: Generation }) {
   const t = useT();
   const [removing, setRemoving] = useState(false);
   const { toggleFavorite, addRef, saveToLibrary, reuse, view, safeZones, setSafeZones } = useWorkspace();
+  // Upscaling makes a version: not from an older one.
+  const fullHdBlocked = useWorkspace(viewingOlder) && !coversFullHd(gen);
   return (
     <>
       <IconTip label={gen.favorite ? t('canvas.unfavorite') : t('canvas.favorite')}>
@@ -201,8 +205,12 @@ function ImageActions({ gen }: { gen: Generation }) {
           <DropdownMenuItem onSelect={() => downloadForYouTube(gen)}>
             <SquarePlay /> {t('canvas.exportYouTube')}
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => exportFullHd(gen, t)}>
-            <SquarePlay /> {t('canvas.exportFullHd')}
+          <DropdownMenuItem disabled={fullHdBlocked} onSelect={() => exportFullHd(gen, t)}>
+            <SquarePlay />
+            <span>
+              {t('canvas.exportFullHd')}
+              {fullHdBlocked && <span className="block text-xs">{t('versions.olderNoUpscale')}</span>}
+            </span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => addRef(gen.blob, 'history')}>
@@ -228,7 +236,7 @@ function ImageActions({ gen }: { gen: Generation }) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <RemoveVersionDialog gen={gen} open={removing} onOpenChange={setRemoving} />
+      <RemoveThumbnailDialog gen={gen} open={removing} onOpenChange={setRemoving} />
     </>
   );
 }
@@ -304,7 +312,7 @@ export function CanvasArea() {
 
       <div ref={areaRef} className="relative flex min-h-0 flex-1 flex-col">
         {/* Body. On desktop it keeps clear of the edit bar, floating below it. */}
-        <div className={cn('relative min-h-0 flex-1 transition-[filter] duration-300', onImage && (ws.tool === 'mask' ? 'lg:mb-38' : isLayerTool(ws.tool) ? 'lg:mb-36' : 'lg:mb-28'), busy && 'pointer-events-none blur-md')}>
+        <div className={cn('relative min-h-0 flex-1 transition-[filter] duration-300', onImage && (ws.tool === 'mask' ? 'lg:mb-38' : isLayerTool(ws.tool) || viewingOlder(ws) ? 'lg:mb-36' : 'lg:mb-28'), busy && 'pointer-events-none blur-md')}>
           {ws.view === 'compare' ? (
             <CompareView />
           ) : ws.view === 'feed' && gen ? (

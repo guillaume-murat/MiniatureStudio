@@ -11,7 +11,6 @@ import {
   buildRegionEditPrompt,
   buildHealPrompt,
   buildUpscalePrompt,
-  outputRatio,
   type ImageRole,
 } from '../lib/prompt';
 import { composeReframe, composeZoneReframe, isIdentity, isZone, type Point, type Reframe } from '../lib/reframe';
@@ -20,7 +19,7 @@ import { dimensions, highlightRegion, mergeWithMask, normaliseUpload, prepareRef
 import { explainError } from '../lib/errors';
 import { smoothRegion } from '../lib/smooth';
 import { randomSeed } from '../lib/channel';
-import { newGeneration, type VersionInput, selectionAfterRemoval, versionsRemovedWith } from '../lib/versions';
+import { newGeneration, type VersionInput, historyOf, isOlderVersion, versionsAfter } from '../lib/versions';
 import { findStyle, optionsForNewStyle, resolveOptions } from '../lib/styles';
 import type { Concept } from '../lib/ai';
 import { rankThumbnails, type Ranking } from '../lib/ai';
@@ -154,8 +153,8 @@ interface WorkspaceState {
   edit: (instruction: string, opts?: { mask?: HTMLCanvasElement }) => Promise<Outcome<Generation>[]>;
   /** Healing brush: the painted area is repainted to erase seams and hard edges. */
   heal: () => Promise<Outcome<Generation> | null>;
-  /** The selected version copied as a new, independent thumbnail. */
-  duplicateSelected: () => Promise<Generation | null>;
+  /** A version copied as a new, independent thumbnail, shown at once. */
+  duplicateVersion: (id: string) => Promise<Generation | null>;
   /** « Lisser »: the painted area is refilled from its surroundings, locally, without AI. */
   smooth: () => Promise<Generation | null>;
   /** AI upscale: a 2K version of the image with finer detail, saved as a new version. */
@@ -167,8 +166,10 @@ interface WorkspaceState {
   togglePick: (id: string) => void;
   clearPicks: () => void;
   toggleFavorite: (id: string) => Promise<void>;
-  /** Removes a version and everything made from it, unless a call to the model is running. */
-  removeVersion: (id: string) => Promise<void>;
+  /** Deletes the versions after this one, which becomes the latest again, unless a call to the model is running. */
+  revertTo: (id: string) => Promise<void>;
+  /** Deletes a thumbnail with all its versions, under the same condition. */
+  removeThumbnail: (id: string) => Promise<void>;
   reuse: (gen: Generation) => void;
   rankPicked: () => Promise<Outcome<Ranking>>;
   // assets
@@ -237,13 +238,6 @@ function snapshotMask(painted: HTMLCanvasElement): HTMLCanvasElement {
 
 const EMPTY_BRAND: BrandKit = { id: 'default', channelName: '', colors: [], updatedAt: 0 };
 
-/** Brand kits saved before the merge into the brief panel also had a font, a style profile… and a separate feed picture. */
-function migrateBrand(saved: (BrandKit & { avatar?: Blob }) | undefined): BrandKit {
-  if (!saved) return EMPTY_BRAND;
-  const { channelName = '', colors = [], banner, handle, subscribers, videoCount, description, verified, updatedAt = 0 } = saved;
-  return { id: 'default', channelName, colors, logo: saved.avatar ?? saved.logo, banner, handle, subscribers, videoCount, description, verified, updatedAt };
-}
-
 /** The name a new project gets, in either language: a project still named so was never renamed. */
 const DEFAULT_PROJECT_NAMES = new Set([translate('fr', 'topbar.untitled'), translate('en', 'topbar.untitled')]);
 
@@ -260,14 +254,11 @@ function currentOutput(): ProjectOutput {
 
 // ─── Per-project brief panel ─────────────────────────────
 // The brief panel (brief, references, channel, people, output) is saved in its
-// project, shortly after each change. Projects made before that take the values
-// that were shared then (the last brief, brand kit, people and output settings).
+// project, shortly after each change.
 
 /** The project whose inputs are on screen; null while switching (nothing gets saved then). */
 let loadedProjectId: string | null = null;
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
-/** Output settings at launch, for projects made before they were per project. */
-let legacyOutput: ProjectOutput = DEFAULT_OUTPUT;
 /** Every person record known, to spot the one just created (it joins the open project's selection). */
 let knownPersonaIds = new Set<string>();
 
@@ -290,16 +281,6 @@ async function flushSave() {
   const updated = { ...project, inputs };
   useWorkspace.setState({ projects: useWorkspace.getState().projects.map((p) => (p.id === updated.id ? updated : p)) });
   await db.putProject(updated);
-}
-
-/** The brief that was shared by all projects (kept in localStorage before projects had their own). */
-function loadBrief(): Brief {
-  try {
-    const saved = JSON.parse(localStorage.getItem('nt_brief') || '{}');
-    return { videoTitle: saved.videoTitle ?? '', brief: saved.brief ?? '', styleId: saved.styleId ?? '' };
-  } catch {
-    return EMPTY_BRIEF;
-  }
 }
 
 function reportError(error: unknown, set: (s: Partial<WorkspaceState>) => void): string {
@@ -349,19 +330,54 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
    * Saved, then shown when its project is still open, unless `show` is false
    * (the later results of a batch).
    */
+  /** The versions a new one is being saved after. */
+  const savingAfter = new Set<string>();
+
   async function saveVersion(input: Omit<VersionInput, 'width' | 'height'> & { show?: boolean }): Promise<Generation> {
     const { show = true, ...rest } = input;
-    const { width, height } = await dimensions(input.blob);
-    const generation = newGeneration({ projectId: get().projectId, ...rest, width, height }, db.uid('g_'), Date.now());
-    await db.putGeneration(generation);
-    if (generation.projectId !== get().projectId) return generation;
-    set({ generations: [generation, ...get().generations] });
-    if (show) {
-      // Leaves the current tool, so the result shows without a mask or text draft over it.
-      get().select(generation.id);
-      if (get().view === 'compare' || get().view === 'channel') set({ view: 'image' });
+    // The one rule of the history: nothing follows an older version. Claimed before
+    // waiting, as two saves at once (agents call in parallel) would both pass otherwise.
+    const parentId = input.parent?.id;
+    if (parentId && (isOlderVersion(get().generations, parentId) || savingAfter.has(parentId))) throw new Error(t('versions.olderLocked'));
+    if (parentId) savingAfter.add(parentId);
+    try {
+      const { width, height } = await dimensions(input.blob);
+      const generation = newGeneration({ projectId: get().projectId, ...rest, width, height }, db.uid('g_'), Date.now());
+      await db.putGeneration(generation);
+      if (generation.projectId !== get().projectId) return generation;
+      set({ generations: [generation, ...get().generations] });
+      if (show) {
+        // Leaves the current tool, so the result shows without a mask or text draft over it.
+        get().select(generation.id);
+        if (get().view === 'compare' || get().view === 'channel') set({ view: 'image' });
+      }
+      return generation;
+    } finally {
+      if (parentId) savingAfter.delete(parentId);
     }
-    return generation;
+  }
+
+  /** Deletes versions at once, and everything that pointed at them. */
+  async function dropVersions(removed: Generation[], selectAfter: (remaining: Generation[], selectedId: string | null) => string | null) {
+    await db.deleteGenerations(removed.map((g) => g.id));
+    // Read after the wait: a favourite may have changed meanwhile.
+    const { generations, selectedId, pickedIds, ranking, projects, projectId } = get();
+    const isRemoved = (id?: string) => removed.some((g) => g.id === id);
+    const remaining = generations.filter((g) => !isRemoved(g.id));
+    // Versions can share a Blob in memory: only free it once unused.
+    for (const { blob } of removed) if (!remaining.some((g) => g.blob === blob)) revoke(blob);
+    const next = selectAfter(remaining, selectedId);
+    if (next !== selectedId) get().setTool(null);
+    set({
+      generations: remaining,
+      selectedId: next,
+      pickedIds: pickedIds.filter((picked) => !isRemoved(picked)),
+      // It was made from a set that no longer exists.
+      ranking: pickedIds.some(isRemoved) ? null : ranking,
+    });
+    // A channel page's video goes with its title, or the next image placed there would inherit it.
+    const slots = projects.find((p) => p.id === projectId)?.channelPage?.slots;
+    if (slots?.some((slot) => isRemoved(slot?.id))) await get().updateChannelPage({ slots: slots.map((slot) => (isRemoved(slot?.id) ? {} : slot)) });
   }
 
   /** Saves a changed version in place (favourite). */
@@ -468,6 +484,9 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     /** Shared by the jobs of one batch: the first result to arrive gets shown. */
     batch: { shown: boolean };
   }): Promise<Outcome<Generation>> {
+    // Before paying for an image that couldn't be saved.
+    const parentId = opts.parent?.id;
+    if (parentId && (isOlderVersion(get().generations, parentId) || get().jobs.some((j) => j.status === 'running' && j.parentId === parentId))) return { error: t('versions.olderLocked') };
     // The project it was started in, even if the user opens another one meanwhile.
     const projectId = opts.parent?.projectId ?? get().projectId;
     const job: Job = {
@@ -549,7 +568,6 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     init: async () => {
       const [projects, library, personas, customStyles] = await Promise.all([db.listProjects(), db.listLibrary(), db.listPersonas(), db.listStyles()]);
       set({ customStyles });
-      legacyOutput = currentOutput();
       knownPersonaIds = new Set(personas.map((p) => p.id));
       set({ projects, library, personas });
       let lastId: string | null = null;
@@ -580,22 +598,15 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     },
 
     openProject: async (id) => {
+      const inputs = get().projects.find((p) => p.id === id)?.inputs;
+      if (!inputs) return;
       await flushSave();
       loadedProjectId = null;
       get().generations.forEach((g) => revoke(g.blob));
       const generations = await db.listGenerations(id);
       const { personas } = get();
-      const project = get().projects.find((p) => p.id === id);
-      const inputs: ProjectInputs = project?.inputs ?? {
-        brief: loadBrief(),
-        refs: [],
-        brand: migrateBrand(await db.getBrandKit()),
-        // Everyone was in the thumbnails by default.
-        people: personas.slice(0, MAX_PERSONAS).map((p) => p.id),
-        output: legacyOutput,
-      };
       get().setTool(null);
-      useSettings.getState().set({ ...inputs.output, aspectRatio: outputRatio(inputs.output.aspectRatio) });
+      useSettings.getState().set(inputs.output);
       set({
         projectId: id,
         generations,
@@ -609,8 +620,6 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         personaIds: inputs.people.filter((pid) => personas.some((p) => p.id === pid)).slice(0, MAX_PERSONAS),
       });
       loadedProjectId = id;
-      // An older project gets its own copy of what was shared.
-      if (!project?.inputs) scheduleSave();
       try {
         localStorage.setItem('nt_project', id);
       } catch {
@@ -710,8 +719,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       return regionEdit({ ...source, blob: patched }, mask, t('heal.done'), buildHealPrompt(promptLang()), apiKey, 'heal', 'nano-banana-2');
     },
 
-    duplicateSelected: async () => {
-      const source = selectedGeneration(get());
+    duplicateVersion: async (id) => {
+      const source = get().generations.find((g) => g.id === id);
       if (!source) return null;
       // Its own Blob: deleting one of the two must not free the other's image.
       return saveVersion({
@@ -766,7 +775,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         fullPrompt,
         videoTitle: get().brief.videoTitle || undefined,
         params,
-        // Its own Blob: each click is an independent thumbnail, as with `duplicateSelected`.
+        // Its own Blob: each click is an independent thumbnail, as with `duplicateVersion`.
         blob: new Blob([blob], { type: blob.type }),
       }),
 
@@ -897,35 +906,23 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       await replaceVersion({ ...gen, favorite: !gen.favorite });
     },
 
-    removeVersion: async (id) => {
-      // The result of a call needs the version it was made from.
+    revertTo: async (id) => {
       if (get().jobs.some((j) => j.status === 'running')) return;
-      const removed = versionsRemovedWith(get().generations, id);
+      const removed = versionsAfter(get().generations, id);
       if (!removed.length) return;
-      await db.deleteGenerations(removed.map((g) => g.id));
-      // Read after the wait: a favourite may have changed meanwhile.
-      const { generations, selectedId, pickedIds, ranking, projects, projectId } = get();
-      const isRemoved = (versionId?: string) => removed.some((g) => g.id === versionId);
-      const remaining = generations.filter((g) => !isRemoved(g.id));
-      // Versions can share a Blob in memory: only free it once unused.
-      for (const { blob } of removed) if (!remaining.some((g) => g.blob === blob)) revoke(blob);
-      const next = selectionAfterRemoval(generations, id, selectedId);
-      if (next !== selectedId) get().setTool(null);
-      set({
-        generations: remaining,
-        selectedId: next,
-        pickedIds: pickedIds.filter((picked) => !isRemoved(picked)),
-        // It was made from a set that no longer exists.
-        ranking: pickedIds.some(isRemoved) ? null : ranking,
-      });
-      // A channel page's video goes with its title, or the next image placed there would inherit it.
-      const slots = projects.find((p) => p.id === projectId)?.channelPage?.slots;
-      if (slots?.some((slot) => isRemoved(slot?.id))) await get().updateChannelPage({ slots: slots.map((slot) => (isRemoved(slot?.id) ? {} : slot)) });
+      await dropVersions(removed, () => id);
+    },
+
+    removeThumbnail: async (id) => {
+      if (get().jobs.some((j) => j.status === 'running')) return;
+      const removed = historyOf(get().generations, id);
+      if (!removed.length) return;
+      await dropVersions(removed, (remaining, selectedId) => (remaining.some((g) => g.id === selectedId) ? selectedId : (remaining[0]?.id ?? null)));
     },
 
     reuse: (gen) => {
       const s = useSettings.getState();
-      s.set({ model: gen.params.model, aspectRatio: outputRatio(gen.params.aspectRatio), resolution: gen.params.resolution });
+      s.set({ model: gen.params.model, aspectRatio: gen.params.aspectRatio, resolution: gen.params.resolution });
       if (gen.kind === 'generate' || gen.kind === 'import') get().setBrief({ brief: gen.prompt, videoTitle: gen.videoTitle ?? get().brief.videoTitle });
     },
 
@@ -991,6 +988,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     },
     setSafeZones: (on) => set({ safeZones: on }),
     setTool: (tool) => {
+      // Tools make versions: not from an older one.
+      if (tool && viewingOlder(get())) return;
       const current = get().tool;
       if (tool === current || (tool && !get().selectedId)) return;
       // Text and arrows share one layer: switching between them keeps the unapplied blocks.
@@ -1074,6 +1073,11 @@ export type Tool = 'mask' | 'text' | 'arrow' | 'reframe';
 /** The text and arrow tools edit the same layer (`stores/text.ts`), each its own kind of block. */
 export function isLayerTool(tool: Tool | null): tool is 'text' | 'arrow' {
   return tool === 'text' || tool === 'arrow';
+}
+
+/** The selected version is an older one: it can be looked at, not edited. */
+export function viewingOlder(s: Pick<WorkspaceState, 'generations' | 'selectedId'>): boolean {
+  return !!s.selectedId && isOlderVersion(s.generations, s.selectedId);
 }
 
 export function selectedGeneration(s: WorkspaceState): Generation | undefined {

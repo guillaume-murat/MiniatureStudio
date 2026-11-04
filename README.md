@@ -25,7 +25,7 @@ NanoThumbnail is a free, open-source studio to **generate, edit and test YouTube
 **Iterate**
 - **Edit bar**: floats under the image and moves with its handle (below the image on mobile). It holds the instruction, the image tools, a suggestions menu that fills the field without sending anything, and an eye that shows on hover the prompt, images and model the next edit would send.
 - **Conversational edits**: “make the face more surprised” changes only that.
-- **History**: every version is kept in a tree; click one to carry on from it, or copy it as an independent thumbnail from the right-click menu.
+- **History**: a thumbnail has one simple line of versions. Click one to see it; go back to it, which deletes the newer ones after a warning, or duplicate it as a new independent thumbnail.
 - **Area edits**: paint a mask, describe the change; the model gets the clean image plus a marked copy as a location guide, and pixels outside the mask are merged back untouched. **Smooth** refills the painted area from its surroundings, locally and instantly (for seams and lines on soft backgrounds); **AI heal** does the same, then lets the model restore texture.
 - **Text & arrows** (`T`, `A`): text blocks with Google Fonts and curved arrows (solid, open or double head, thickness, bend, colour, border, dashes, shadow), placed over the image. Applying them draws them in for good as a new version: to fix a mistake, go back to the previous one.
 - **Reframe** (`R`): move or zoom the whole image, or circle one part freehand (a person, an object) and move only that part; the AI fills only what's left empty and repaints the cut so no seam shows, everything else stays pixel-exact. The studio is locked, image blurred, while the AI works.
@@ -138,10 +138,6 @@ The app is a native window (WKWebView) around the studio. It starts a bundled lo
 | `npm run app:mac` | Build the macOS app into `macos/build/` (`app:mac:install` also copies it to `/Applications`) |
 | `npm run feed:update` | Refresh the feed preview's snapshot of YouTube videos (needs a YouTube Data API key) |
 | `npm run fonts:download` | Download the Google Fonts shipped for text blocks |
-
-## Upgrading from v1
-
-Nothing to do: on first launch, v1 history, reference library and personas are imported into the new storage (the v1 database is left untouched), and API keys are carried over.
 
 ## License
 

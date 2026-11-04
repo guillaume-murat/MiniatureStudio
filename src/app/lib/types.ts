@@ -1,10 +1,8 @@
 export type Provider = 'replicate' | 'gemini' | 'openrouter' | 'mammouth' | 'vertex';
 export type ModelId = 'nano-banana-pro' | 'nano-banana-2' | 'nano-banana-2-lite';
-/** The ratio of an existing image: older ones may be in a format the studio no longer generates, and their edits keep it. */
 /** The interface's language, which the prompts follow. */
 export type Lang = 'en' | 'fr';
 
-export type AspectRatio = '16:9' | '9:16' | '4:3' | '1:1' | '21:9';
 /** The formats a new image can have. */
 export type OutputRatio = '16:9' | '9:16';
 export type Resolution = '1K' | '2K' | '4K';
@@ -14,7 +12,7 @@ export type SafetyLevel = 'block_only_high' | 'block_medium_and_above' | 'block_
 export interface GenerationParams {
   provider: Provider;
   model: ModelId;
-  aspectRatio: AspectRatio;
+  aspectRatio: OutputRatio;
   resolution: Resolution;
   format: OutputFormat;
   safety: SafetyLevel;
@@ -51,8 +49,8 @@ export interface Project {
   name: string;
   videoTitle?: string;
   channelPage?: ChannelPage;
-  /** Everything in the brief panel, as left in this project (older projects get it on first open). */
-  inputs?: ProjectInputs;
+  /** Everything in the brief panel, as left in this project. */
+  inputs: ProjectInputs;
   createdAt: number;
   updatedAt: number;
 }

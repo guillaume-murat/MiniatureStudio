@@ -1,7 +1,9 @@
 import { strFromU8, strToU8, unzip, zip, type Unzipped, type Zippable } from 'fflate';
-import { getBrandKit, getDB, listGenerations, listLibrary, listPersonas, listProjects, listStyles } from './db';
+import { getDB, listGenerations, listLibrary, listPersonas, listProjects, listStyles } from './db';
 import { extensionFor } from './images';
-import type { BrandKit, CustomStyle, Generation, LibraryImage, Persona, Project } from './types';
+import { thumbnailsToImport } from './versions';
+import { t } from '../i18n';
+import type { CustomStyle, Generation, LibraryImage, Persona, Project } from './types';
 
 /**
  * Full local backup as a zip: `backup.json` holds all records with each Blob
@@ -9,21 +11,28 @@ import type { BrandKit, CustomStyle, Generation, LibraryImage, Persona, Project 
  */
 
 const FORMAT = 'nanothumbnail-backup';
-const VERSION = 1;
+/** 2: a thumbnail has one line of versions. Older backups may hold branches. */
+const VERSION = 2;
 
 type BlobRef = { $blob: string; type: string };
+/** A generation in a backup: its Blob replaced, its links as they were. */
+type BackupGeneration = { id: string; parentId?: string; createdAt: number };
 
 interface Manifest {
   format: typeof FORMAT;
   version: number;
   exportedAt: string;
   projects: Project[];
-  generations: unknown[];
+  generations: BackupGeneration[];
   personas: unknown[];
-  /** Absent from backups made before the style library. */
-  styles?: CustomStyle[];
+  styles: CustomStyle[];
   library: unknown[];
-  brand: unknown | null;
+}
+
+/** Why a backup can't be imported, if it can't: read before anything is written. */
+export function backupProblem(manifest: unknown): 'unknown' | 'old' | null {
+  if (!manifest || typeof manifest !== 'object' || (manifest as Manifest).format !== FORMAT) return 'unknown';
+  return (manifest as Manifest).version === VERSION ? null : 'old';
 }
 
 async function bytes(blob: Blob): Promise<Uint8Array> {
@@ -68,13 +77,12 @@ function hydrate(value: unknown, files: Unzipped): unknown {
 
 export async function exportBackup(): Promise<Blob> {
   const files: Zippable = {};
-  const [projects, generations, personas, styles, library, brand] = await Promise.all([
+  const [projects, generations, personas, styles, library] = await Promise.all([
     listProjects(),
     listGenerations(),
     listPersonas(),
     listStyles(),
     listLibrary(),
-    getBrandKit(),
   ]);
   const manifest: Manifest = {
     format: FORMAT,
@@ -82,32 +90,33 @@ export async function exportBackup(): Promise<Blob> {
     exportedAt: new Date().toISOString(),
     // Projects hold Blobs too (references, logo, banner).
     projects: await Promise.all(projects.map((p) => dehydrate(p, files, p.id))) as Project[],
-    generations: await Promise.all(generations.map((g) => dehydrate(g, files, g.id))),
+    generations: await Promise.all(generations.map((g) => dehydrate(g, files, g.id))) as BackupGeneration[],
     personas: await Promise.all(personas.map((p) => dehydrate(p, files, p.id))),
     styles,
     library: await Promise.all(library.map((l) => dehydrate(l, files, l.id))),
-    brand: brand ? await dehydrate(brand, files, 'brand') : null,
   };
   files['backup.json'] = strToU8(JSON.stringify(manifest, null, 2));
   return new Blob([(await zipAsync(files)) as BlobPart], { type: 'application/zip' });
 }
 
-/** Merges a backup into the current data (records with the same id are overwritten). */
+/** Merges a backup into the current data: records with the same id are overwritten, except thumbnails already here, left as they are. */
 export async function importBackup(file: Blob): Promise<number> {
   const files = await unzipAsync(await bytes(file));
   const raw = files['backup.json'];
-  if (!raw) throw new Error('Not a NanoThumbnail backup');
+  if (!raw) throw new Error(t('settings.backupUnknown'));
   const manifest = JSON.parse(strFromU8(raw)) as Manifest;
-  if (manifest.format !== FORMAT) throw new Error('Not a NanoThumbnail backup');
+  const problem = backupProblem(manifest);
+  if (problem) throw new Error(t(problem === 'old' ? 'settings.backupOld' : 'settings.backupUnknown'));
 
+  const here = await listGenerations();
   const db = await getDB();
-  const tx = db.transaction(['projects', 'generations', 'personas', 'styles', 'library', 'brand'], 'readwrite');
+  const tx = db.transaction(['projects', 'generations', 'personas', 'styles', 'library'], 'readwrite');
   let count = 0;
   for (const p of manifest.projects) {
     await tx.objectStore('projects').put(hydrate(p, files) as Project);
     count++;
   }
-  for (const g of manifest.generations) {
+  for (const g of thumbnailsToImport(here, manifest.generations)) {
     await tx.objectStore('generations').put(hydrate(g, files) as Generation);
     count++;
   }
@@ -115,7 +124,7 @@ export async function importBackup(file: Blob): Promise<number> {
     await tx.objectStore('personas').put(hydrate(p, files) as Persona);
     count++;
   }
-  for (const s of manifest.styles ?? []) {
+  for (const s of manifest.styles) {
     await tx.objectStore('styles').put(s);
     count++;
   }
@@ -123,7 +132,6 @@ export async function importBackup(file: Blob): Promise<number> {
     await tx.objectStore('library').put(hydrate(l, files) as LibraryImage);
     count++;
   }
-  if (manifest.brand) await tx.objectStore('brand').put(hydrate(manifest.brand, files) as BrandKit);
   await tx.done;
   return count;
 }

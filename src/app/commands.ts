@@ -4,7 +4,7 @@
  * letter, a label or a condition can't differ between them.
  */
 import { ArrowUpRight, Crop, Paintbrush, PanelsTopLeft, ScanLine, Tv, Type, type LucideIcon } from 'lucide-react';
-import { useWorkspace, type Tool } from './stores/workspace';
+import { useWorkspace, viewingOlder, type Tool } from './stores/workspace';
 import type { TKey } from './i18n';
 
 type Workspace = ReturnType<typeof useWorkspace.getState>;
@@ -89,6 +89,8 @@ export const COMMANDS: Command[] = [
 ];
 
 export function isAvailable(command: Command, ws: Workspace): boolean {
+  // Image tools make versions: not from an older one.
+  if (command.group === 'tool' && viewingOlder(ws)) return false;
   return !command.needsImage || !!ws.selectedId;
 }
 

@@ -1,4 +1,4 @@
-import type { AspectRatio } from '../../lib/types';
+import type { OutputRatio } from '../../lib/types';
 
 /**
  * Areas YouTube covers or that get lost at small sizes:
@@ -17,7 +17,7 @@ function Zone({ style, label }: { style: React.CSSProperties; label: string }) {
   );
 }
 
-export function SafeZones({ aspectRatio }: { aspectRatio: AspectRatio }) {
+export function SafeZones({ aspectRatio }: { aspectRatio: OutputRatio }) {
   if (aspectRatio === '9:16') {
     return (
       <div className="pointer-events-none absolute inset-0">

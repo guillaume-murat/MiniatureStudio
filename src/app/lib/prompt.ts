@@ -1,4 +1,4 @@
-import type { AspectRatio, Lang, OutputRatio, PromptOptions, ReferenceUse, ResolvedPromptOptions, TitleZone } from './types';
+import type { Lang, OutputRatio, PromptOptions, ReferenceUse, ResolvedPromptOptions, TitleZone } from './types';
 
 /**
  * Prompt construction for Nano Banana Pro / Nano Banana 2.
@@ -42,8 +42,8 @@ export const DEFAULT_PROMPT_OPTIONS: ResolvedPromptOptions = {
 
 export const OUTPUT_RATIOS: OutputRatio[] = ['16:9', '9:16'];
 
-/** The output format for a saved value: one the studio no longer generates falls back to 16:9. */
-export function outputRatio(ratio: AspectRatio | undefined): OutputRatio {
+/** The output format for a saved preference: anything else falls back to 16:9. */
+export function outputRatio(ratio: string | undefined): OutputRatio {
   return ratio === '9:16' ? '9:16' : '16:9';
 }
 
