@@ -11,12 +11,13 @@ import LegalLayout from '@layouts/LegalLayout.astro';
 
   <p>NanoThumbnail operates on a decentralized model ("Client-Side").</p>
 
-  <h3>API Keys (Replicate, Google Gemini, OpenRouter)</h3>
+  <h3>API Keys (Replicate, Google Gemini, OpenRouter, Mammouth)</h3>
 
   <p>
     <strong>Storage:</strong> Your API keys are stored exclusively in your browser, either in local storage (LocalStorage) or, if you choose "This session only", in session storage, which is cleared when the tab is closed.<br>
     <strong>Google Gemini:</strong> requests are sent directly from your browser to Google's API.<br>
     <strong>OpenRouter:</strong> requests are sent directly from your browser to OpenRouter's API, which routes them to Google's models.<br>
+    <strong>Mammouth:</strong> requests are sent directly from your browser to Mammouth's API, which routes them to Google's models.<br>
     <strong>Replicate:</strong> Replicate does not accept requests from web browsers, so requests (including your key, in the Authorization header) are relayed by a serverless function hosted on Netlify. This function only forwards requests to Replicate's API and returns the response; it does not store or log your key, prompts or images. Its source code is public.<br>
     <strong>No user database:</strong> NanoThumbnail has no accounts and no database.
   </p>

@@ -7,7 +7,7 @@ description: Create, edit, rank and export YouTube thumbnails by driving the Nan
 
 NanoThumbnail is a free, local-first studio that runs in the user's browser and generates thumbnails with Google's Nano Banana models, on the user's own API key. The `nanothumbnail` MCP server lets you drive it: every action shows up live in the studio, so work *with* the user, not around them.
 
-Answer in the user's language. The studio generates images without text (it leaves room for it); the user adds text and arrows afterwards with the studio's text tool.
+Answer in the user's language. The studio writes its prompts in its interface's language (French or English); write briefs and edit instructions in that language when you can. It generates images without text unless the style asks for short elements such as a badge or a number (`versus`, `tech`, `ranking`); the user adds text and arrows afterwards with the studio's text tool, which draws them into a new version for good.
 
 ## 0. Check the connection
 
@@ -40,7 +40,7 @@ Each image costs the user real API credits (more with `nano-banana-pro` and high
 
 ## 3. Rules of thumb
 
-- Text on the thumbnail: 0–4 words, never a repeat of the title — it adds to it. Suggest it to the user; they add it with the studio's text tool (images are generated without text).
+- Text on the thumbnail: 0–4 words, never a repeat of the title — it adds to it. Suggest it to the user; they add it with the studio's text tool.
 - One focal point. A face showing a clear emotion beats a busy scene. Big, close, contrasted.
 - Must read at phone size: if you can't tell what it is from a 168×94 px glance, it fails.
 - Keep the bottom-right corner free (YouTube's duration badge). `set_view` with `safeZones: true` shows it.

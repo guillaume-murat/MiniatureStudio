@@ -30,7 +30,7 @@ const fr = {
   studio: {
     eyebrow: 'Le studio',
     title: 'Tout le cycle d’une miniature, dans un seul écran',
-    subtitle: 'Brief à gauche, image au centre, itération à droite. Chaque version est gardée dans la pellicule du projet.',
+    subtitle: 'Brief à gauche, image au centre avec la barre de retouche dessous, historique à droite. Chaque version est gardée.',
   },
   gallery: {
     eyebrow: 'Galerie',
@@ -102,19 +102,19 @@ const fr = {
   extras: {
     title: 'Pensé pour aller vite',
     items: [
-      { key: 'concepts', title: 'Assistant de concepts', text: 'Donnez votre titre : trois angles vraiment différents, avec brief, texte et style, prêts à générer.' },
+      { key: 'concepts', title: 'Assistant de concepts', text: 'Donnez votre titre : trois angles vraiment différents, avec brief et style, prêts à générer, et un aperçu en image si vous le souhaitez.' },
       { key: 'commands', title: 'Tout au clavier', text: 'Palette ⌘K, ⌘↵ pour générer, P pour l’aperçu du fil, T pour le texte, A pour une flèche, R pour recadrer.' },
     ],
   },
   bento: {
     title: 'Pensé pour aller vite, avec tout ce qu’il faut autour',
     items: {
-      people: { title: 'Vos visages, fidèles', text: 'Même visage d’une image à l’autre. Jusqu’à 5 personnes par miniature, avec leurs angles et leurs expressions.' },
+      people: { title: 'Vos visages, fidèles', text: 'Même visage d’une image à l’autre. Une bibliothèque commune à vos projets, jusqu’à 5 personnes par projet, avec leurs angles et leurs expressions.' },
       brand: { title: 'Votre chaîne', text: 'Nom, logo et couleurs de marque, récupérés depuis une URL YouTube.' },
-      text: { title: 'Texte et flèches', text: 'L’IA laisse la place, vous posez texte et flèches courbées, modifiables jusqu’à la fusion.' },
+      text: { title: 'Texte et flèches', text: 'L’IA laisse la place, vous posez texte et flèches courbées. Chaque ajout devient une version : un clic pour revenir en arrière.' },
       local: { title: '100 % local', text: 'Projets, versions et visages restent dans votre navigateur. Sauvegarde zip en un clic.' },
       pwa: { title: 'Installable', text: 'Une vraie app, même hors ligne pour consulter votre bibliothèque.' },
-      keys: { title: 'Votre clé, vos règles', text: 'Replicate, Gemini ou OpenRouter, mémorisée ou juste pour la session.' },
+      keys: { title: 'Votre clé, vos règles', text: 'Replicate, Gemini, OpenRouter ou Mammouth, mémorisée ou juste pour la session.' },
     },
   },
   agents: {
@@ -148,12 +148,12 @@ const fr = {
     title: 'Prêt en 2 minutes',
     subtitle: 'NanoThumbnail utilise votre propre clé d’API : vous payez les images directement au fournisseur, sans intermédiaire.',
     steps: [
-      { title: 'Créez une clé d’API', text: 'Chez Google AI Studio (Gemini), Replicate ou OpenRouter. Quelques clics, avec votre compte Google ou GitHub.' },
+      { title: 'Créez une clé d’API', text: 'Chez Google AI Studio (Gemini), Replicate, OpenRouter ou Mammouth. Quelques clics, avec votre compte Google ou GitHub.' },
       { title: 'Collez-la dans le studio', text: 'Elle reste dans votre navigateur, mémorisée ou seulement pour la session.' },
       { title: 'Écrivez un brief, générez', text: 'Quatre variantes en une trentaine de secondes. Retouchez, comparez, exportez.' },
     ],
-    links: { gemini: 'Clé Google AI Studio', replicate: 'Clé Replicate', openrouter: 'Clé OpenRouter' },
-    cost: 'Environ 0,07 à 0,15 $ par image : 100 miniatures coûtent 7 à 15 $.',
+    links: { gemini: 'Clé Google AI Studio', replicate: 'Clé Replicate', openrouter: 'Clé OpenRouter', mammouth: 'Clé Mammouth' },
+    cost: 'Environ 0,03 à 0,24 $ par image selon le modèle et la résolution : 100 miniatures coûtent 3 à 24 $.',
   },
   maker: {
     eyebrow: 'Par un créateur, pour les créateurs',
@@ -164,13 +164,13 @@ const fr = {
   },
   pricing: {
     title: 'Payez les images, pas un abonnement',
-    subtitle: 'NanoThumbnail est gratuit. Vous réglez directement Replicate, Google ou OpenRouter, au prix coûtant.',
+    subtitle: 'NanoThumbnail est gratuit. Vous réglez directement Replicate, Google, OpenRouter ou Mammouth, au prix coûtant.',
     ours: {
       name: 'NanoThumbnail',
       price: 'Gratuit',
       unit: 'pour toujours',
-      note: 'Vous payez seulement les images, au fournisseur : environ 0,07 $ (Nano Banana 2, 1K) à 0,15 $ (Nano Banana Pro).',
-      features: ['Toutes les fonctionnalités', 'Votre clé Replicate, Gemini ou OpenRouter', 'Aucune commission', 'Données locales'],
+      note: 'Vous payez seulement les images, au fournisseur : environ 0,03 $ (Nano Banana 2 Lite) à 0,24 $ (Nano Banana Pro en 4K).',
+      features: ['Toutes les fonctionnalités', 'Votre clé Replicate, Gemini, OpenRouter ou Mammouth', 'Aucune commission', 'Données locales'],
       cta: 'Commencer',
     },
     theirs: {
@@ -186,11 +186,11 @@ const fr = {
     items: [
       {
         q: 'YouTube Studio génère déjà des miniatures. Pourquoi NanoThumbnail ?',
-        a: 'L’assistant de YouTube Studio peut vous proposer une miniature. NanoThumbnail est un atelier dédié : retouche phrase par phrase qui garde le visage intact, retouche par zone, aperçu dans le fil avec les zones de sécurité, texte et flèches modifiables, 14 styles, vos visages et vos couleurs de marque, et le choix du modèle. Les deux se complètent : vos meilleures variantes s’exportent vers «\u00a0Tester et comparer\u00a0».',
+        a: 'L’assistant de YouTube Studio peut vous proposer une miniature. NanoThumbnail est un atelier dédié : retouche phrase par phrase qui garde le visage intact, retouche par zone, aperçu dans le fil avec les zones de sécurité, texte et flèches, 14 styles et les vôtres, vos visages et vos couleurs de marque, et le choix du modèle. Les deux se complètent : vos meilleures variantes s’exportent vers «\u00a0Tester et comparer\u00a0».',
       },
       {
         q: 'C’est vraiment gratuit ?',
-        a: 'Le studio est gratuit et open source. La génération passe par votre compte Replicate, Google Gemini ou OpenRouter, que vous payez directement : quelques centimes par image selon le modèle et la résolution.',
+        a: 'Le studio est gratuit et open source. La génération passe par votre compte Replicate, Google Gemini, OpenRouter ou Mammouth, que vous payez directement : quelques centimes par image selon le modèle et la résolution.',
       },
       {
         q: 'Un agent IA comme Claude peut-il utiliser NanoThumbnail ?',
@@ -198,7 +198,7 @@ const fr = {
       },
       {
         q: 'Ma clé API est-elle en sécurité ?',
-        a: 'Elle est stockée uniquement dans votre navigateur (ou seulement pour la session). Gemini et OpenRouter sont appelés directement depuis votre navigateur. Replicate n’autorise pas ces appels : les requêtes transitent par une petite fonction Netlify qui les relaie sans rien stocker ni journaliser — le code est public.',
+        a: 'Elle est stockée uniquement dans votre navigateur (ou seulement pour la session). Gemini, OpenRouter et Mammouth sont appelés directement depuis votre navigateur. Replicate n’autorise pas ces appels : les requêtes transitent par une petite fonction Netlify qui les relaie sans rien stocker ni journaliser — le code est public.',
       },
       {
         q: 'Où sont mes images ?',
@@ -206,7 +206,7 @@ const fr = {
       },
       {
         q: 'Faut-il une carte bancaire ?',
-        a: 'Oui, chez le fournisseur : la génération d’images n’est pas incluse dans l’offre gratuite de l’API Gemini, il faut activer la facturation sur le projet Google de votre clé. Replicate facture aussi à l’usage, OpenRouter fonctionne avec des crédits prépayés. Comptez environ 0,07 à 0,15 $ par image.',
+        a: 'Oui, chez le fournisseur : la génération d’images n’est pas incluse dans l’offre gratuite de l’API Gemini, il faut activer la facturation sur le projet Google de votre clé. Replicate facture aussi à l’usage, OpenRouter fonctionne avec des crédits prépayés. Comptez environ 0,03 à 0,24 $ par image.',
       },
       {
         q: 'Combien de temps pour une miniature ?',
@@ -218,11 +218,11 @@ const fr = {
       },
       {
         q: 'Nano Banana Pro ou Nano Banana 2 ?',
-        a: 'Pro pour la qualité maximale et le rendu de texte. Nano Banana 2 pour itérer vite et moins cher. Vous pouvez changer à tout moment, même en cours de retouche.',
+        a: 'Pro pour la qualité maximale et le rendu de texte. Nano Banana 2 pour itérer vite et moins cher, sa version Lite (1K seulement) pour explorer au plus bas prix. Vous pouvez changer à tout moment, même en cours de retouche.',
       },
       {
         q: 'Puis-je utiliser les images commercialement ?',
-        a: 'En général oui, mais les conditions dépendent du fournisseur (Replicate, Google, OpenRouter). Vérifiez leurs CGU.',
+        a: 'En général oui, mais les conditions dépendent du fournisseur (Replicate, Google, OpenRouter, Mammouth). Vérifiez leurs CGU.',
       },
     ],
   },
@@ -272,7 +272,7 @@ const en: Dict = {
   studio: {
     eyebrow: 'The studio',
     title: 'A thumbnail’s whole lifecycle, on one screen',
-    subtitle: 'Brief on the left, image in the middle, iteration on the right. Every version is kept in the project filmstrip.',
+    subtitle: 'Brief on the left, image in the middle with the edit bar below it, history on the right. Every version is kept.',
   },
   gallery: {
     eyebrow: 'Gallery',
@@ -343,19 +343,19 @@ const en: Dict = {
   extras: {
     title: 'Built for speed',
     items: [
-      { key: 'concepts', title: 'Concept assistant', text: 'Give it your title: three genuinely different angles, with brief, text and style, ready to generate.' },
+      { key: 'concepts', title: 'Concept assistant', text: 'Give it your title: three genuinely different angles, with brief and style, ready to generate, plus an image preview if you want one.' },
       { key: 'commands', title: 'Keyboard-first', text: '⌘K palette, ⌘↵ to generate, P for feed preview, T for text, A for an arrow, R to reframe.' },
     ],
   },
   bento: {
     title: 'Built for speed, with everything around it',
     items: {
-      people: { title: 'Faithful faces', text: 'The same face from one image to the next. Up to 5 people per thumbnail, with their angles and expressions.' },
+      people: { title: 'Faithful faces', text: 'The same face from one image to the next. A library shared by your projects, up to 5 people per project, with their angles and expressions.' },
       brand: { title: 'Your channel', text: 'Name, logo and brand colours, fetched from a YouTube URL.' },
-      text: { title: 'Text and arrows', text: 'The AI leaves room; you add text and curved arrows, editable until you merge them.' },
+      text: { title: 'Text and arrows', text: 'The AI leaves room; you add text and curved arrows. Each addition becomes a version: one click takes you back.' },
       local: { title: '100% local', text: 'Projects, versions and faces stay in your browser. One-click zip backup.' },
       pwa: { title: 'Installable', text: 'A real app, even offline to browse your library.' },
-      keys: { title: 'Your key, your rules', text: 'Replicate, Gemini or OpenRouter, remembered or just for the session.' },
+      keys: { title: 'Your key, your rules', text: 'Replicate, Gemini, OpenRouter or Mammouth, remembered or just for the session.' },
     },
   },
   agents: {
@@ -389,12 +389,12 @@ const en: Dict = {
     title: 'Ready in 2 minutes',
     subtitle: 'NanoThumbnail runs on your own API key: you pay the provider directly for images, with no middleman.',
     steps: [
-      { title: 'Create an API key', text: 'On Google AI Studio (Gemini), Replicate or OpenRouter. A few clicks with your Google or GitHub account.' },
+      { title: 'Create an API key', text: 'On Google AI Studio (Gemini), Replicate, OpenRouter or Mammouth. A few clicks with your Google or GitHub account.' },
       { title: 'Paste it in the studio', text: 'It stays in your browser, remembered or just for the session.' },
       { title: 'Write a brief, generate', text: 'Four variants in about thirty seconds. Edit, compare, export.' },
     ],
-    links: { gemini: 'Google AI Studio key', replicate: 'Replicate key', openrouter: 'OpenRouter key' },
-    cost: 'About $0.07 to $0.15 per image: 100 thumbnails cost $7 to $15.',
+    links: { gemini: 'Google AI Studio key', replicate: 'Replicate key', openrouter: 'OpenRouter key', mammouth: 'Mammouth key' },
+    cost: 'About $0.03 to $0.24 per image depending on model and resolution: 100 thumbnails cost $3 to $24.',
   },
   maker: {
     eyebrow: 'By a creator, for creators',
@@ -405,13 +405,13 @@ const en: Dict = {
   },
   pricing: {
     title: 'Pay for images, not a subscription',
-    subtitle: 'NanoThumbnail is free. You pay Replicate, Google or OpenRouter directly, at cost.',
+    subtitle: 'NanoThumbnail is free. You pay Replicate, Google, OpenRouter or Mammouth directly, at cost.',
     ours: {
       name: 'NanoThumbnail',
       price: 'Free',
       unit: 'forever',
-      note: 'You only pay for images, to the provider: about $0.07 (Nano Banana 2, 1K) to $0.15 (Nano Banana Pro).',
-      features: ['Every feature', 'Your Replicate, Gemini or OpenRouter key', 'No markup', 'Local data'],
+      note: 'You only pay for images, to the provider: about $0.03 (Nano Banana 2 Lite) to $0.24 (Nano Banana Pro at 4K).',
+      features: ['Every feature', 'Your Replicate, Gemini, OpenRouter or Mammouth key', 'No markup', 'Local data'],
       cta: 'Get started',
     },
     theirs: {
@@ -427,11 +427,11 @@ const en: Dict = {
     items: [
       {
         q: 'YouTube Studio already generates thumbnails. Why NanoThumbnail?',
-        a: 'YouTube Studio’s assistant can suggest a thumbnail. NanoThumbnail is a dedicated workshop: sentence-by-sentence edits that keep the face intact, area edits, feed preview with safe zones, editable text and arrows, 14 styles, your faces and brand colours, and your choice of model. The two work together: your best variants export straight to Test & Compare.',
+        a: 'YouTube Studio’s assistant can suggest a thumbnail. NanoThumbnail is a dedicated workshop: sentence-by-sentence edits that keep the face intact, area edits, feed preview with safe zones, text and arrows, 14 styles plus your own, your faces and brand colours, and your choice of model. The two work together: your best variants export straight to Test & Compare.',
       },
       {
         q: 'Is it really free?',
-        a: 'The studio is free and open source. Generation runs on your Replicate, Google Gemini or OpenRouter account, which you pay directly: a few cents per image depending on model and resolution.',
+        a: 'The studio is free and open source. Generation runs on your Replicate, Google Gemini, OpenRouter or Mammouth account, which you pay directly: a few cents per image depending on model and resolution.',
       },
       {
         q: 'Can an AI agent like Claude use NanoThumbnail?',
@@ -439,7 +439,7 @@ const en: Dict = {
       },
       {
         q: 'Is my API key safe?',
-        a: 'It’s stored only in your browser (or only for the session). Gemini and OpenRouter are called directly from your browser. Replicate doesn’t allow browser calls, so requests go through a tiny Netlify function that relays them without storing or logging anything — the code is public.',
+        a: 'It’s stored only in your browser (or only for the session). Gemini, OpenRouter and Mammouth are called directly from your browser. Replicate doesn’t allow browser calls, so requests go through a tiny Netlify function that relays them without storing or logging anything — the code is public.',
       },
       {
         q: 'Where are my images?',
@@ -447,7 +447,7 @@ const en: Dict = {
       },
       {
         q: 'Do I need a credit card?',
-        a: 'Yes, with the provider: image generation isn’t part of the Gemini API free tier, so billing must be enabled on your key’s Google project. Replicate also bills per use, OpenRouter uses prepaid credits. Expect about $0.07 to $0.15 per image.',
+        a: 'Yes, with the provider: image generation isn’t part of the Gemini API free tier, so billing must be enabled on your key’s Google project. Replicate also bills per use, OpenRouter uses prepaid credits. Expect about $0.03 to $0.24 per image.',
       },
       {
         q: 'How long does a thumbnail take?',
@@ -463,7 +463,7 @@ const en: Dict = {
       },
       {
         q: 'Can I use the images commercially?',
-        a: 'Generally yes, but terms depend on the provider (Replicate, Google, OpenRouter). Check their terms.',
+        a: 'Generally yes, but terms depend on the provider (Replicate, Google, OpenRouter, Mammouth). Check their terms.',
       },
     ],
   },

@@ -15,12 +15,12 @@ export function llmsTxt(): string {
 
 > ${c.meta.description}
 
-NanoThumbnail is a free, MIT-licensed web app (a "studio") to create YouTube thumbnails with Google's Nano Banana image models (Nano Banana Pro and Nano Banana 2). It is bring-your-own-key: users paste a Replicate, Google Gemini or OpenRouter API key and pay the provider directly. There is no account and no server-side storage: projects, images, people and channel details are stored in the browser (IndexedDB). The interface is available in English and French.
+NanoThumbnail is a free, MIT-licensed web app (a "studio") to create YouTube thumbnails with Google's Nano Banana image models (Nano Banana Pro, Nano Banana 2 and its Lite version). It is bring-your-own-key: users paste a Replicate, Google Gemini, OpenRouter or Mammouth API key and pay the provider directly. There is no account and no server-side storage: projects, images, people and channel details are stored in the browser (IndexedDB). The interface is available in English and French.
 
 Key facts:
-- Price: the studio is free. Image generation costs roughly $0.07 (Nano Banana 2, 1K) to $0.15 (Nano Banana Pro) per image at the provider.
-- Providers: Replicate (\`google/nano-banana-pro\`, \`google/nano-banana-2\`) or Google Gemini API (\`gemini-3-pro-image\`, \`gemini-3.1-flash-image\`).
-- Output: 16:9 or 9:16; 1K, 2K or 4K; 1 to 4 variants per generation.
+- Price: the studio is free. Image generation costs roughly $0.03 (Nano Banana 2 Lite) to $0.24 (Nano Banana Pro at 4K) per image at the provider.
+- Providers: Replicate (\`google/nano-banana-pro\`, \`google/nano-banana-2\`, \`google/nano-banana-2-lite\`), Google Gemini API (\`gemini-3-pro-image\`, \`gemini-3.1-flash-image\`, \`gemini-3.1-flash-lite-image\`), OpenRouter or Mammouth.
+- Output: 16:9 or 9:16; 1K, 2K or 4K (Lite is 1K only); 1, 2 or 4 variants per generation.
 - Main workflow: brief → generate → iterate (conversational edits, masked area edits) → test (feed preview, AI critique, side-by-side ranking, export for YouTube Studio "Test & Compare").
 - AI agents (Claude Code, Claude Desktop, Cursor, any MCP client) can drive the studio through the \`nanothumbnail-mcp\` MCP server (\`claude mcp add nanothumbnail -- npx -y nanothumbnail-mcp\`): brief, generate, edit, rank, export. It relays over a local WebSocket to the studio open in the browser; keys and images stay there. Companion skill: \`npx skills add yoanbernabeu/NanoThumbnail --skill nanothumbnail\`.
 
