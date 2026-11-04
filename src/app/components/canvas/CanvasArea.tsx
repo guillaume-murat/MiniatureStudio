@@ -236,7 +236,7 @@ export function CanvasArea() {
   const reframeTarget = useReframe((s) => s.target);
   const reframeZone = useReframe((s) => s.zone);
   const gen = useWorkspace(selectedGeneration);
-  const [tool, setTool] = useState<MaskTool>('brush');
+  const [maskTool, setMaskTool] = useState<MaskTool>('brush');
   const [brushSize, setBrushSize] = useState(0.05);
   const [clearSignal, setClearSignal] = useState(0);
   const [instruction, setInstruction] = useState('');
@@ -245,6 +245,51 @@ export function CanvasArea() {
   const busy = runningJobs(ws.jobs).length > 0;
   const failed = ws.jobs.filter((j) => j.status === 'failed');
   const onImage = !!gen && ws.view === 'image';
+  // Replaces the tools in the edit bar. No way back through them, and no Esc on a phone: it has its own way out.
+  const maskControls = ws.tool === 'mask' && (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <ToggleGroup type="single" size="sm" disabled={busy} value={maskTool} onValueChange={(v) => v && setMaskTool(v as MaskTool)}>
+        <ToggleGroupItem value="brush" aria-label={t('canvas.brush')}>
+          <Brush />
+        </ToggleGroupItem>
+        <ToggleGroupItem value="eraser" aria-label={t('canvas.eraser')}>
+          <Eraser />
+        </ToggleGroupItem>
+      </ToggleGroup>
+      <Slider
+        className="max-w-32 min-w-10 flex-1"
+        disabled={busy}
+        min={0.01}
+        max={0.15}
+        step={0.005}
+        value={[brushSize]}
+        onValueChange={([v]) => setBrushSize(v)}
+        aria-label={t('canvas.brush')}
+      />
+      <Button variant="ghost" size="xs" disabled={busy} onClick={() => setClearSignal((n) => n + 1)} aria-label={t('canvas.clearMask')}>
+        <Trash2 /> <span className="hidden @min-[34rem]:inline">{t('canvas.clearMask')}</span>
+      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="outline" size="xs" className="ml-auto" disabled={busy || !ws.hasMask} onClick={() => ws.smooth()}>
+            <Blend /> {t('smooth.button')}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-64">{t('smooth.hint')}</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="outline" size="xs" disabled={busy || !ws.hasMask} onClick={() => ws.heal()}>
+            <Bandage /> {t('heal.button')}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-64">{t('heal.hint')}</TooltipContent>
+      </Tooltip>
+      <Button variant="ghost" size="xs" disabled={busy} onClick={() => ws.setTool(null)} aria-label={t('common.cancel')}>
+        <X /> <span className="hidden @min-[34rem]:inline">{t('common.cancel')}</span>
+      </Button>
+    </div>
+  );
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col bg-canvas">
@@ -255,7 +300,7 @@ export function CanvasArea() {
 
       <div className="relative flex min-h-0 flex-1 flex-col">
         {/* Body. On desktop it keeps clear of the edit bar, floating below it. */}
-        <div className={cn('relative min-h-0 flex-1 transition-[filter] duration-300', onImage && (isLayerTool(ws.tool) ? 'lg:mb-36' : 'lg:mb-28'), busy && 'pointer-events-none blur-md')}>
+        <div className={cn('relative min-h-0 flex-1 transition-[filter] duration-300', onImage && (ws.tool === 'mask' ? 'lg:mb-38' : isLayerTool(ws.tool) ? 'lg:mb-36' : 'lg:mb-28'), busy && 'pointer-events-none blur-md')}>
           {ws.view === 'compare' ? (
             <CompareView />
           ) : ws.view === 'feed' && gen ? (
@@ -265,7 +310,7 @@ export function CanvasArea() {
           ) : gen && ws.tool === 'reframe' ? (
             <ReframeView gen={gen} />
           ) : gen ? (
-            <ImageView gen={gen} tool={tool} brushSize={brushSize} clearSignal={clearSignal} />
+            <ImageView gen={gen} tool={maskTool} brushSize={brushSize} clearSignal={clearSignal} />
           ) : (
             <div className="flex size-full items-center justify-center">
               <EmptyState running={running} />
@@ -322,53 +367,11 @@ export function CanvasArea() {
             ) : ws.tool === 'reframe' ? (
               <ReframeToolbar />
             ) : (
-              <EditBar gen={gen} instruction={instruction} onInstruction={setInstruction} />
+              <EditBar gen={gen} instruction={instruction} onInstruction={setInstruction} maskControls={maskControls} />
             )}
           </EditBarShell>
         )}
       </div>
-
-      {/* The active tool's controls, under the image. */}
-      {ws.tool === 'mask' && ws.view === 'image' && gen && (
-        <div className="flex h-10 shrink-0 items-center gap-1.5 border-t bg-background px-2">
-          <ToggleGroup type="single" size="sm" value={tool} onValueChange={(v) => v && setTool(v as MaskTool)}>
-            <ToggleGroupItem value="brush" aria-label={t('canvas.brush')}>
-              <Brush />
-            </ToggleGroupItem>
-            <ToggleGroupItem value="eraser" aria-label={t('canvas.eraser')}>
-              <Eraser />
-            </ToggleGroupItem>
-          </ToggleGroup>
-          <Slider
-            className="max-w-32 min-w-10 flex-1"
-            min={0.01}
-            max={0.15}
-            step={0.005}
-            value={[brushSize]}
-            onValueChange={([v]) => setBrushSize(v)}
-            aria-label={t('canvas.brush')}
-          />
-          <Button variant="ghost" size="xs" onClick={() => setClearSignal((n) => n + 1)} aria-label={t('canvas.clearMask')}>
-            <X /> <span className="hidden sm:inline">{t('canvas.clearMask')}</span>
-          </Button>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="xs" className="ml-auto" disabled={!ws.hasMask} onClick={() => ws.smooth()}>
-                <Blend /> {t('smooth.button')}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-64">{t('smooth.hint')}</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="xs" disabled={!ws.hasMask} onClick={() => ws.heal()}>
-                <Bandage /> {t('heal.button')}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-64">{t('heal.hint')}</TooltipContent>
-          </Tooltip>
-        </div>
-      )}
     </div>
   );
 }

@@ -60,9 +60,20 @@ function ToolButtons({ locked }: { locked: boolean }) {
  * The edit bar under the image: the instruction, its suggestions, the tools, the prompt it would send.
  * The instruction is held by the canvas: the bar goes away with other views and tools.
  */
-export function EditBar({ gen, instruction, onInstruction }: { gen: Generation; instruction: string; onInstruction: (text: string) => void }) {
+export function EditBar({
+  gen,
+  instruction,
+  onInstruction,
+  maskControls,
+}: {
+  gen: Generation;
+  instruction: string;
+  onInstruction: (text: string) => void;
+  /** The area tool's controls, in place of the tools while it is on. */
+  maskControls?: ReactNode;
+}) {
   const t = useT();
-  const { edit, tool, hasMask, jobs } = useWorkspace();
+  const { edit, tool, setTool, hasMask, jobs } = useWorkspace();
   const [showPrompt, setShowPrompt] = useState(false);
   const field = useRef<HTMLTextAreaElement>(null);
   const refocusField = useRef(false);
@@ -86,6 +97,8 @@ export function EditBar({ gen, instruction, onInstruction }: { gen: Generation; 
         value={instruction}
         onChange={(e) => onInstruction(e.target.value)}
         onKeyDown={(e) => {
+          // The global Esc ignores a field being typed in, where the area tool is mostly used.
+          if (e.key === 'Escape') setTool(null);
           if (e.key === 'Enter' && (e.metaKey || e.ctrlKey || !e.shiftKey)) {
             e.preventDefault();
             e.stopPropagation();
@@ -96,8 +109,9 @@ export function EditBar({ gen, instruction, onInstruction }: { gen: Generation; 
         aria-label={t('iterate.instruction')}
         className="max-h-32 min-h-9 resize-none"
       />
+      {maskControls}
       <div className="flex items-center gap-1">
-        <ToolButtons locked={locked} />
+        {!maskControls && <ToolButtons locked={locked} />}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="text-muted-foreground" disabled={locked} aria-label={t('iterate.suggestions')}>
@@ -132,9 +146,9 @@ export function EditBar({ gen, instruction, onInstruction }: { gen: Generation; 
             })}
           </DropdownMenuContent>
         </DropdownMenu>
-        {/* In the row, so the bar keeps its height and stays clear of the image; the field's text says it too when narrow. */}
+        {/* In the row, so painting doesn't change the bar's height. */}
         {region && (
-          <p className="hidden min-w-0 items-center gap-1.5 text-xs text-primary @min-[39rem]:flex" title={t('iterate.regionActive')}>
+          <p className="flex min-w-0 items-center gap-1.5 text-xs text-primary" title={t('iterate.regionActive')}>
             <SquareDashedMousePointer className="size-3.5 shrink-0" /> <span className="truncate">{t('iterate.regionActive')}</span>
           </p>
         )}
