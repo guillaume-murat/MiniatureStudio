@@ -182,7 +182,7 @@ export const en = {
     title: 'History',
     instruction: 'Prompt an edit',
     suggestions: 'Suggestions',
-    moveBar: 'Move the bar (double-click: back to its place)',
+    moveBar: 'Move the bar',
     editPlaceholder: 'e.g. make the face more surprised, add a red arrow pointing at the laptop…',
     regionPlaceholder: 'What should change in the selected area?',
     regionActive: 'Area edit — only the selected area will change',

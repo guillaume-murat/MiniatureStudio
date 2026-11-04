@@ -82,7 +82,6 @@ export function EditBarShell({ area, children }: { area: Size; children: ReactNo
         onPointerUp={drop}
         onPointerCancel={drop}
         onLostPointerCapture={drop}
-        onDoubleClick={() => set({ editBarOffset: null })}
       >
         <GripVertical className="size-3.5" />
       </button>

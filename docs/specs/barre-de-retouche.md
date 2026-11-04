@@ -44,7 +44,6 @@ Quand un outil est actif, ses réglages s'affichent dans cette même barre. Le p
 10. En tant que créateur, je veux que la barre reste entièrement dans la zone centrale, afin de ne jamais la perdre hors de l'écran.
 11. En tant que créateur, je veux qu'elle reste accessible quand je redimensionne la fenêtre ou un panneau, afin de ne jamais avoir à la chercher.
 12. En tant que créateur, je veux retrouver sa position après un rechargement, afin de ne pas la replacer à chaque session.
-13. En tant que créateur, je veux la remettre à sa place par défaut d'un double-clic sur la poignée, afin de revenir facilement à la disposition d'origine.
 14. En tant que créateur, je veux que peindre, zoomer ou déplacer l'image ne soit pas déclenché quand je manipule la barre, afin d'éviter les gestes involontaires.
 
 ### Outils
@@ -134,7 +133,7 @@ Quand un outil est actif, ses réglages s'affichent dans cette même barre. Le p
 - **Tests existants à garder** : commandes (une lettre par commande, à étendre au libellé court de chaque outil), prompt et versions.
 - **Modèles de tests** : les tests purs du zoom et du recadrage, qui couvrent déjà une géométrie relative à une zone.
 - **Vérification manuelle dans l'app de test** (le dépôt n'a pas d'environnement de test DOM, et ces tests n'en ajoutent pas) :
-  - déplacement, double-clic et rechargement ;
+  - déplacement et rechargement ;
   - changement de taille de la fenêtre et des panneaux ;
   - les quatre outils et le retour au champ ;
   - clic sur une suggestion, sans appel au modèle ;
@@ -153,7 +152,7 @@ Quand un outil est actif, ses réglages s'affichent dans cette même barre. Le p
 
 ## Further Notes
 
-- **Décisions prises sans validation explicite**, faute de tour de questions supplémentaire : l'adaptation mobile, la position des actions sur l'image (en haut à droite), la mémorisation de la position par appareil, le double-clic de remise à zéro et la réservation de hauteur fixe pour l'image. Elles restent à relire.
+- **Décisions prises sans validation explicite**, faute de tour de questions supplémentaire : l'adaptation mobile, la position des actions sur l'image (en haut à droite), la mémorisation de la position par appareil et la réservation de hauteur fixe pour l'image. Elles restent à relire.
 - **Conséquence de la vue Image seule** : il faudra revenir à cette vue pour lancer une retouche depuis un aperçu.
 - **Conséquence de la réservation** : l'image perd de la hauteur en permanence, environ 90 px à confirmer une fois la barre construite, plus la marge. Les rangées de réglages supprimées en rendent une partie quand un outil est actif.
 - **Largeur** : la barre Texte contient beaucoup de réglages. Dans une zone centrale étroite, elle doit passer à la ligne, sans déborder.
