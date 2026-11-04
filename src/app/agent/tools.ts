@@ -243,7 +243,7 @@ export const handlers: Record<string, Handler> = {
       {
         videoTitle,
         lang,
-        styles: conceptStyles(ws().customStyles),
+        styles: conceptStyles(lang, ws().customStyles),
       },
     );
     return ok({ concepts, hint: 'Apply one with generate({ brief, styleId }).' });

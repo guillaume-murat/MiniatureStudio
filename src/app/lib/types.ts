@@ -1,6 +1,9 @@
 export type Provider = 'replicate' | 'gemini' | 'openrouter' | 'mammouth' | 'vertex';
 export type ModelId = 'nano-banana-pro' | 'nano-banana-2' | 'nano-banana-2-lite';
 /** The ratio of an existing image: older ones may be in a format the studio no longer generates, and their edits keep it. */
+/** The interface's language, which the prompts follow. */
+export type Lang = 'en' | 'fr';
+
 export type AspectRatio = '16:9' | '9:16' | '4:3' | '1:1' | '21:9';
 /** The formats a new image can have. */
 export type OutputRatio = '16:9' | '9:16';

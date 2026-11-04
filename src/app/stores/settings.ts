@@ -2,10 +2,10 @@ import { create } from 'zustand';
 import { VERTEX_GCLOUD } from '../lib/providers';
 import { parseBarOffset, type BarOffset } from '../lib/editBar';
 import { outputRatio } from '../lib/prompt';
-import type { OutputRatio, GenerationParams, ModelId, OutputFormat, Provider, Resolution, SafetyLevel } from '../lib/types';
+import type { Lang, OutputRatio, GenerationParams, ModelId, OutputFormat, Provider, Resolution, SafetyLevel } from '../lib/types';
 
 export type Theme = 'light' | 'dark' | 'system';
-export type Lang = 'en' | 'fr';
+export type { Lang };
 /** Where API keys live: across sessions (localStorage) or until the tab closes (sessionStorage). */
 export type KeyPersistence = 'local' | 'session';
 

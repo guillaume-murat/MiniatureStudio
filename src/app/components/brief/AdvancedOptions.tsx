@@ -57,7 +57,7 @@ export function AdvancedOptions({ number }: { number: number }) {
         </ToggleGroup>
       </Field>
 
-      <Field label={t('promptOptions.brandWeight')} hint={t('promptOptions.brandHint')} prompt={brandWeightLine(options.brandWeight)}>
+      <Field label={t('promptOptions.brandWeight')} hint={t('promptOptions.brandHint')} prompt={brandWeightLine(lang, options.brandWeight)}>
         <ToggleGroup type="single" variant="outline" className="w-full" value={options.brandWeight} onValueChange={(v) => v && set({ brandWeight: v as PromptOptions['brandWeight'] })}>
           {WEIGHTS.map((w) => (
             <ToggleGroupItem key={w} value={w} className="flex-1 px-1 text-xs">
@@ -67,7 +67,7 @@ export function AdvancedOptions({ number }: { number: number }) {
         </ToggleGroup>
       </Field>
 
-      <Field label={t('brief.promptAlways')} prompt={`${qualityLine()}\n\n${marginLine()}\n\n${priorityLine()}`} />
+      <Field label={t('brief.promptAlways')} prompt={`${qualityLine(lang)}\n\n${marginLine(lang)}\n\n${priorityLine(lang)}`} />
     </Section>
   );
 }

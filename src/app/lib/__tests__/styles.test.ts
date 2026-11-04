@@ -12,7 +12,11 @@ describe('styles', () => {
   });
 
   it('writes each preset as a list', () => {
-    for (const style of STYLES) expect(style.prompt.split('\n').every((line) => line.startsWith('- '))).toBe(true);
+    for (const style of STYLES) {
+      for (const text of [style.prompt.fr, style.prompt.en]) expect(text.split('\n').every((line) => line.startsWith('- '))).toBe(true);
+      // Line for line, so that neither language asks for more than the other.
+      expect(style.prompt.en.split('\n')).toHaveLength(style.prompt.fr.split('\n').length);
+    }
   });
 
   it('lists the user’s styles first, in the presets’ shape', () => {
@@ -26,16 +30,20 @@ describe('styles', () => {
     expect(resolveOptions(findStyle('st_1', [{ ...mine, addsText: true }])).text).toBe('style');
   });
 
-  it('gives the concepts prompt the whole library, in French', () => {
-    const list = conceptStyles([{ ...mine, hint: 'Vlogs' }]);
+  it('gives the concepts prompt the whole library, in its language', () => {
+    const list = conceptStyles('fr', [{ ...mine, hint: 'Vlogs' }]);
     expect(list).toHaveLength(STYLES.length + 1);
     expect(list[0]).toEqual({ id: 'st_1', name: 'Signature', hint: 'Vlogs', prompt: 'Bold colours' });
     expect(list.find((s) => s.id === 'reaction')?.name).toBe('Réaction + objet');
+    const reaction = conceptStyles('en', []).find((s) => s.id === 'reaction');
+    expect(reaction?.name).toBe('Reaction + object');
+    expect(reaction?.prompt).toContain('featured person');
+    expect(conceptStyles('en', [mine])[0].prompt).toBe('Bold colours');
   });
 
   it('finds presets and the user’s styles, but no deleted one', () => {
     expect(findStyle('versus')?.id).toBe('versus');
-    expect(findStyle('st_1', [mine])?.prompt).toBe('Bold colours');
+    expect(findStyle('st_1', [mine])?.prompt.fr).toBe('Bold colours');
     expect(findStyle('st_1')).toBeUndefined();
     expect(findStyle('')).toBeUndefined();
   });

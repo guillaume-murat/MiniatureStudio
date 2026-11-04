@@ -8,6 +8,7 @@ import { Field, Section } from '../Section';
 import { useWorkspace } from '../../stores/workspace';
 import { BRAND_PALETTES, MAX_BRAND_COLORS, mergeColors, normaliseHex, parseHexColors } from '../../lib/colors';
 import { colorsLine } from '../../lib/prompt';
+import { useSettings } from '../../stores/settings';
 import { useT } from '../../i18n';
 
 function Swatches({ colors }: { colors: string[] }) {
@@ -44,6 +45,7 @@ function HexInput({ value, onChange, label }: { value: string; onChange: (hex: s
 /** Brand colours, sent in the prompt as the dominant accents: a preset palette, pickers, or pasted hex codes. */
 export function BrandColors({ number }: { number: number }) {
   const t = useT();
+  const lang = useSettings((s) => s.lang);
   const { brand, saveBrand, promptOptions } = useWorkspace();
   const [hexText, setHexText] = useState('');
   const colors = brand.colors;
@@ -71,7 +73,7 @@ export function BrandColors({ number }: { number: number }) {
     <Section
       foldable
       title={`${number}. ${t('brand.colors')}`}
-      prompt={colorsLine(colors, promptOptions().brandWeight)}
+      prompt={colorsLine(lang, colors, promptOptions().brandWeight)}
     >
       <Field label={t('brand.presets')} htmlFor="brandPalette">
         <Select value={preset} onValueChange={(id) => save([...BRAND_PALETTES.find((p) => p.id === id)!.colors])}>

@@ -68,9 +68,10 @@ function PeopleSection({ number }: { number: number }) {
 function FormatField() {
   const t = useT();
   const aspectRatio = useSettings((s) => s.aspectRatio);
+  const lang = useSettings((s) => s.lang);
   const set = useSettings((s) => s.set);
   return (
-    <Field label={t('brief.ratio')} prompt={formatLine(aspectRatio)}>
+    <Field label={t('brief.ratio')} prompt={formatLine(lang, aspectRatio)}>
       <ToggleGroup type="single" variant="outline" className="w-full" value={aspectRatio} onValueChange={(v) => v && set({ aspectRatio: v as OutputRatio })}>
         {OUTPUT_RATIOS.map((r) => (
           <ToggleGroupItem key={r} value={r} className="tabular flex-1">
@@ -83,6 +84,7 @@ function FormatField() {
 }
 
 export function BriefPanel({ onGenerated }: { onGenerated?: () => void }) {
+  const lang = useSettings((s) => s.lang);
   const t = useT();
   const { brief, setBrief, generate, jobs, cancelAll, customStyles, personaIds } = useWorkspace();
   const open = useUI((s) => s.open);
@@ -108,7 +110,7 @@ export function BriefPanel({ onGenerated }: { onGenerated?: () => void }) {
             }
           >
             <FormatField />
-            <Field label={t('brief.videoTitle')} htmlFor="videoTitle" prompt={titlePreviewLine(brief.videoTitle)}>
+            <Field label={t('brief.videoTitle')} htmlFor="videoTitle" prompt={titlePreviewLine(lang, brief.videoTitle)}>
               <Input
                 id="videoTitle"
                 value={brief.videoTitle}
@@ -116,7 +118,7 @@ export function BriefPanel({ onGenerated }: { onGenerated?: () => void }) {
                 placeholder={t('brief.videoTitlePlaceholder')}
               />
             </Field>
-            <Field label={t('brief.brief')} htmlFor="brief" required prompt={sceneLine(brief.brief)}>
+            <Field label={t('brief.brief')} htmlFor="brief" required prompt={sceneLine(lang, brief.brief)}>
               <Textarea
                 id="brief"
                 required
@@ -126,7 +128,7 @@ export function BriefPanel({ onGenerated }: { onGenerated?: () => void }) {
                 className="min-h-28 resize-y"
               />
             </Field>
-            <Field label={t('brief.style')} prompt={styleLine(findStyle(brief.styleId, customStyles)?.prompt, personaIds.length)}>
+            <Field label={t('brief.style')} prompt={styleLine(lang, findStyle(brief.styleId, customStyles)?.prompt[lang], personaIds.length)}>
               <StylePicker />
             </Field>
             <GeneratedTextField />

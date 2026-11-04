@@ -146,6 +146,7 @@ function StyleOption({
 
 function CustomStyleOption({ style, active, onChoose, onEdit }: { style: CustomStyle; active: boolean; onChoose: () => void; onEdit: () => void }) {
   const t = useT();
+  const lang = useSettings((s) => s.lang);
   const reloadStyles = useWorkspace((s) => s.reloadStyles);
   const [confirming, setConfirming] = useState(false);
   return (
@@ -155,7 +156,7 @@ function CustomStyleOption({ style, active, onChoose, onEdit }: { style: CustomS
       title={style.name}
       hint={style.hint ?? ''}
       addsText={style.addsText}
-      prompt={styleLine(style.prompt)}
+      prompt={styleLine(lang, style.prompt)}
       onClick={onChoose}
       actions={
         confirming ? (
@@ -253,9 +254,9 @@ export function StyleDialog() {
             <section className="space-y-2">
               <h3 className="text-sm font-medium">{t('styles.presets')}</h3>
               <div className="grid gap-2 sm:grid-cols-2">
-                <StyleOption active={!hasStyle} emoji={NO_STYLE_EMOJI} title={t('brief.styleNone')} hint="—" prompt={styleLine()} onClick={() => choose('')} />
+                <StyleOption active={!hasStyle} emoji={NO_STYLE_EMOJI} title={t('brief.styleNone')} hint="—" prompt={styleLine(lang)} onClick={() => choose('')} />
                 {STYLES.map((s) => (
-                  <StyleOption key={s.id} active={s.id === styleId} emoji={s.emoji} title={s.name[lang]} hint={s.hint[lang]} addsText={s.preset?.text === 'style'} prompt={styleLine(s.prompt)} onClick={() => choose(s.id)} />
+                  <StyleOption key={s.id} active={s.id === styleId} emoji={s.emoji} title={s.name[lang]} hint={s.hint[lang]} addsText={s.preset?.text === 'style'} prompt={styleLine(lang, s.prompt[lang])} onClick={() => choose(s.id)} />
                 ))}
               </div>
             </section>

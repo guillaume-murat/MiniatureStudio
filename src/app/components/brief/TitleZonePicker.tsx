@@ -1,6 +1,7 @@
 import { Field } from '../Section';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { titleZoneLine } from '../../lib/prompt';
+import { useSettings } from '../../stores/settings';
 import { useWorkspace } from '../../stores/workspace';
 import { useT } from '../../i18n';
 import type { TitleZone } from '../../lib/types';
@@ -36,12 +37,13 @@ function PlaceholderScene() {
 /** Where the image keeps room for the text added afterwards with the text tool. */
 export function TitleZonePicker() {
   const t = useT();
+  const lang = useSettings((s) => s.lang);
   const { brief, setBrief, promptOptions } = useWorkspace();
   const current = promptOptions().titleZone;
   const choose = (titleZone: TitleZone) => setBrief({ options: { ...brief.options, titleZone } });
 
   return (
-    <Field label={t('promptOptions.titleZone')} htmlFor="titleZone" prompt={titleZoneLine(current)} hint={current === 'bottom-right' ? t('promptOptions.zoneDuration') : undefined}>
+    <Field label={t('promptOptions.titleZone')} htmlFor="titleZone" prompt={titleZoneLine(lang, current)} hint={current === 'bottom-right' ? t('promptOptions.zoneDuration') : undefined}>
       <Select value={current === 'none' ? 'none' : 'room'} onValueChange={(v) => choose(v === 'none' ? 'none' : FIRST_ZONE)}>
         <SelectTrigger id="titleZone" className="w-full gap-1 px-2 text-xs">
           <SelectValue />

@@ -6,7 +6,7 @@ import {
   buildEditPrompt,
   buildGenerationPrompt,
   describeImages,
-  IMAGES_HEADER,
+  imagesHeader,
   buildOutpaintPrompt,
   buildRegionEditPrompt,
   buildHealPrompt,
@@ -48,6 +48,9 @@ import { t, translate } from '../i18n';
 import { isArrow, isVisible, type LayerBlock } from '../lib/textBlocks';
 import { renderText, textSteps, textSummary } from '../lib/textLayer';
 import { useText } from './text';
+
+/** Every prompt is written in the interface's language. */
+const promptLang = () => useSettings.getState().lang;
 
 export const MAX_IMAGES = 14;
 export const MAX_PERSONAS = 5;
@@ -422,7 +425,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       brief: concept?.brief ?? brief.brief,
       videoTitle: brief.videoTitle,
       aspectRatio: useSettings.getState().aspectRatio,
-      style: style?.prompt,
+      lang: promptLang(),
+      style: style?.prompt[promptLang()],
       roles: attached.map((a) => a.role),
       colors: get().brand.colors,
       options: resolveOptions(style, brief.options),
@@ -702,7 +706,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       // Filled locally first: the model then only restores texture, it has no hole to invent into.
       const patched = await smoothRegion(source.blob, mask);
       // Always Nano Banana 2, whatever the model chosen for generating.
-      return regionEdit({ ...source, blob: patched }, mask, t('heal.done'), buildHealPrompt(), apiKey, 'heal', 'nano-banana-2');
+      return regionEdit({ ...source, blob: patched }, mask, t('heal.done'), buildHealPrompt(promptLang()), apiKey, 'heal', 'nano-banana-2');
     },
 
     duplicateSelected: async () => {
@@ -740,8 +744,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       const people = personaImages().map((a) => a.role);
       const references = referenceImages().map((a) => a.role);
       return {
-        people: (people.length ? [IMAGES_HEADER, ...describeImages(people)] : []).join('\n'),
-        references: (references.length && !people.length ? [IMAGES_HEADER] : []).concat(describeImages(references, people.length)).join('\n'),
+        people: (people.length ? [imagesHeader(promptLang()), ...describeImages(promptLang(), people)] : []).join('\n'),
+        references: (references.length && !people.length ? [imagesHeader(promptLang())] : []).concat(describeImages(promptLang(), references, people.length)).join('\n'),
       };
     },
 
@@ -802,7 +806,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       return runJob({
         kind: 'upscale',
         prompt: t('export.upscaled'),
-        fullPrompt: buildUpscalePrompt(),
+        fullPrompt: buildUpscalePrompt(promptLang()),
         images: [source.blob],
         // 2K is above 1920×1080 at every aspect ratio, and Lite does not reach it.
         params: {
@@ -829,7 +833,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         const mask = snapshotMask(painted);
         return {
           region: true,
-          prompt: buildRegionEditPrompt(text),
+          prompt: buildRegionEditPrompt(promptLang(), text),
           params,
           images: [{ blob: source.blob, role: 'current' }, { blob: await highlightRegion(source.blob, mask), role: 'marked' }],
           peopleLeftOut: personaImages().length > 0,
@@ -838,7 +842,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       const people = editPeople();
       return {
         region: false,
-        prompt: buildEditPrompt(text, people.map((p) => p.role)),
+        prompt: buildEditPrompt(promptLang(), text, people.map((p) => p.role)),
         params,
         images: [
           { blob: source.blob, role: 'current' },
@@ -856,13 +860,13 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
 
       const painted = paintedMask();
       const mask = opts?.mask ?? (painted ? snapshotMask(painted) : null);
-      if (mask) return [await regionEdit(source, mask, instruction, buildRegionEditPrompt(instruction), apiKey)];
+      if (mask) return [await regionEdit(source, mask, instruction, buildRegionEditPrompt(promptLang(), instruction), apiKey)];
 
       const people = editPeople();
       const outcome = await runJob({
         kind: 'edit',
         prompt: instruction,
-        fullPrompt: buildEditPrompt(instruction, people.map((p) => p.role)),
+        fullPrompt: buildEditPrompt(promptLang(), instruction, people.map((p) => p.role)),
         images: [source.blob, ...people.map((p) => p.blob)],
         params: editParams(source),
         parent: source,
@@ -1006,7 +1010,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
           kind: 'edit',
           action: 'reframe',
           prompt: t('reframe.done'),
-          fullPrompt: buildOutpaintPrompt(),
+          fullPrompt: buildOutpaintPrompt(promptLang()),
           images: [composed],
           params: { ...useSettings.getState().params(), aspectRatio: source.params.aspectRatio },
           parent: source,

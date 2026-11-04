@@ -117,7 +117,7 @@ export function AssistantDialog() {
   const input: ConceptsInput = {
     videoTitle: brief.videoTitle,
     lang,
-    styles: conceptStyles(customStyles),
+    styles: conceptStyles(lang, customStyles),
   };
 
   // Closing the window stops the previews still running: nobody is waiting for them.

@@ -19,6 +19,15 @@ describe('conceptsPrompt', () => {
   });
 });
 
+describe('conceptsPrompt in English', () => {
+  it('asks in English for answers in English', () => {
+    const styles = [{ id: 'x', name: 'X', hint: 'Y', prompt: '- One' }];
+    const p = conceptsPrompt({ videoTitle: 'Mars', lang: 'en', styles });
+    for (const part of ['leading YouTube thumbnail strategist', 'Video title: "Mars"', 'written in English', '- x: X (Y).\n  - One']) expect(p).toContain(part);
+    expect(p).not.toMatch(/français|Titre de la vidéo/);
+  });
+});
+
 describe('conceptPoints', () => {
   it('fills the brief with one point per line', () => {
     expect(conceptIdea({ brief: 'Une scène.', points: ['Gros plan', 'Fond sombre'] })).toBe('- Gros plan\n- Fond sombre');
