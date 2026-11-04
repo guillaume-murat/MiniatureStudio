@@ -391,6 +391,7 @@ export const en = {
     timeout: 'The generation took too long and was stopped.',
     network: 'Network error. Check your connection.',
     generic: 'The provider returned an error.',
+    storage: 'The image could not be saved on this device. Try again.',
     vertexLocal: 'Vertex AI only works locally: open the NanoThumbnail macOS app or run npm run dev.',
   },
   tools: { text: 'Text', arrow: 'Arrow', mask: 'Area', reframe: 'Reframe' },

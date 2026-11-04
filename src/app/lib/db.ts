@@ -1,4 +1,5 @@
 import { deleteDB, openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import { putWithBlobRetry } from './blobStore';
 import type { BrandKit, CustomStyle, Generation, LibraryImage, Persona, Project } from './types';
 
 interface NanoDB extends DBSchema {
@@ -99,11 +100,16 @@ export async function listGenerations(projectId?: string): Promise<Generation[]>
 
 export async function putGeneration(generation: Generation): Promise<void> {
   const db = await getDB();
-  const tx = db.transaction(['generations', 'projects'], 'readwrite');
-  await tx.objectStore('generations').put(generation);
-  const project = await tx.objectStore('projects').get(generation.projectId);
-  if (project) await tx.objectStore('projects').put({ ...project, updatedAt: Date.now() });
-  await tx.done;
+  await putWithBlobRetry(generation, async (value) => {
+    const tx = db.transaction(['generations', 'projects'], 'readwrite');
+    // A refused put also rejects this: it is reported by the await below.
+    const done = tx.done.catch(() => {});
+    await tx.objectStore('generations').put(value);
+    const project = await tx.objectStore('projects').get(value.projectId);
+    if (project) await tx.objectStore('projects').put({ ...project, updatedAt: Date.now() });
+    await tx.done;
+    await done;
+  });
 }
 
 export async function deleteGeneration(id: string): Promise<void> {

@@ -1,3 +1,4 @@
+import { isBlobStoreError } from './blobStore';
 import { isAbort, ProviderError } from './providers';
 import type { TKey } from '../i18n';
 
@@ -17,6 +18,7 @@ export function explainError(error: unknown): { key: TKey; message: string; deta
       return { key: 'errors.safety', ...base };
     return { key: 'errors.generic', ...base };
   }
+  if (isBlobStoreError(error)) return { key: 'errors.storage', message: (error as DOMException).message };
   if (error instanceof TypeError) return { key: 'errors.network', message: error.message };
   return { key: 'errors.generic', message: error instanceof Error ? error.message : String(error) };
 }

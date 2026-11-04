@@ -23,4 +23,9 @@ describe('explainError', () => {
     expect(explainError(new DOMException('a', 'AbortError')).key).toBe('canvas.canceled');
     expect(explainError(new TypeError('Failed to fetch')).key).toBe('errors.network');
   });
+
+  it('does not blame the provider when an image cannot be saved', () => {
+    const error = new DOMException('Error preparing Blob/File data to be stored in object store', 'UnknownError');
+    expect(explainError(error).key).toBe('errors.storage');
+  });
 });

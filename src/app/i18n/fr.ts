@@ -393,6 +393,7 @@ export const fr: Dict = {
     timeout: 'La génération a pris trop de temps et a été interrompue.',
     network: 'Erreur réseau. Vérifiez votre connexion.',
     generic: 'Le fournisseur a renvoyé une erreur.',
+    storage: 'L’image n’a pas pu être enregistrée sur cet appareil. Réessayez.',
     vertexLocal: 'Vertex AI ne fonctionne qu’en local : ouvrez l’app macOS NanoThumbnail ou lancez npm run dev.',
   },
   tools: { text: 'Texte', arrow: 'Flèche', mask: 'Zone', reframe: 'Recadrer' },
