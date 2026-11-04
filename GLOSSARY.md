@@ -15,21 +15,25 @@ _À éviter : idée, description._
 
 ## Les images
 
-**Miniature** (thumbnail) : une image originale et toutes les versions qui en descendent. Une tuile de la bande du projet représente une miniature.
+**Miniature** (thumbnail) : une image originale et la suite de ses versions. Une tuile de la bande du projet représente une miniature.
 _À éviter : variante, quand il s'agit de l'ensemble._
 
-**Version** : une image précise d'une miniature. Toute retouche, tout texte appliqué et tout recadrage crée une nouvelle version sans modifier la précédente.
+**Version** : une image précise d'une miniature. Toute retouche, tout texte appliqué et tout recadrage crée une nouvelle version à la suite de la dernière, sans modifier la précédente.
 
 **Originale** (original) : la première version d'une miniature, générée ou importée.
 
 **Variante** (variant) : une des miniatures obtenues par une même génération, quand on en demande plusieurs.
 
-**Historique** (history) : les versions d'une miniature, montrées branche par branche dans le panneau de droite. La prochaine retouche part de la version sélectionnée.
-_À éviter : versions, comme nom du panneau._
+**Historique** (history) : la suite des versions d'une miniature, de l'originale à la dernière, dans le panneau de droite.
+_À éviter : versions, comme nom du panneau ; branche, qui n'existe pas dans ce modèle._
 
-**Branche** (branch) : une suite de versions, de l'originale jusqu'à une version sans suite. Une miniature en a plusieurs dès qu'une retouche repart d'une ancienne version.
+**Dernière version** (latest version) : la version sans suite. C'est la seule d'où peut partir une retouche.
 
-**Embranchement** (fork) : une version d'où partent au moins deux suites.
+**Ancienne version** (older version) : une version suivie d'au moins une autre. On peut l'afficher, mais pas la retoucher.
+
+**Revenir à une version** (revert) : supprimer définitivement les versions plus récentes, pour que celle-ci redevienne la dernière.
+
+**Dupliquer** (duplicate) : créer une nouvelle miniature indépendante, dont une version existante devient l'originale.
 
 **Groupe** (group) : plusieurs étapes consécutives du même outil, réunies en une ligne dépliable de l'historique. Ce n'est qu'un affichage : chaque étape reste une version.
 
