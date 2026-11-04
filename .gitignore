@@ -138,3 +138,6 @@ macos/build/
 
 # Logo drafts (the chosen one is macos/icon-source.png)
 macos/icon-candidates/
+
+# Astro generated files
+.astro/
