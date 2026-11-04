@@ -1,5 +1,4 @@
 import { Field } from '../Section';
-import { PromptCode } from './PromptCode';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { titleZoneLine } from '../../lib/prompt';
 import { useWorkspace } from '../../stores/workspace';
@@ -42,7 +41,7 @@ export function TitleZonePicker() {
   const choose = (titleZone: TitleZone) => setBrief({ options: { ...brief.options, titleZone } });
 
   return (
-    <Field label={t('promptOptions.titleZone')} htmlFor="titleZone" hint={current === 'bottom-right' ? t('promptOptions.zoneDuration') : undefined}>
+    <Field label={t('promptOptions.titleZone')} htmlFor="titleZone" prompt={titleZoneLine(current)} hint={current === 'bottom-right' ? t('promptOptions.zoneDuration') : undefined}>
       <Select value={current === 'none' ? 'none' : 'room'} onValueChange={(v) => choose(v === 'none' ? 'none' : FIRST_ZONE)}>
         <SelectTrigger id="titleZone" className="w-full gap-1 px-2 text-xs">
           <SelectValue />
@@ -78,7 +77,6 @@ export function TitleZonePicker() {
         </div>
       </div>
       )}
-      <PromptCode text={titleZoneLine(current)} />
     </Field>
   );
 }

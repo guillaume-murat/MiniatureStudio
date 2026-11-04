@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   ArrowUp,
   ArrowUpRight,
@@ -19,7 +19,7 @@ import {
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { ScrollArea } from '../ui/scroll-area';
-import { Section } from '../Section';
+import { Field, Section } from '../Section';
 import { Toggle } from '../ui/toggle';
 import { Kbd } from '../ui/kbd';
 import { COMMANDS, isAvailable } from '../../commands';
@@ -143,17 +143,24 @@ function EditTab({ gen, onEdited }: { gen: Generation; onEdited?: () => void }) 
   const { generations, select, edit, tool, hasMask, jobs } = useWorkspace();
   const [instruction, setInstruction] = useState('');
   const [showPrompt, setShowPrompt] = useState(false);
+  const field = useRef<HTMLTextAreaElement>(null);
   const root = rootOf(generations, gen.id) ?? gen;
   const versions = versionTree(generations, root.id);
   const lines = treeLines(versions);
   const editing = jobs.some((j) => j.status === 'running' && j.parentId === gen.id);
   const region = tool === 'mask' && hasMask;
 
-  const submit = (text = instruction) => {
-    if (!text.trim()) return;
-    edit(text);
+  const submit = () => {
+    if (!instruction.trim()) return;
+    edit(instruction);
     setInstruction('');
     onEdited?.();
+  };
+
+  /** Puts a suggestion in the instruction, to reread or complete before sending. */
+  const suggest = (text: string) => {
+    setInstruction(text);
+    field.current?.focus();
   };
 
   return (
@@ -178,71 +185,77 @@ function EditTab({ gen, onEdited }: { gen: Generation; onEdited?: () => void }) 
 
           <Section title={t('iterate.quick')}>
             <EditTools onUse={onEdited} />
-            <div className="flex flex-wrap gap-1.5">
-              {QUICK_EDITS.map((key) => {
-                const text = t(`iterate.quickEdits.${key}` as TKey);
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    disabled={editing}
-                    onClick={() => submit(text)}
-                    className="rounded-full border px-2.5 py-1 text-left text-xs transition-colors hover:border-primary/50 hover:bg-accent disabled:opacity-50"
-                  >
-                    {text}
-                  </button>
-                );
-              })}
-            </div>
           </Section>
         </div>
       </ScrollArea>
 
-      <div className="space-y-2 border-t p-3">
-        {region && (
-          <p className="flex items-center gap-1.5 rounded-md bg-primary/10 px-2 py-1.5 text-xs text-primary">
-            <SquareDashedMousePointer className="size-3.5" /> {t('iterate.regionActive')}
-          </p>
-        )}
-        <div className="relative">
-          <Textarea
-            value={instruction}
-            onChange={(e) => setInstruction(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey || !e.shiftKey)) {
-                e.preventDefault();
-                e.stopPropagation();
-                submit();
-              }
-            }}
-            placeholder={region ? t('iterate.regionPlaceholder') : t('iterate.editPlaceholder')}
-            className="min-h-20 resize-none pr-20"
-            aria-label={t('iterate.edit')}
-          />
-          <Tooltip>
-            <TooltipTrigger asChild>
+      <div className="space-y-3 p-3">
+        <Field label={t('iterate.suggestions')}>
+          <div className="flex flex-wrap gap-1.5">
+            {QUICK_EDITS.map((key) => {
+              const text = t(`iterate.quickEdits.${key}` as TKey);
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => suggest(text)}
+                  className="rounded-full border px-2.5 py-1 text-left text-xs italic transition-colors hover:border-primary/50 hover:bg-accent"
+                >
+                  {text}
+                </button>
+              );
+            })}
+          </div>
+        </Field>
+        <Field label={t('iterate.instruction')} htmlFor="editInstruction">
+          {region && (
+            <p className="flex items-center gap-1.5 rounded-md bg-primary/10 px-2 py-1.5 text-xs text-primary">
+              <SquareDashedMousePointer className="size-3.5" /> {t('iterate.regionActive')}
+            </p>
+          )}
+          <div className="flex items-end gap-2">
+            <div className="relative min-w-0 flex-1">
+              <Textarea
+                id="editInstruction"
+                ref={field}
+                value={instruction}
+                onChange={(e) => setInstruction(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey || !e.shiftKey)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    submit();
+                  }
+                }}
+                placeholder={region ? t('iterate.regionPlaceholder') : t('iterate.editPlaceholder')}
+                className="max-h-40 min-h-20 resize-none pr-11"
+              />
               <Button
                 size="icon-sm"
-                variant="ghost"
-                className="absolute right-11 bottom-2 rounded-full border border-yellow-500/25 bg-yellow-500/10 hover:bg-yellow-500/15 dark:hover:bg-yellow-500/15"
-                onClick={() => setShowPrompt(true)}
-                aria-label={t('editPrompt.open')}
+                className="absolute right-2 bottom-2 rounded-full"
+                onClick={() => submit()}
+                disabled={!instruction.trim()}
+                aria-label={t('iterate.send')}
               >
-                <Eye />
+                {editing ? <Loader2 className="animate-spin" /> : <ArrowUp />}
               </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('editPrompt.open')}</TooltipContent>
-          </Tooltip>
-          <Button
-            size="icon-sm"
-            className="absolute right-2 bottom-2 rounded-full"
-            onClick={() => submit()}
-            disabled={!instruction.trim()}
-            aria-label={t('iterate.send')}
-          >
-            {editing ? <Loader2 className="animate-spin" /> : <ArrowUp />}
-          </Button>
-        </div>
+            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon-lg"
+                  variant="ghost"
+                  className="border border-yellow-500/25 bg-yellow-500/10 hover:bg-yellow-500/15 dark:hover:bg-yellow-500/15"
+                  onClick={() => setShowPrompt(true)}
+                  aria-label={t('editPrompt.open')}
+                >
+                  <Eye />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('editPrompt.open')}</TooltipContent>
+            </Tooltip>
+          </div>
+        </Field>
       </div>
       <EditPromptDialog open={showPrompt} onOpenChange={setShowPrompt} instruction={instruction} />
     </div>

@@ -271,7 +271,7 @@ export function AssistantDialog() {
           </div>
         )}
 
-        <PromptCode text={conceptsPrompt(input)} full heading={t('assistant.promptSent')} />
+        <PromptCode text={conceptsPrompt(input)} heading={t('assistant.promptSent')} />
       </DialogContent>
       <ConceptViewer items={ready} current={viewing} onChange={setViewing} onClose={() => setViewing(null)} action={(i) => addButton(i)} />
     </Dialog>

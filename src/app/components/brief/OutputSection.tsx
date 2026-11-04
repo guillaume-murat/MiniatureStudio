@@ -15,7 +15,7 @@ export function OutputSection({ number }: { number: number }) {
   const [advanced, setAdvanced] = useState(false);
 
   return (
-    <Section title={`${number}. ${t('brief.settings')}`}>
+    <Section foldable title={`${number}. ${t('brief.settings')}`}>
       <Field label={t('brief.count')}>
         <ToggleGroup
           type="single"

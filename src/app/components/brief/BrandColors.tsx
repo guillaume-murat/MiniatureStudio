@@ -5,7 +5,6 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Field, Section } from '../Section';
-import { PromptCode } from './PromptCode';
 import { useWorkspace } from '../../stores/workspace';
 import { BRAND_PALETTES, MAX_BRAND_COLORS, mergeColors, normaliseHex, parseHexColors } from '../../lib/colors';
 import { colorsLine } from '../../lib/prompt';
@@ -69,7 +68,11 @@ export function BrandColors({ number }: { number: number }) {
   const preset = BRAND_PALETTES.find((p) => p.colors.join() === colors.join())?.id ?? '';
 
   return (
-    <Section title={`${number}. ${t('brand.colors')}`}>
+    <Section
+      foldable
+      title={`${number}. ${t('brand.colors')}`}
+      prompt={colorsLine(colors, promptOptions().brandWeight)}
+    >
       <Field label={t('brand.presets')} htmlFor="brandPalette">
         <Select value={preset} onValueChange={(id) => save([...BRAND_PALETTES.find((p) => p.id === id)!.colors])}>
           <SelectTrigger id="brandPalette" className="w-full">
@@ -132,7 +135,6 @@ export function BrandColors({ number }: { number: number }) {
           )}
         </div>
       </Field>
-      <PromptCode text={colorsLine(colors, promptOptions().brandWeight)} />
     </Section>
   );
 }

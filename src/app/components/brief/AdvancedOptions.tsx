@@ -1,16 +1,12 @@
-import { useState } from 'react';
-import { ChevronRight } from 'lucide-react';
 import { Field, Section } from '../Section';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group';
-import { PromptCode } from './PromptCode';
 import { brandWeightLine, marginLine, priorityLine, qualityLine } from '../../lib/prompt';
 import { imagePrice } from '../../lib/pricing';
 import { useSettings } from '../../stores/settings';
 import { useWorkspace } from '../../stores/workspace';
 import { useT } from '../../i18n';
 import type { ModelId, PromptOptions, Resolution, ResolvedPromptOptions } from '../../lib/types';
-import { cn } from '../../lib/utils';
 
 const LITE: ModelId = 'nano-banana-2-lite';
 const RESOLUTIONS: Resolution[] = ['1K', '2K', '4K'];
@@ -32,19 +28,10 @@ export function AdvancedOptions({ number }: { number: number }) {
     ['nano-banana-2', t('brief.model2'), t('brief.model2Hint')],
     [LITE, t('brief.modelLite'), t('brief.modelLiteHint')],
   ];
-  const [open, setOpen] = useState(false);
   const set = (patch: PromptOptions) => setBrief({ options: { ...brief.options, ...patch } });
-  const title = (
-    <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="flex items-center gap-1 tracking-wide uppercase hover:text-foreground">
-      <ChevronRight className={cn('size-3.5 transition-transform', open && 'rotate-90')} />
-      {number}. {t('promptOptions.title')}
-    </button>
-  );
-
-  if (!open) return <Section title={title}>{null}</Section>;
 
   return (
-    <Section title={title}>
+    <Section foldable startFolded title={`${number}. ${t('promptOptions.title')}`}>
       <Field label={t('brief.model')} htmlFor="model" hint={t('brief.modelPrices')}>
         <Select value={model} onValueChange={(v) => setSettings({ model: v as ModelId })}>
           <SelectTrigger id="model" className="w-full">
@@ -70,7 +57,7 @@ export function AdvancedOptions({ number }: { number: number }) {
         </ToggleGroup>
       </Field>
 
-      <Field label={t('promptOptions.brandWeight')} hint={t('promptOptions.brandHint')}>
+      <Field label={t('promptOptions.brandWeight')} hint={t('promptOptions.brandHint')} prompt={brandWeightLine(options.brandWeight)}>
         <ToggleGroup type="single" variant="outline" className="w-full" value={options.brandWeight} onValueChange={(v) => v && set({ brandWeight: v as PromptOptions['brandWeight'] })}>
           {WEIGHTS.map((w) => (
             <ToggleGroupItem key={w} value={w} className="flex-1 px-1 text-xs">
@@ -78,12 +65,9 @@ export function AdvancedOptions({ number }: { number: number }) {
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
-        <PromptCode text={brandWeightLine(options.brandWeight)} />
       </Field>
 
-      <Field label={t('brief.promptAlways')}>
-        <PromptCode text={`${qualityLine()}\n\n${marginLine()}\n\n${priorityLine()}`} />
-      </Field>
+      <Field label={t('brief.promptAlways')} prompt={`${qualityLine()}\n\n${marginLine()}\n\n${priorityLine()}`} />
     </Section>
   );
 }

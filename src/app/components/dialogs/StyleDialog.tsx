@@ -137,7 +137,7 @@ function StyleOption({
           {active && <Check className="mt-0.5 size-4 shrink-0 text-primary" />}
         </span>
         <TextBadge addsText={addsText} />
-        <PromptCode text={prompt} full />
+        <PromptCode text={prompt} />
       </button>
       {actions && <div className="absolute top-1.5 right-7 flex gap-0.5 rounded-md bg-card opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100">{actions}</div>}
     </div>

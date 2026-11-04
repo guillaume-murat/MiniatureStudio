@@ -1,5 +1,4 @@
 import { Field } from '../Section';
-import { PromptCode } from './PromptCode';
 import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group';
 import { textLine } from '../../lib/prompt';
 import { findStyle } from '../../lib/styles';
@@ -14,7 +13,7 @@ export function GeneratedTextField() {
   const locked = findStyle(brief.styleId, customStyles)?.preset?.text === 'style';
   const text = promptOptions().text;
   return (
-    <Field label={t('promptOptions.text')} hint={locked ? t('promptOptions.textLocked') : t('promptOptions.presetHint')}>
+    <Field label={t('promptOptions.text')} prompt={textLine(text)} hint={locked ? t('promptOptions.textLocked') : t('promptOptions.presetHint')}>
       <ToggleGroup
         type="single"
         variant="outline"
@@ -25,7 +24,6 @@ export function GeneratedTextField() {
         <ToggleGroupItem value="none" disabled={locked} className="flex-1 text-xs">{t('promptOptions.textNone')}</ToggleGroupItem>
         <ToggleGroupItem value="style" className="flex-1 text-xs">{t('promptOptions.textStyle')}</ToggleGroupItem>
       </ToggleGroup>
-      <PromptCode text={textLine(text)} />
     </Field>
   );
 }

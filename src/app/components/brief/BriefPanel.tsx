@@ -16,12 +16,12 @@ import { ChannelSection } from './ChannelSection';
 import { AdvancedOptions } from './AdvancedOptions';
 import { BrandColors } from './BrandColors';
 import { PersonaChip } from './PersonaChip';
-import { PromptCode } from './PromptCode';
 import { MOD } from '../TopBar';
 import { MAX_PERSONAS, useWorkspace } from '../../stores/workspace';
 import { useSettings } from '../../stores/settings';
 import { useUI } from '../../stores/ui';
-import { formatLine, OUTPUT_RATIOS, sceneLine, titlePreviewLine } from '../../lib/prompt';
+import { formatLine, OUTPUT_RATIOS, sceneLine, styleLine, titlePreviewLine } from '../../lib/prompt';
+import { findStyle } from '../../lib/styles';
 import { useT } from '../../i18n';
 import type { OutputRatio } from '../../lib/types';
 
@@ -31,6 +31,7 @@ function PeopleSection({ number }: { number: number }) {
   const open = useUI((s) => s.open);
   return (
     <Section
+      foldable
       title={
         <span className="flex items-center gap-2">
           {number}. {t('brief.personas')}
@@ -43,7 +44,7 @@ function PeopleSection({ number }: { number: number }) {
         </Button>
       }
     >
-      <Field label={t('brief.peopleSelect')}>
+      <Field label={t('brief.peopleSelect')} prompt={previewImageLines().people}>
         {personas.length === 0 ? (
           <button
             type="button"
@@ -59,7 +60,6 @@ function PeopleSection({ number }: { number: number }) {
             ))}
           </div>
         )}
-        <PromptCode text={previewImageLines().people} />
       </Field>
     </Section>
   );
@@ -70,7 +70,7 @@ function FormatField() {
   const aspectRatio = useSettings((s) => s.aspectRatio);
   const set = useSettings((s) => s.set);
   return (
-    <Field label={t('brief.ratio')}>
+    <Field label={t('brief.ratio')} prompt={formatLine(aspectRatio)}>
       <ToggleGroup type="single" variant="outline" className="w-full" value={aspectRatio} onValueChange={(v) => v && set({ aspectRatio: v as OutputRatio })}>
         {OUTPUT_RATIOS.map((r) => (
           <ToggleGroupItem key={r} value={r} className="tabular flex-1">
@@ -78,14 +78,13 @@ function FormatField() {
           </ToggleGroupItem>
         ))}
       </ToggleGroup>
-      <PromptCode text={formatLine(aspectRatio)} />
     </Field>
   );
 }
 
 export function BriefPanel({ onGenerated }: { onGenerated?: () => void }) {
   const t = useT();
-  const { brief, setBrief, generate, jobs, cancelAll } = useWorkspace();
+  const { brief, setBrief, generate, jobs, cancelAll, customStyles, personaIds } = useWorkspace();
   const open = useUI((s) => s.open);
   const running = jobs.filter((j) => j.status === 'running' && j.kind === 'generate').length;
 
@@ -95,6 +94,7 @@ export function BriefPanel({ onGenerated }: { onGenerated?: () => void }) {
         <div className="divide-y [&>section]:px-4 [&>section]:py-5">
           <ChannelSection />
           <Section
+            foldable
             title={`1. ${t('brief.title')}`}
             action={
               <Tooltip>
@@ -108,16 +108,15 @@ export function BriefPanel({ onGenerated }: { onGenerated?: () => void }) {
             }
           >
             <FormatField />
-            <Field label={t('brief.videoTitle')} htmlFor="videoTitle">
+            <Field label={t('brief.videoTitle')} htmlFor="videoTitle" prompt={titlePreviewLine(brief.videoTitle)}>
               <Input
                 id="videoTitle"
                 value={brief.videoTitle}
                 onChange={(e) => setBrief({ videoTitle: e.target.value })}
                 placeholder={t('brief.videoTitlePlaceholder')}
               />
-              <PromptCode text={titlePreviewLine(brief.videoTitle)} />
             </Field>
-            <Field label={t('brief.brief')} htmlFor="brief" required>
+            <Field label={t('brief.brief')} htmlFor="brief" required prompt={sceneLine(brief.brief)}>
               <Textarea
                 id="brief"
                 required
@@ -126,9 +125,8 @@ export function BriefPanel({ onGenerated }: { onGenerated?: () => void }) {
                 placeholder={t('brief.briefPlaceholder')}
                 className="min-h-28 resize-y"
               />
-              <PromptCode text={sceneLine(brief.brief)} />
             </Field>
-            <Field label={t('brief.style')}>
+            <Field label={t('brief.style')} prompt={styleLine(findStyle(brief.styleId, customStyles)?.prompt, personaIds.length)}>
               <StylePicker />
             </Field>
             <GeneratedTextField />

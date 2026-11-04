@@ -7,7 +7,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Field, Section } from '../Section';
 import { Thumb } from '../Thumb';
-import { PromptCode } from './PromptCode';
 import { MAX_IMAGES, useWorkspace } from '../../stores/workspace';
 import { deleteLibraryImage } from '../../lib/db';
 import { extractVideoId, fetchThumbnail, fetchVideoTitle } from '../../lib/youtube';
@@ -21,7 +20,7 @@ function YouTubeRemix() {
   const t = useT();
   const [url, setUrl] = useState('');
   const [busy, setBusy] = useState(false);
-  const { addRef, setBrief, brief } = useWorkspace();
+  const addRef = useWorkspace((s) => s.addRef);
 
   async function load() {
     const id = extractVideoId(url);
@@ -31,7 +30,6 @@ function YouTubeRemix() {
       const [thumb, title] = await Promise.all([fetchThumbnail(id), fetchVideoTitle(id)]);
       if (!thumb) throw new Error('thumbnail');
       addRef(thumb, 'youtube', title ? `YouTube: ${title}` : 'YouTube thumbnail');
-      if (title && !brief.videoTitle) setBrief({ videoTitle: title });
       setUrl('');
       toast.success(t('brief.youtubeLoaded'));
     } catch {
@@ -109,6 +107,7 @@ export function ReferencesSection({ number }: { number: number }) {
 
   return (
     <Section
+      foldable
       title={
         <span className="flex items-center gap-2">
           {number}. {t('brief.references')}
@@ -126,7 +125,7 @@ export function ReferencesSection({ number }: { number: number }) {
         </div>
       }
     >
-      <Field label={t('brief.refImages')}>
+      <Field label={t('brief.refImages')} prompt={previewImageLines().references}>
         {refs.length > 0 && (
           <div className="space-y-1.5">
             {refs.map((r) => (
@@ -190,9 +189,8 @@ export function ReferencesSection({ number }: { number: number }) {
             e.target.value = '';
           }}
         />
-        <PromptCode text={previewImageLines().references} />
       </Field>
-      <Field label={t('brief.youtube')} htmlFor="youtubeRemix">
+      <Field label={t('brief.youtube')} htmlFor="youtubeRemix" hint={t('brief.youtubeHint')}>
         <YouTubeRemix />
       </Field>
     </Section>
