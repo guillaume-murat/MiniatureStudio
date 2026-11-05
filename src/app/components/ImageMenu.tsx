@@ -21,7 +21,7 @@ export function ImageMenu({ gen, removable, disabled, children }: { gen: Generat
             <Copy /> {t('versions.duplicate')}
           </ContextMenuItem>
           {removable && (
-            <ContextMenuItem className="text-destructive focus:text-destructive [&_svg]:text-destructive" onSelect={() => setRemoving(true)}>
+            <ContextMenuItem className="text-danger-text focus:text-danger-text [&_svg]:text-danger-text" onSelect={() => setRemoving(true)}>
               <Trash2 /> {t('canvas.deleteImage')}
             </ContextMenuItem>
           )}

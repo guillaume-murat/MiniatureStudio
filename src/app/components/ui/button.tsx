@@ -3,20 +3,24 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/app/lib/utils"
 import { Slot } from "radix-ui"
 
+/** Pressing a raised button sinks it onto its shadow. */
+const PRESS = "active:translate-x-px active:translate-y-px active:shadow-none disabled:shadow-none"
+
 const buttonVariants = cva(
   "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default: "border-2 border-ink bg-primary text-primary-foreground shadow-pop hover:bg-primary/90 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:shadow-none",
+        default: `border-2 border-ink bg-brand text-on-brand shadow-pop hover:bg-brand/90 ${PRESS}`,
         destructive:
-          "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40",
+          `border-2 border-ink bg-danger text-on-danger shadow-pop hover:bg-danger/90 focus-visible:ring-danger/20 dark:focus-visible:ring-danger/40 ${PRESS}`,
+        honey: `border-2 border-ink bg-honey text-on-honey shadow-pop hover:bg-honey/85 ${PRESS}`,
         outline:
-          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          `border-[1.5px] border-ink bg-background shadow-pop-sm hover:bg-accent hover:text-accent-foreground ${PRESS}`,
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          `border-[1.5px] border-ink bg-secondary text-secondary-foreground shadow-pop-sm hover:bg-accent ${PRESS}`,
         ghost:
-          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
+          `border-[1.5px] border-border bg-background shadow-pop-soft hover:bg-accent hover:text-accent-foreground ${PRESS}`,
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
@@ -25,6 +29,7 @@ const buttonVariants = cva(
         sm: "h-8 gap-1.5 rounded-md px-3 has-[>svg]:px-2.5",
         lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
         icon: "size-9",
+        "icon-2xs": "size-5 rounded-sm [&_svg:not([class*='size-'])]:size-3",
         "icon-xs": "size-6 rounded-md [&_svg:not([class*='size-'])]:size-3",
         "icon-sm": "size-8",
         "icon-lg": "size-10",

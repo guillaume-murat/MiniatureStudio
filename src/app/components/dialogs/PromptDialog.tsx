@@ -46,7 +46,7 @@ export function PromptDialog() {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && close()}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{t('prompt.title')}</DialogTitle>
           <DialogDescription>{t('prompt.description')}</DialogDescription>

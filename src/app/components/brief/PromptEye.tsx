@@ -32,7 +32,7 @@ export function PromptEye({
           type="button"
           onClick={() => change(true)}
           aria-label={heading}
-          className="inline-flex size-5 shrink-0 cursor-help items-center justify-center rounded text-yellow-600 transition-colors hover:bg-yellow-500/15 dark:text-yellow-400"
+          className="inline-flex size-5 shrink-0 cursor-help items-center justify-center rounded text-warning transition-colors hover:bg-highlight/15"
         >
           <Eye className="size-3.5" />
         </button>
@@ -45,11 +45,11 @@ export function PromptEye({
           sideOffset={6}
           collisionPadding={8}
           className={cn(
-            'prompt-eye-popup pointer-events-none z-50 max-h-[85dvh] max-w-[calc(100vw-1rem)] overflow-hidden rounded-md border border-yellow-500/40 bg-popover shadow-lg',
+            'prompt-eye-popup pointer-events-none z-50 max-h-[85dvh] max-w-[calc(100vw-1rem)] overflow-hidden rounded-md border-[1.5px] border-ink bg-popover shadow-pop',
             children ? 'w-[40rem]' : 'w-96',
           )}
         >
-          <div className="bg-yellow-500/10 p-2.5 font-mono text-[11px] leading-relaxed text-muted-foreground">
+          <div className="bg-highlight/10 p-2.5 font-mono text-[11px] leading-relaxed text-muted-foreground">
             <p className="mb-1 font-sans font-medium text-foreground">{heading}</p>
             {children ?? <p className="whitespace-pre-wrap italic">{text || t('brief.promptNone')}</p>}
           </div>

@@ -27,7 +27,7 @@ export function NewProjectDialog() {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !busy && close()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-md">
         <form
           className="space-y-4"
           onSubmit={(e) => {

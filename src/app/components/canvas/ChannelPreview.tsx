@@ -145,7 +145,7 @@ function SlotDialog({ index, onClose }: { index: number | null; onClose: () => v
 
   return (
     <Dialog open={index !== null} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto max-w-lg">
         <DialogHeader>
           <DialogTitle>{t('channel.video', { n: (index ?? 0) + 1 })}</DialogTitle>
           <DialogDescription>{t('channel.videoHint')}</DialogDescription>
@@ -296,7 +296,7 @@ export function ChannelPreview() {
             width={PAGE.outputWidth}
             height={PAGE.outputHeight}
             onClick={onCanvasClick}
-            className="cursor-pointer rounded-lg bg-muted shadow-lg ring-1 ring-border"
+            className="cursor-pointer rounded-lg bg-muted ring-1 ring-border"
             style={size}
           />
         )}

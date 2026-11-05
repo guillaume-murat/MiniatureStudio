@@ -100,14 +100,16 @@ export function BrandColors({ number }: { number: number }) {
                   <input type="color" value={c} onChange={(e) => setColor(i, e.target.value)} className="size-full cursor-pointer opacity-0" aria-label={c} />
                 </label>
                 <HexInput value={c} onChange={(hex) => setColor(i, hex)} label={`${t('brand.colors')} ${i + 1}`} />
-                <button
+                <Button
                   type="button"
                   onClick={() => save(colors.filter((_, j) => j !== i))}
-                  className="absolute -top-1.5 left-5 hidden rounded-full bg-foreground p-0.5 text-background group-hover:block [@media(pointer:coarse)]:block"
+                  variant="outline"
+              size="icon-2xs"
+              className="absolute -top-1.5 left-5 hidden group-hover:inline-flex [@media(pointer:coarse)]:inline-flex"
                   aria-label={t('common.remove')}
                 >
                   <X className="size-3" />
-                </button>
+                </Button>
               </div>
             ))}
           </div>

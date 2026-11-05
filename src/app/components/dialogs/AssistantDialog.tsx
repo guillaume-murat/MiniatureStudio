@@ -63,7 +63,7 @@ function ConceptViewer({
   return (
     <Dialog open={!!item} onOpenChange={(o) => !o && onClose()}>
       <DialogContent
-        className="max-h-[95dvh] overflow-y-auto sm:max-w-[90vw]"
+        className="max-h-[95dvh] overflow-y-auto max-w-[90vw]"
         onKeyDown={(e) => {
           if (e.key === 'ArrowLeft') move(-1);
           if (e.key === 'ArrowRight') move(1);
@@ -207,7 +207,7 @@ export function AssistantDialog() {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && close()}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-5xl">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto max-w-5xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="size-4 text-primary" /> {t('assistant.title')}
@@ -239,7 +239,7 @@ export function AssistantDialog() {
         </form>
 
         {busy && concepts.length === 0 && (
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 grid-cols-3">
             {[0, 1, 2].map((i) => (
               <div key={i} className="h-48 animate-pulse rounded-lg bg-muted" />
             ))}
@@ -247,7 +247,7 @@ export function AssistantDialog() {
         )}
 
         {concepts.length > 0 && (
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 grid-cols-3">
             {concepts.map((c, i) => {
               const style = findStyle(c.styleId, customStyles);
               return (

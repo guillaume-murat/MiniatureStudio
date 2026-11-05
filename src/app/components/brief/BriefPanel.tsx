@@ -46,13 +46,9 @@ function PeopleSection({ number }: { number: number }) {
     >
       <Field label={t('brief.peopleSelect')} prompt={previewImageLines().people}>
         {personas.length === 0 ? (
-          <button
-            type="button"
-            onClick={() => open('newPersona')}
-            className="flex w-full items-center gap-2 rounded-lg border border-dashed px-3 py-2.5 text-sm text-muted-foreground hover:bg-accent/50"
-          >
-            <Plus className="size-4" /> {t('persona.new')}
-          </button>
+          <Button variant="outline" className="w-full" onClick={() => open('newPersona')}>
+            <Plus /> {t('persona.new')}
+          </Button>
         ) : (
           <div className="flex flex-wrap gap-1.5">
             {personas.map((p) => (
@@ -83,7 +79,7 @@ function FormatField() {
   );
 }
 
-export function BriefPanel({ onGenerated }: { onGenerated?: () => void }) {
+export function BriefPanel() {
   const lang = useSettings((s) => s.lang);
   const t = useT();
   const { brief, setBrief, generate, jobs, cancelAll, customStyles, personaIds } = useWorkspace();
@@ -150,16 +146,15 @@ export function BriefPanel({ onGenerated }: { onGenerated?: () => void }) {
           disabled={!brief.brief.trim()}
           onClick={() => {
             generate();
-            onGenerated?.();
           }}
         >
           {running ? <Loader2 className="animate-spin" /> : <Wand2 />}
           {running ? t('brief.generating') : t('brief.generate')}
-          <Kbd className="ml-1 hidden bg-primary-foreground/15 text-primary-foreground sm:inline-flex">{MOD} ↵</Kbd>
+          <Kbd className="ml-1 bg-on-brand/15 text-on-brand">{MOD} ↵</Kbd>
         </Button>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button size="icon-lg" variant="ghost" className="border border-yellow-500/25 bg-yellow-500/10 hover:bg-yellow-500/15 dark:hover:bg-yellow-500/15" onClick={() => open('prompt')} aria-label={t('prompt.open')}>
+            <Button size="icon-lg" variant="honey" onClick={() => open('prompt')} aria-label={t('prompt.open')}>
               <Eye />
             </Button>
           </TooltipTrigger>

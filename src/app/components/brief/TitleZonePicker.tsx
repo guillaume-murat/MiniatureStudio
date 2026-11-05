@@ -19,17 +19,17 @@ function PlaceholderScene() {
     <svg viewBox="0 0 160 90" preserveAspectRatio="xMidYMid slice" aria-hidden className="absolute inset-0 size-full">
       <defs>
         <linearGradient id="zone-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#3b3f8f" />
-          <stop offset="0.65" stopColor="#c0627a" />
-          <stop offset="1" stopColor="#f2a65a" />
+          <stop offset="0" stopColor="#0f5c45" />
+          <stop offset="0.65" stopColor="#7fb069" />
+          <stop offset="1" stopColor="#f2d15a" />
         </linearGradient>
       </defs>
       <rect width="160" height="90" fill="url(#zone-sky)" />
-      <circle cx="118" cy="34" r="11" fill="#ffd98a" />
-      <path d="M0 66 Q30 48 62 62 T124 58 T160 64 V90 H0 Z" fill="#4a2f5e" />
-      <path d="M0 78 Q44 66 90 76 T160 74 V90 H0 Z" fill="#2c1c3f" />
-      <circle cx="80" cy="42" r="12" fill="#1a1226" />
-      <path d="M54 90 C54 66 66 52 80 52 S106 66 106 90 Z" fill="#1a1226" />
+      <circle cx="118" cy="34" r="11" fill="#fff0a8" />
+      <path d="M0 66 Q30 48 62 62 T124 58 T160 64 V90 H0 Z" fill="#14513c" />
+      <path d="M0 78 Q44 66 90 76 T160 74 V90 H0 Z" fill="#0c3a2a" />
+      <circle cx="80" cy="42" r="12" fill="#06170f" />
+      <path d="M54 90 C54 66 66 52 80 52 S106 66 106 90 Z" fill="#06170f" />
     </svg>
   );
 }

@@ -217,7 +217,7 @@ export function StyleDialog() {
         }
       }}
     >
-      <DialogContent className={cn('max-h-[90dvh] overflow-y-auto', editing ? 'sm:max-w-xl' : 'sm:max-w-4xl')}>
+      <DialogContent className={cn('max-h-[90dvh] overflow-y-auto', editing ? 'max-w-xl' : 'max-w-4xl')}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {editing && (
@@ -244,7 +244,7 @@ export function StyleDialog() {
               {customStyles.length === 0 ? (
                 <p className="text-sm text-muted-foreground">{t('styles.empty')}</p>
               ) : (
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2 grid-cols-2">
                   {customStyles.map((s) => (
                     <CustomStyleOption key={s.id} style={s} active={s.id === styleId} onChoose={() => choose(s.id)} onEdit={() => setEditing(s)} />
                   ))}
@@ -253,7 +253,7 @@ export function StyleDialog() {
             </section>
             <section className="space-y-2">
               <h3 className="text-sm font-medium">{t('styles.presets')}</h3>
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2 grid-cols-2">
                 <StyleOption active={!hasStyle} emoji={NO_STYLE_EMOJI} title={t('brief.styleNone')} hint="—" prompt={styleLine(lang)} onClick={() => choose('')} />
                 {STYLES.map((s) => (
                   <StyleOption key={s.id} active={s.id === styleId} emoji={s.emoji} title={s.name[lang]} hint={s.hint[lang]} addsText={s.preset?.text === 'style'} prompt={styleLine(lang, s.prompt[lang])} onClick={() => choose(s.id)} />

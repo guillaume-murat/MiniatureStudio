@@ -47,7 +47,7 @@ function ProjectSwitcher() {
     <>
       <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className={cn(TOP_BUTTON, "max-w-40 gap-2 font-medium sm:max-w-56")}>
+              <Button variant="ghost" size="sm" className={cn(TOP_BUTTON, "max-w-40 gap-2 font-medium xl:max-w-48")}>
                 <Folder />
                 <span className="truncate">{current?.name ?? t('topbar.untitled')}</span>
                 <ChevronsUpDown className="text-muted-foreground" />
@@ -82,7 +82,7 @@ function ProjectSwitcher() {
       </DropdownMenu>
 
       <Dialog open={renaming} onOpenChange={setRenaming}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>{t('topbar.renameProject')}</DialogTitle>
           </DialogHeader>
@@ -142,16 +142,16 @@ export function TopBar() {
     <header className="topbar relative flex h-12 shrink-0 items-center gap-1 border-b-2 border-(--brand-edge) bg-sidebar px-2">
       <div className="flex items-center gap-2 rounded-md px-2 py-1 font-heading text-[15px] font-semibold">
         <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" width={28} height={28} className="size-7 shrink-0 rounded-md border-2 border-ink" draggable={false} />
-        <span className="hidden sm:inline">Miniature Studio</span>
+        <span className="hidden xl:inline">Miniature Studio</span>
       </div>
       <span className="mx-1 h-5 w-px bg-border" />
       <ProjectSwitcher />
-      <ViewSwitcher className="view-tabs absolute left-1/2 hidden -translate-x-1/2 lg:flex" />
+      <ViewSwitcher className="view-tabs absolute left-1/2 -translate-x-1/2" />
 
       <div className="ml-auto flex items-center gap-1.5">
-        <Button variant="outline" size="sm" className={cn(TOP_BUTTON, "hidden gap-2 md:inline-flex")} onClick={() => open('commands')}>
-          <Command /> {t('topbar.commands')}
-          <Kbd>{MOD} K</Kbd>
+        <Button variant="outline" size="sm" className={cn(TOP_BUTTON, "gap-2")} onClick={() => open('commands')} aria-label={t('topbar.commands')}>
+          <Command /> <span className="hidden xl:inline">{t('topbar.commands')}</span>
+          <Kbd className="hidden xl:inline-flex">{MOD} K</Kbd>
         </Button>
 
         <Tooltip>
@@ -168,7 +168,7 @@ export function TopBar() {
           <Tooltip>
             <TooltipTrigger asChild>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-sm" className={cn(TOP_BUTTON, "hidden sm:inline-flex")} aria-label={t('topbar.theme')}>
+                <Button variant="ghost" size="icon-sm" className={TOP_BUTTON} aria-label={t('topbar.theme')}>
                   <ThemeIcon />
                 </Button>
               </DropdownMenuTrigger>
@@ -208,7 +208,7 @@ export function TopBar() {
               className={cn(hasKey ? TOP_BUTTON : 'gap-2')}
             >
               <Settings />
-              {!hasKey && <span className="hidden sm:inline">{t('topbar.keyMissing')}</span>}
+              {!hasKey && <span className="hidden min-[1440px]:inline">{t('topbar.keyMissing')}</span>}
             </Button>
           </TooltipTrigger>
           <TooltipContent>{t('topbar.settings')}</TooltipContent>

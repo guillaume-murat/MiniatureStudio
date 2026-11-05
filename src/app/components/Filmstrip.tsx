@@ -60,7 +60,7 @@ function Tile({
             style={{ width, height: TILE_HEIGHT }}
           >
             <img src={url} alt="" className="size-full object-cover" loading="lazy" draggable={false} />
-            {gen.favorite && <Star className="absolute top-1 left-1 size-3 fill-amber-400 text-amber-400 drop-shadow" />}
+            {gen.favorite && <Star className="absolute top-1 left-1 size-3 fill-highlight text-highlight drop-shadow" />}
             {count > 1 && (
               <span className="tabular absolute bottom-1 left-1 flex items-center gap-0.5 rounded bg-black/70 px-1 text-[10px] leading-4 font-medium text-white">
                 <History className="size-2.5" /> {count}
@@ -117,7 +117,7 @@ export function Filmstrip() {
         <Tooltip>
           <TooltipTrigger asChild>
             <Toggle size="sm" className="h-6 min-w-6 shrink-0 px-1" pressed={favoritesOnly} onPressedChange={setFavoritesOnly} aria-label={t('filmstrip.favoritesOnly')}>
-              <Star className={cn('size-3.5', favoritesOnly && 'fill-amber-400 text-amber-400')} />
+              <Star className={cn('size-3.5', favoritesOnly && 'fill-highlight text-highlight')} />
             </Toggle>
           </TooltipTrigger>
           <TooltipContent>{t('filmstrip.favoritesOnly')}</TooltipContent>

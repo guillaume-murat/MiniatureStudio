@@ -55,17 +55,19 @@ function PhotoSlot({ label, blob, required, onSet, onClear }: { label: string; b
         {url ? (
           <>
             <img src={url} alt={label} className="size-full object-cover" />
-            <button
+            <Button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onClear();
               }}
-              className="absolute top-1 right-1 rounded-full bg-black/70 p-1 text-white opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:opacity-100"
+              variant="outline"
+              size="icon-2xs"
+              className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:opacity-100"
               aria-label="Remove"
             >
               <Trash2 className="size-3" />
-            </button>
+            </Button>
           </>
         ) : (
           <UserRound className="size-8 text-muted-foreground/60" />
@@ -108,7 +110,7 @@ function Editor({ initial, onDone }: { initial?: Persona; onDone: () => void }) 
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 grid-cols-2">
         <Field label={t('persona.name')} htmlFor="pname">
           <Input id="pname" value={name} onChange={(e) => setName(e.target.value)} placeholder={t('persona.namePlaceholder')} autoFocus />
         </Field>
@@ -243,7 +245,7 @@ export function PersonaDialog() {
         }
       }}
     >
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {editing && !direct && (

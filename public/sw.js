@@ -6,7 +6,7 @@
  * - /assets/* (content-hashed): cache first.
  * - Everything else (APIs, functions, cross-origin): untouched.
  */
-const VERSION = 'v2-3';
+const VERSION = 'v2-5';
 const PAGES = `pages-${VERSION}`;
 const ASSETS = `assets-${VERSION}`;
 const SHELL = ['./app/', './manifest.webmanifest', './favicon.png'];

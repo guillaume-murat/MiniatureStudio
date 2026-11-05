@@ -2,7 +2,7 @@
 
 > This project is a fork of [yoanbernabeu/NanoThumbnail](https://github.com/yoanbernabeu/NanoThumbnail).
 
-Miniature Studio is a local studio to **generate, edit and test YouTube thumbnails** with Google's Nano Banana models (Nano Banana Pro, Nano Banana 2 and its Lite version). It runs on your computer, as a macOS app or a local server: bring your own **Replicate**, **Google Gemini**, **OpenRouter** or **Mammouth** key, or use **Vertex AI** through your gcloud. Your images stay on your device.
+Miniature Studio is a local studio to **generate, edit and test YouTube thumbnails** with Google's Nano Banana models (Nano Banana Pro, Nano Banana 2 and its Lite version). It runs on your computer, as a macOS app or a local server, and is made for computer screens and large tablets (1024 px wide or more), not phones: bring your own **Replicate**, **Google Gemini**, **OpenRouter** or **Mammouth** key, or use **Vertex AI** through your gcloud. Your images stay on your device.
 
 ## Features
 
@@ -16,7 +16,7 @@ Miniature Studio is a local studio to **generate, edit and test YouTube thumbnai
 - **References & YouTube remix**: up to 14 reference images, each with its role (composition, style, object, background or free), or paste a YouTube URL to pull its thumbnail and title.
 
 **Iterate**
-- **Edit bar**: floats under the image and moves with its handle (below the image on mobile). It holds the instruction, the image tools, a suggestions menu that fills the field without sending anything, and an eye that shows on hover the prompt, images and model the next edit would send.
+- **Edit bar**: floats under the image and moves with its handle. It holds the instruction, the image tools, a suggestions menu that fills the field without sending anything, and an eye that shows on hover the prompt, images and model the next edit would send.
 - **Conversational edits**: “make the face more surprised” changes only that.
 - **History**: a thumbnail has one simple line of versions. Click one to see it; go back to it, which deletes the newer ones after a warning, or duplicate it as a new independent thumbnail.
 - **Area edits**: paint a mask, describe the change; the model gets the clean image plus a marked copy as a location guide, and pixels outside the mask are merged back untouched. **Smooth** refills the painted area from its surroundings, locally and instantly (for seams and lines on soft backgrounds); **AI heal** does the same, then lets the model restore texture.

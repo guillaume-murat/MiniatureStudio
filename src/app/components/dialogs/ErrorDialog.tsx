@@ -12,7 +12,7 @@ export function ErrorDialog() {
 
   return (
     <Dialog open={!!lastError} onOpenChange={(o) => !o && showError(null)}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{t('errors.details')}</DialogTitle>
           <DialogDescription>

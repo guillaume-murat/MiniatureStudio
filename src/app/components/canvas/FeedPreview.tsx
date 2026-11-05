@@ -199,7 +199,7 @@ export function FeedPreview({ generation }: { generation: Generation }) {
 
         {mode === 'sidebar' && (
           <div className="flex gap-6 p-6">
-            <div className="hidden flex-1 lg:block">
+            <div className="flex-1">
               <div className="aspect-video w-full rounded-xl" style={{ background: colors.placeholder }} />
             </div>
             <div className="w-[402px] shrink-0 space-y-2">

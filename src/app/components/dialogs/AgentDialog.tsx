@@ -17,8 +17,8 @@ const INSTALL_OTHER = 'node /path/to/MiniatureStudio/mcp/dist/index.js';
 
 const STATUS_COLOR: Record<AgentStatus, string> = {
   off: 'bg-muted-foreground/40',
-  connecting: 'bg-amber-500',
-  waiting: 'bg-amber-500',
+  connecting: 'bg-warning',
+  waiting: 'bg-warning',
   connected: 'bg-success',
   rejected: 'bg-destructive',
   replaced: 'bg-muted-foreground/40',
@@ -61,7 +61,7 @@ export function AgentDialog() {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && close()}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Bot className="size-5" /> {t('agent.title')}
@@ -71,9 +71,9 @@ export function AgentDialog() {
 
         <div className="space-y-5">
           {agent.pending && (
-            <div className="space-y-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
+            <div className="space-y-3 rounded-lg border border-warning/40 bg-highlight/15 p-3">
               <p className="flex items-start gap-2 text-sm">
-                <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                <ShieldAlert className="mt-0.5 size-4 shrink-0 text-warning" />
                 {t('agent.pendingText', { port: agent.pending.port })}
               </p>
               <div className="flex justify-end gap-2">
@@ -157,7 +157,7 @@ export function AgentDialog() {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{t('agent.activity')}</h3>
+              <h3 className="font-heading text-sm font-semibold">{t('agent.activity')}</h3>
               {agent.log.length > 0 && (
                 <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={agent.clearLog}>
                   {t('agent.clear')}

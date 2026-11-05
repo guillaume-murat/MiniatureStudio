@@ -113,7 +113,7 @@ export function ReframeView({ gen }: { gen: Generation }) {
             style={{ ...imgStyle, clipPath: movedClip }}
           />
           {/* The frame: checkerboard where nothing covers it, the image on top */}
-          <div className="absolute inset-0 overflow-hidden rounded-lg shadow-lg ring-2 ring-primary" style={frameBg}>
+          <div className="absolute inset-0 overflow-hidden rounded-lg ring-2 ring-highlight" style={frameBg}>
             {zoneMoves && (
               <img src={url} alt="" draggable={false} className="pointer-events-none absolute inset-0 size-full max-w-none select-none" style={{ clipPath: holed }} />
             )}

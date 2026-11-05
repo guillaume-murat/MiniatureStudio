@@ -5,11 +5,12 @@
  * Design tokens — Miniature Studio
  * A mix of two screens, UI by Made Good Designs: the thick outlines and hard
  * shadows of « Create photo post » retro, the rounded type (Fredoka, Nunito) of
- * its playful version, in fir green and red.
+ * its playful version, in greens and yellows only (see docs/design-system.md).
  * https://madegooddesigns.com/inspiration/ui/create-post-web-retro-679d6c96880e
  * https://madegooddesigns.com/inspiration/ui/create-post-web-playful-9597dc774b65
  * Ink draws the outlines and hard shadows, kept for the key elements (`shadow-pop`).
- * Destructive is raspberry, so that it does not read as the red primary.
+ * Destructive (error text) is a deep ochre. Red (danger) is the one exception to
+ * greens and yellows, kept for destructive actions: buttons and menu items.
  */
 :root {
   --radius: 0.625rem;
@@ -20,17 +21,24 @@
   --card-foreground: #0c2a1e;
   --popover: #fbfcf5;
   --popover-foreground: #0c2a1e;
-  --primary: #c4242e;
-  --primary-foreground: #ffffff;
+  --primary: #0f5c45;
+  --primary-foreground: #fbfcf5;
   --secondary: color-mix(in oklab, #0f5c45 12%, #e6f1e4);
   --secondary-foreground: #0c2a1e;
   --muted: color-mix(in oklab, #0f5c45 12%, #e6f1e4);
   --muted-foreground: #3f5c4f;
   --accent: color-mix(in oklab, #0f5c45 18%, #e6f1e4);
   --accent-foreground: #0c2a1e;
-  --destructive: #9c1458;
-  --success: oklch(0.6 0.15 155);
-  --warning: oklch(0.75 0.15 75);
+  --destructive: #7a5c00;
+  --on-destructive: #fffbe6;
+  --danger: #c4242e;
+  --on-danger: #ffffff;
+  --danger-text: #c4242e;
+  --success: #2e8b57;
+  --warning: #a67c00;
+  --highlight: #ffd23f;
+  --honey: #fbbf24;
+  --on-honey: #000000;
   --border: #bbd3b8;
   --input: #bbd3b8;
   --ring: #0f5c45;
@@ -55,17 +63,24 @@
   --card-foreground: #eef5ee;
   --popover: #16241d;
   --popover-foreground: #eef5ee;
-  --primary: #ff8a92;
-  --primary-foreground: #111111;
+  --primary: #7fd0ae;
+  --primary-foreground: #0d1713;
   --secondary: color-mix(in oklab, #5fb795 14%, #16241d);
   --secondary-foreground: #eef5ee;
   --muted: color-mix(in oklab, #5fb795 14%, #16241d);
   --muted-foreground: #aebfb4;
   --accent: color-mix(in oklab, #5fb795 22%, #16241d);
   --accent-foreground: #eef5ee;
-  --destructive: #ff7fb0;
-  --success: oklch(0.7 0.15 155);
-  --warning: oklch(0.8 0.14 75);
+  --destructive: #ffd24d;
+  --on-destructive: #1a1400;
+  --danger: #c4242e;
+  --on-danger: #ffffff;
+  --danger-text: #ff8a92;
+  --success: #5fb795;
+  --warning: #ffd24d;
+  --highlight: #ffd23f;
+  --honey: #fbbf24;
+  --on-honey: #000000;
   --border: #2d4136;
   --input: #2d4136;
   --ring: #7fd0ae;
@@ -93,6 +108,7 @@
   --radius-lg: 20px;
   --radius-xl: 20px;
 
+  --shadow-pop-soft: 2px 2px 0 var(--border);
   --shadow-pop-sm: 2px 2px 0 var(--brand-edge);
   --shadow-pop: 3px 3px 0 var(--ink);
   --shadow-pop-lg: 6px 6px 0 var(--ink);
@@ -112,6 +128,15 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-on-destructive: var(--on-destructive);
+  --color-danger: var(--danger);
+  --color-on-danger: var(--on-danger);
+  --color-danger-text: var(--danger-text);
+  --color-highlight: var(--highlight);
+  --color-honey: var(--honey);
+  --color-on-honey: var(--on-honey);
+  --color-brand: var(--brand);
+  --color-on-brand: var(--on-brand);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-border: var(--border);

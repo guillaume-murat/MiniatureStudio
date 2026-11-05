@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { Toaster } from './components/ui/sonner';
 import { TooltipProvider } from './components/ui/tooltip';
@@ -21,16 +21,12 @@ import { PromptDialog } from './components/dialogs/PromptDialog';
 import { NewProjectDialog } from './components/dialogs/NewProjectDialog';
 import { useAgent } from './agent/bridge';
 import { useApplyTheme } from './hooks/use-theme';
-import { useMediaQuery } from './hooks/use-media-query';
 import { isLayerTool, useWorkspace } from './stores/workspace';
 import { useText } from './stores/text';
 import { useUI } from './stores/ui';
 import { useSettings } from './stores/settings';
 import { requestPersistence } from './lib/db';
 import { useT } from './i18n';
-import { cn } from './lib/utils';
-
-type MobileTab = 'brief' | 'canvas' | 'iterate';
 
 function isTyping(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
@@ -41,8 +37,6 @@ export default function App() {
   useApplyTheme();
   const t = useT();
   const ready = useWorkspace((s) => s.ready);
-  const isDesktop = useMediaQuery('(min-width: 1024px)');
-  const [mobileTab, setMobileTab] = useState<MobileTab>('brief');
 
   useEffect(() => {
     (async () => {
@@ -77,7 +71,6 @@ export default function App() {
       if (mod && e.key === 'Enter') {
         e.preventDefault();
         useWorkspace.getState().generate();
-        if (!isDesktop) setMobileTab('canvas');
       } else if (mod && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         const ui = useUI.getState();
@@ -107,15 +100,15 @@ export default function App() {
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('paste', onPaste);
     };
-  }, [isDesktop]);
+  }, []);
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex h-dvh flex-col overflow-hidden bg-background">
+      <div className="flex h-dvh min-w-5xl flex-col overflow-hidden bg-background">
         <TopBar />
         {!ready ? (
           <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">{t('common.loading')}</div>
-        ) : isDesktop ? (
+        ) : (
           <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
             <ResizablePanel defaultSize={340} minSize={290} maxSize={500} className="bg-sidebar">
               <BriefPanel />
@@ -132,37 +125,6 @@ export default function App() {
               <IteratePanel />
             </ResizablePanel>
           </ResizablePanelGroup>
-        ) : (
-          <>
-            {/* Panels stay mounted (hidden, not removed) so switching tabs keeps the
-                painted mask, scroll positions and drafts. */}
-            <div className="relative min-h-0 flex-1 overflow-clip">
-              <div className={cn('absolute inset-0', mobileTab !== 'brief' && 'invisible')}>
-                <BriefPanel onGenerated={() => setMobileTab('canvas')} />
-              </div>
-              <div className={cn('absolute inset-0 flex flex-col', mobileTab !== 'canvas' && 'invisible')}>
-                <CanvasArea />
-                <Filmstrip />
-              </div>
-              <div className={cn('absolute inset-0', mobileTab !== 'iterate' && 'invisible')}>
-                <IteratePanel />
-              </div>
-            </div>
-            <nav className="grid grid-cols-3 border-t bg-sidebar pb-[env(safe-area-inset-bottom)]">
-              {(['brief', 'canvas', 'iterate'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setMobileTab(tab)}
-                  className={cn(
-                    'py-3 text-sm font-medium text-muted-foreground transition-colors',
-                    mobileTab === tab && 'text-foreground',
-                  )}
-                >
-                  {tab === 'brief' ? t('brief.title') : tab === 'canvas' ? t('canvas.viewImage') : t('iterate.title')}
-                </button>
-              ))}
-            </nav>
-          </>
         )}
       </div>
 
@@ -176,8 +138,7 @@ export default function App() {
       <PromptDialog />
       <NewProjectDialog />
       <BlockingJobOverlay />
-      {/* Bottom-right would cover the mobile tab bar */}
-      <Toaster position={isDesktop ? 'bottom-right' : 'top-center'} />
+      <Toaster position="bottom-right" />
     </TooltipProvider>
   );
 }

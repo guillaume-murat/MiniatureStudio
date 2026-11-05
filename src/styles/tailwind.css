@@ -16,6 +16,8 @@
   --sidebar: var(--brand);
   --sidebar-foreground: var(--on-brand);
   --foreground: var(--on-brand);
+  --primary: var(--on-brand);
+  --primary-foreground: var(--brand);
   --muted-foreground: var(--on-brand);
   --background: color-mix(in oklab, var(--on-brand) 14%, var(--brand));
   --muted: color-mix(in oklab, var(--on-brand) 22%, var(--brand));
@@ -88,17 +90,22 @@
 }
 
 /*
- * The brief panel stays pure white with grey neutrals, in both themes: brand
- * colours must be judged against a neutral background.
+ * The brief panel is pure white with grey neutrals in the light theme, as brand
+ * colours are judged against a neutral background. In the dark theme it is dark,
+ * like the history panel.
  */
 .neutral-panel {
+  background: var(--sidebar);
+  color: var(--foreground);
+}
+:root:not(.dark) .neutral-panel {
   --background: #ffffff;
   --foreground: #16161a;
   --card: #ffffff;
   --card-foreground: #16161a;
   --popover: #ffffff;
   --popover-foreground: #16161a;
-  --primary: #c4242e;
+  --primary: #0f5c45;
   --primary-foreground: #ffffff;
   --secondary: #f0f0f2;
   --secondary-foreground: #16161a;
@@ -106,7 +113,8 @@
   --muted-foreground: #5c5c64;
   --accent: #e8e8eb;
   --accent-foreground: #16161a;
-  --destructive: #9c1458;
+  --destructive: #7a5c00;
+  --on-destructive: #fffbe6;
   --border: #d6d6db;
   --input: #d6d6db;
   --ring: #0f5c45;
@@ -115,6 +123,5 @@
   --sidebar-border: #d6d6db;
   --ink: #0c2a1e;
   --on-ink: #ffffff;
-  background: #ffffff;
-  color: #16161a;
+  --brand-edge: #0c2a1e;
 }

@@ -31,7 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered, defer: false)
         window.title = "Miniature Studio"
-        window.minSize = NSSize(width: 900, height: 600)
+        window.minSize = NSSize(width: 1024, height: 600)
         window.contentView = webView
         window.center()
         window.setFrameAutosaveName("MiniatureStudioMain")

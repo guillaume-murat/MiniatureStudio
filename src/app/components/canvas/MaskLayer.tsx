@@ -46,7 +46,8 @@ export function MaskLayer({
     if (!ctx) return;
     const from = last.current ?? to;
     ctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over';
-    ctx.strokeStyle = 'rgb(255 0 200)';
+    // Only what's on screen: the mask's alpha is what counts, images.ts paints its own colour for the model.
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--highlight');
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.lineWidth = brushSize * width;

@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import { useBlobUrl } from '../hooks/use-blob-url';
+import { Button } from './ui/button';
 import { cn } from '../lib/utils';
 
 /** Small square image tile with an optional remove button and corner badge. */
@@ -28,17 +29,19 @@ export function Thumb({
         </span>
       )}
       {onRemove && (
-        <button
+        <Button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             onRemove();
           }}
           aria-label={removeLabel}
-          className="absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-black/70 text-white opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:opacity-100"
+          variant="outline"
+          size="icon-2xs"
+          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:opacity-100"
         >
           <X className="size-3" />
-        </button>
+        </Button>
       )}
     </div>
   );

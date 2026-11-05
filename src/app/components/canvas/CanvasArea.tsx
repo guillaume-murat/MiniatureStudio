@@ -30,7 +30,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { ImageMenu } from '../ImageMenu';
 import { SafeZones } from './SafeZones';
 import { MaskLayer, type MaskTool } from './MaskLayer';
-import { ViewSwitcher } from './ViewSwitcher';
 import { EditBar, EditBarShell } from './EditBar';
 import { ChannelPreview } from './ChannelPreview';
 import { TextOverlay, TextToolbar } from './TextLayer';
@@ -65,10 +64,10 @@ function FailedJob({ job }: { job: Job }) {
   const t = useT();
   const dismissJob = useWorkspace((s) => s.dismissJob);
   return (
-    <div className="flex items-center gap-2 rounded-full border border-destructive/40 bg-card/95 py-1 pr-1 pl-3 text-xs text-destructive shadow-sm backdrop-blur">
+    <div className="flex items-center gap-2 rounded-full border-[1.5px] border-ink bg-card py-1 pr-1 pl-3 text-xs text-destructive shadow-pop-sm">
       <AlertCircle className="size-3.5" />
       <span className="max-w-64 truncate">{job.error || t('canvas.failed')}</span>
-      <Button variant="ghost" size="icon-xs" className="rounded-full" onClick={() => dismissJob(job.id)} aria-label={t('common.close')}>
+      <Button variant="ghost" size="icon-xs" onClick={() => dismissJob(job.id)} aria-label={t('common.close')}>
         <X />
       </Button>
     </div>
@@ -126,14 +125,14 @@ function ImageView({ gen, tool, brushSize, clearSignal }: { gen: Generation; too
   return (
     <div ref={ref} className="relative flex size-full items-center justify-center overflow-hidden">
       {zoom.z !== 1 && (
-        <Button variant="secondary" size="xs" className="tabular absolute bottom-3 left-3 z-10 shadow" onClick={() => setZoom(NO_ZOOM)}>
+        <Button variant="secondary" size="xs" className="tabular absolute bottom-3 left-3 z-10" onClick={() => setZoom(NO_ZOOM)}>
           {Math.round(zoom.z * 100)} % · {t('canvas.resetZoom')}
         </Button>
       )}
       {size.width > 0 && (
         <ImageMenu gen={gen} disabled={!!active}>
         <div
-          className="relative overflow-hidden rounded-lg shadow-lg ring-1 ring-border"
+          className="relative overflow-hidden rounded-lg ring-1 ring-border"
           style={{ ...size, transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.z})` }}
         >
           <img src={url} alt={gen.prompt} className="size-full select-none" draggable={false} />
@@ -174,7 +173,7 @@ function ImageActions({ gen }: { gen: Generation }) {
     <>
       <IconTip label={gen.favorite ? t('canvas.unfavorite') : t('canvas.favorite')}>
         <Button variant="ghost" size="icon-sm" onClick={() => toggleFavorite(gen.id)} aria-pressed={!!gen.favorite}>
-          <Star className={cn(gen.favorite && 'fill-amber-400 text-amber-400')} />
+          <Star className={cn(gen.favorite && 'fill-highlight text-highlight')} />
         </Button>
       </IconTip>
       <IconTip label={t('canvas.exportYouTube')}>
@@ -257,7 +256,7 @@ export function CanvasArea() {
   const busy = runningJobs(ws.jobs).length > 0;
   const failed = ws.jobs.filter((j) => j.status === 'failed');
   const onImage = !!gen && ws.view === 'image';
-  // Replaces the tools in the edit bar. No way back through them, and no Esc on a phone: it has its own way out.
+  // Replaces the tools in the edit bar. No way back through them, and no Esc on a tablet: it has its own way out.
   const maskControls = ws.tool === 'mask' && (
     <div className="flex flex-wrap items-center gap-1.5">
       <ToggleGroup type="single" size="sm" disabled={busy} value={maskTool} onValueChange={(v) => v && setMaskTool(v as MaskTool)}>
@@ -305,14 +304,9 @@ export function CanvasArea() {
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col bg-canvas">
-      {/* Mobile only: on desktop the view switcher sits in the top bar. */}
-      <div className="flex h-11 shrink-0 items-center gap-1 border-b bg-background px-2 lg:hidden">
-        <ViewSwitcher />
-      </div>
-
       <div ref={areaRef} className="relative flex min-h-0 flex-1 flex-col">
-        {/* Body. On desktop it keeps clear of the edit bar, floating below it. */}
-        <div className={cn('relative min-h-0 flex-1 transition-[filter] duration-300', onImage && (ws.tool === 'mask' ? 'lg:mb-38' : isLayerTool(ws.tool) || viewingOlder(ws) ? 'lg:mb-36' : 'lg:mb-28'), busy && 'pointer-events-none blur-md')}>
+        {/* Body: it keeps clear of the edit bar, floating below it. */}
+        <div className={cn('relative min-h-0 flex-1 transition-[filter] duration-300', onImage && (ws.tool === 'mask' ? 'mb-38' : isLayerTool(ws.tool) || viewingOlder(ws) ? 'mb-36' : 'mb-28'), busy && 'pointer-events-none blur-md')}>
           {ws.view === 'compare' ? (
             <CompareView />
           ) : ws.view === 'feed' && gen ? (
@@ -330,26 +324,26 @@ export function CanvasArea() {
           )}
 
           {ws.tool === 'reframe' && ws.view === 'image' && (
-            <p className="pointer-events-none absolute top-3 left-1/2 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-2xl bg-foreground px-3 py-1 text-xs text-background shadow sm:rounded-full">
+            <p className="pointer-events-none absolute top-3 left-1/2 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-full bg-foreground px-3 py-1 text-xs text-background">
               {reframeTarget === 'zone' && !reframeZone ? t('reframe.zoneHint') : t('canvas.reframeHint')}
             </p>
           )}
 
           {isLayerTool(ws.tool) && ws.view === 'image' && (
-            <p className="pointer-events-none absolute top-14 left-1/2 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-2xl bg-foreground px-3 py-1 text-xs text-background shadow sm:rounded-full">
+            <p className="pointer-events-none absolute top-14 left-1/2 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-full bg-foreground px-3 py-1 text-xs text-background">
               {ws.tool === 'arrow' ? t('arrow.hint') : t('canvas.textHint')}
             </p>
           )}
 
           {ws.tool === 'mask' && ws.view === 'image' && (
-            <p className="pointer-events-none absolute top-14 left-1/2 flex w-max max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-2 rounded-2xl bg-foreground px-3 py-1 text-xs text-background shadow sm:rounded-full sm:whitespace-nowrap">
-              <span className="sm:truncate">{t('canvas.maskHint')}</span>
+            <p className="pointer-events-none absolute top-14 left-1/2 flex w-max max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-2 rounded-full bg-foreground px-3 py-1 text-xs whitespace-nowrap text-background">
+              <span className="truncate">{t('canvas.maskHint')}</span>
               <Kbd className="shrink-0 [@media(pointer:coarse)]:hidden">Esc</Kbd>
             </p>
           )}
 
           {ws.tool === 'mask' && ws.view === 'image' && (
-            <p className="pointer-events-none absolute bottom-3 left-3 flex max-w-[calc(100%-1.5rem)] items-start gap-2 rounded-lg border bg-background/90 px-3 py-2 text-xs shadow-sm backdrop-blur">
+            <p className="pointer-events-none absolute bottom-3 left-3 flex max-w-[calc(100%-1.5rem)] items-start gap-2 rounded-lg border bg-background/90 px-3 py-2 text-xs backdrop-blur">
               <Bandage className="mt-px size-3.5 shrink-0 text-muted-foreground" />
               {t('heal.context')}
             </p>
@@ -357,7 +351,7 @@ export function CanvasArea() {
 
           {/* Over the image rather than in a toolbar row: the image gets the height. */}
           {gen && ws.view === 'image' && ws.tool !== 'reframe' && (
-            <div className="absolute top-3 right-3 z-10 flex items-center gap-0.5 rounded-lg border bg-background/85 p-0.5 shadow-sm backdrop-blur">
+            <div className="absolute top-3 right-3 z-10 flex items-center gap-0.5 rounded-lg p-0.5">
               <ImageActions gen={gen} />
             </div>
           )}

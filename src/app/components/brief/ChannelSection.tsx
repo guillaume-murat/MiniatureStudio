@@ -130,14 +130,16 @@ export function ChannelSection() {
               <TooltipContent>{t('brand.logoHint')}</TooltipContent>
             </Tooltip>
             {logo && (
-              <button
+              <Button
                 type="button"
                 onClick={() => save({ logo: undefined })}
-                className="absolute -top-1 -right-1 rounded-full bg-foreground p-0.5 text-background"
+                variant="outline"
+              size="icon-2xs"
+              className="absolute -top-1.5 -right-1.5"
                 aria-label={t('common.remove')}
               >
                 <X className="size-2.5" />
-              </button>
+              </Button>
             )}
           </div>
         </Field>

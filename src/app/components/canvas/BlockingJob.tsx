@@ -29,7 +29,7 @@ export function BlockingJobOverlay() {
   const elapsed = Math.max(...jobs.map((j) => j.elapsed));
   return (
     <div className="fixed inset-0 z-50 flex cursor-wait items-center justify-center" role="alertdialog" aria-busy="true" aria-label={label}>
-      <div className="flex cursor-default items-center gap-3 rounded-full border bg-background/95 py-1.5 pr-1.5 pl-4 text-sm shadow-xl">
+      <div className="flex cursor-default items-center gap-3 rounded-full border-2 border-ink bg-background py-1.5 pr-1.5 pl-4 text-sm shadow-pop">
         <Loader2 className="size-4 animate-spin text-primary" />
         {label}
         {jobs.length > 1 && <span className="text-muted-foreground">{t('busy.images', { n: jobs.length })}</span>}

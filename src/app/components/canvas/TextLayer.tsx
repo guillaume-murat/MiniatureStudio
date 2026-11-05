@@ -65,7 +65,7 @@ function ArrowShape({ block, width, height, selected, onGrab }: { block: ArrowBl
         {block.outline && layer(block.outline, 2 * g.border)}
         {layer(block.color, 0)}
       </g>
-      {selected && <path d={g.shaft} fill="none" stroke="var(--primary)" strokeWidth={1.5} strokeDasharray="4 3" />}
+      {selected && <path d={g.shaft} fill="none" stroke="var(--highlight)" strokeWidth={1.5} strokeDasharray="4 3" />}
       {/* Wider invisible hit area along the line and the heads */}
       {onGrab && (
         <g className="pointer-events-auto cursor-move" onPointerDown={onGrab} stroke="transparent" fill="transparent" strokeWidth={Math.max(18, g.stroke + 2 * g.border + 8)} strokeLinecap="round">
@@ -85,7 +85,7 @@ function Handle({ x, y, onGrab, label, round = true }: { x: number; y: number; o
       type="button"
       onPointerDown={onGrab}
       aria-label={label}
-      className={cn('absolute size-3.5 -translate-x-1/2 -translate-y-1/2 cursor-grab border-2 border-primary bg-background shadow', round ? 'rounded-full' : 'rotate-45 rounded-sm')}
+      className={cn('absolute size-3.5 -translate-x-1/2 -translate-y-1/2 cursor-grab border-2 border-highlight bg-background', round ? 'rounded-full' : 'rotate-45 rounded-sm')}
       style={{ left: x, top: y }}
     />
   );
@@ -187,7 +187,7 @@ export function TextOverlay({ width, height, kind }: { width: number; height: nu
             <div
               onPointerDown={(e) => start(e, block, 'move')}
               onDoubleClick={() => document.getElementById(TEXT_INPUT_ID)?.focus()}
-              className={cn('cursor-move text-center whitespace-pre select-none', selected && 'outline-2 outline-offset-2 outline-primary outline-dashed')}
+              className={cn('cursor-move text-center whitespace-pre select-none', selected && 'outline-2 outline-offset-2 outline-highlight outline-dashed')}
               style={{
                 fontFamily: `"${block.font}", sans-serif`,
                 fontWeight: block.bold ? 'bold' : 'normal',
@@ -203,11 +203,11 @@ export function TextOverlay({ width, height, kind }: { width: number; height: nu
             </div>
             {selected && editable && (
               <>
-                <span className="pointer-events-none absolute bottom-full left-1/2 h-4 w-px -translate-x-1/2 bg-primary" />
+                <span className="pointer-events-none absolute bottom-full left-1/2 h-4 w-px -translate-x-1/2 bg-highlight" />
                 <button
                   type="button"
                   onPointerDown={(e) => start(e, block, 'rotate')}
-                  className="absolute bottom-full left-1/2 mb-4 flex size-6 -translate-x-1/2 cursor-grab items-center justify-center rounded-full border-2 border-primary bg-background text-primary shadow"
+                  className="absolute bottom-full left-1/2 mb-4 flex size-6 -translate-x-1/2 cursor-grab items-center justify-center rounded-full border-2 border-highlight bg-background text-primary"
                   aria-label="Rotate"
                 >
                   <RotateCw className="size-3" />

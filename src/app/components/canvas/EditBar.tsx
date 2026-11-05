@@ -25,8 +25,8 @@ const SUGGESTIONS = ['emotion', 'contrast', 'background', 'zoom', 'text', 'noTex
 const TOOLS = COMMANDS.filter((c) => c.group === 'tool');
 
 /**
- * On desktop it floats below the image, with room kept for it by the canvas, and its
- * handle moves it around `area`, the space it floats in; under the image on mobile.
+ * It floats below the image, with room kept for it by the canvas, and its
+ * handle moves it around `area`, the space it floats in.
  */
 export function EditBarShell({ area, children }: { area: Size; children: ReactNode }) {
   const t = useT();
@@ -63,13 +63,13 @@ export function EditBarShell({ area, children }: { area: Size; children: ReactNo
     <div
       ref={ref}
       style={{ '--bar-x': `${offset.x}px`, '--bar-y': `${offset.y}px` } as CSSProperties}
-      className="@container shrink-0 border-t bg-background p-2 lg:absolute lg:bottom-2 lg:left-1/2 lg:z-10 lg:w-[min(42rem,calc(100%-1.5rem))] lg:translate-x-[calc(var(--bar-x)-50%)] lg:translate-y-(--bar-y) lg:rounded-xl lg:border-2 lg:border-ink lg:pl-5 lg:shadow-pop-lg"
+      className="@container absolute bottom-2 left-1/2 z-10 w-[min(42rem,calc(100%-1.5rem))] translate-x-[calc(var(--bar-x)-50%)] translate-y-(--bar-y) rounded-xl border-2 border-ink bg-background p-2 pl-5 shadow-pop-lg"
     >
       <button
         type="button"
         aria-label={t('iterate.moveBar')}
         title={t('iterate.moveBar')}
-        className="absolute inset-y-0 left-0 hidden w-5 cursor-grab touch-none items-center justify-center rounded-l-xl text-muted-foreground hover:bg-accent active:cursor-grabbing lg:flex"
+        className="absolute inset-y-0 left-0 flex w-5 cursor-grab touch-none items-center justify-center rounded-l-xl text-muted-foreground hover:bg-accent active:cursor-grabbing"
         onPointerDown={(e) => {
           if (e.button !== 0) return;
           e.currentTarget.setPointerCapture(e.pointerId);
