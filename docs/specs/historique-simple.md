@@ -1,6 +1,6 @@
 # Historique simple
 
-Statut : `ready-for-agent`, publiée dans guillaume-murat/NanoThumbnail#10.
+Statut : `ready-for-agent`, publiée dans guillaume-murat/MiniatureStudio#10.
 
 ## Problem Statement
 

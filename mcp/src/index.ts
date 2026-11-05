@@ -7,8 +7,8 @@ import { createServer } from './server.ts';
 const config = loadConfig();
 const relay = new StudioRelay(config);
 await relay.listen();
-if (relay.listenError) console.error(`[nanothumbnail-mcp] cannot listen on 127.0.0.1:${config.port}: ${relay.listenError.message}`);
-else console.error(`[nanothumbnail-mcp] waiting for the studio on ws://127.0.0.1:${config.port}`);
+if (relay.listenError) console.error(`[miniature-studio-mcp] cannot listen on 127.0.0.1:${config.port}: ${relay.listenError.message}`);
+else console.error(`[miniature-studio-mcp] waiting for the studio on ws://127.0.0.1:${config.port}`);
 
 const server = createServer(config, relay);
 await server.connect(new StdioServerTransport());

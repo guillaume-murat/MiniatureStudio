@@ -26,9 +26,9 @@ export function Section({
   return (
     <section className={cn('space-y-2.5', className)}>
       <div className="flex min-h-6 items-center justify-between gap-2">
-        <h3 className="flex items-center gap-1 text-xs font-semibold tracking-wide text-foreground uppercase">
+        <h3 className="flex items-center gap-1 font-heading text-[15px] font-semibold text-foreground">
           {foldable ? (
-            <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="flex items-center gap-1 text-left tracking-wide uppercase">
+            <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="flex items-center gap-1 text-left">
               <ChevronRight className={cn('size-3.5 shrink-0 transition-transform', open && 'rotate-90')} />
               {title}
             </button>

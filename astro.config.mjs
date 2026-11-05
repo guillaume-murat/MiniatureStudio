@@ -13,14 +13,11 @@ const vertexLocal = {
   },
 };
 
-// Base path: "/" for Netlify and local dev, "/NanoThumbnail/" for GitHub Pages
-const isGitHubPages = process.env.GITHUB_ACTIONS === 'true';
-const basePath = isGitHubPages ? '/NanoThumbnail/' : '/';
-
 // https://astro.build/config
 export default defineConfig({
   output: 'static',
-  base: basePath,
+  // The studio is the only page.
+  redirects: { '/': '/app/' },
   integrations: [react(), vertexLocal],
   security: {
     // Emits a <meta> CSP with hashes for every script Astro renders.
@@ -30,7 +27,7 @@ export default defineConfig({
         // Generated images (Replicate CDN), YouTube thumbnails, blobs/data for local images
         "img-src 'self' data: blob: https://replicate.delivery https://*.replicate.delivery https://i.ytimg.com https://img.youtube.com",
         // Gemini, OpenRouter and Mammouth are called directly; Replicate goes through our function; images are downloaded from Replicate's CDN.
-        // ws://127.0.0.1: the local MCP server (npx nanothumbnail-mcp) that lets an AI agent drive the studio.
+        // ws://127.0.0.1: the local MCP server (mcp/) that lets an AI agent drive the studio.
         "connect-src 'self' data: blob: https://generativelanguage.googleapis.com https://openrouter.ai https://api.mammouth.ai https://replicate.delivery https://*.replicate.delivery https://www.youtube.com https://i.ytimg.com https://img.youtube.com https://fonts.googleapis.com ws://127.0.0.1:*",
         // Brand kit: the chosen Google Font is loaded for the preview and the specimen.
         "font-src 'self' https://fonts.gstatic.com",
@@ -46,10 +43,10 @@ export default defineConfig({
   },
   build: {
     assets: 'assets',
-    // Inline CSS in the HTML: removes a render-blocking request (the site sheet is small).
+    // Inline CSS in the HTML: removes a render-blocking request.
     inlineStylesheets: 'always'
   },
-  // No Markdown code blocks on this site; Shiki's inline styles would conflict with the CSP.
+  // No Markdown code blocks here; Shiki's inline styles would conflict with the CSP.
   markdown: { syntaxHighlight: false },
   vite: {
     plugins: [tailwindcss()],

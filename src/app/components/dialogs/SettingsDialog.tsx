@@ -87,7 +87,7 @@ export function SettingsDialog() {
     setBusy('export');
     try {
       const blob = await exportBackup();
-      downloadBlob(blob, `nanothumbnail-backup-${new Date().toISOString().slice(0, 10)}.zip`);
+      downloadBlob(blob, `miniature-studio-backup-${new Date().toISOString().slice(0, 10)}.zip`);
     } catch (error) {
       toast.error(explainError(error).message);
     } finally {

@@ -91,7 +91,7 @@ export function BriefPanel({ onGenerated }: { onGenerated?: () => void }) {
   const running = jobs.filter((j) => j.status === 'running' && j.kind === 'generate').length;
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="neutral-panel flex h-full flex-col">
       <ScrollArea className="min-h-0 flex-1">
         <div className="divide-y [&>section]:px-4 [&>section]:py-5">
           <ChannelSection />

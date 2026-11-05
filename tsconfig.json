@@ -6,17 +6,11 @@
       "@/*": [
         "src/*"
       ],
-      "@components/*": [
-        "src/components/*"
-      ],
       "@layouts/*": [
         "src/layouts/*"
       ],
       "@styles/*": [
         "src/styles/*"
-      ],
-      "@assets/*": [
-        "src/assets/*"
       ]
     },
     "strictNullChecks": true,
@@ -26,7 +20,6 @@
   },
   "include": [
     "src/**/*",
-    "netlify/**/*",
     "local/**/*",
     "astro.config.mjs",
     "vitest.config.ts"

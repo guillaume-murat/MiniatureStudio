@@ -29,7 +29,7 @@ interface FeedData {
 
 export const FEED: FeedData = data as FeedData;
 
-/** Bundled paths are relative to the site root (which differs on GitHub Pages). */
+/** Bundled paths are relative to the build root. */
 export function feedAsset(path: string | undefined): string | undefined {
   return path ? `${import.meta.env.BASE_URL}${path}` : undefined;
 }

@@ -1,6 +1,6 @@
 # Barre de retouche flottante sous l'image
 
-Statut : `ready-for-agent`, publiée dans guillaume-murat/NanoThumbnail#1.
+Statut : `ready-for-agent`, publiée dans guillaume-murat/MiniatureStudio#1.
 
 ## Problem Statement
 

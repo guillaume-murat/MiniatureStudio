@@ -2,7 +2,7 @@
  * Agent bridge: shared between the studio (browser) and the local MCP server (mcp/).
  * Pure data, no DOM or Node APIs: the MCP server bundles this file as-is.
  *
- *   agent ──MCP/stdio──▶ nanothumbnail-mcp ──WebSocket──▶ studio tab ──▶ store actions
+ *   agent ──MCP/stdio──▶ miniature-studio-mcp ──WebSocket──▶ studio tab ──▶ store actions
  *
  * The server only relays; API keys, projects and images stay in the browser.
  */

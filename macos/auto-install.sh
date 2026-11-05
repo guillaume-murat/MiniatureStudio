@@ -6,7 +6,7 @@
 set -u
 cd "$(dirname "$0")/.."
 
-PATHS="src public local netlify macos/NanoThumbnail.swift macos/build.sh macos/AppIcon.png astro.config.mjs package.json"
+PATHS="src public local macos/MiniatureStudio.swift macos/build.sh macos/AppIcon.png astro.config.mjs package.json"
 STAMP=macos/build/.installed
 LOG=macos/build/auto-install.log
 LOCK=macos/build/.auto-install.lock
@@ -34,7 +34,7 @@ trap 'rmdir "$LOCK"' EXIT
 
 if npm run app:mac:install >"$LOG" 2>&1; then
   echo "$current" >"$STAMP"
-  echo '{"systemMessage": "NanoThumbnail.app rebuilt and installed in /Applications (relaunch it to use the new version)."}'
+  echo '{"systemMessage": "Miniature Studio.app rebuilt and installed in /Applications (relaunch it to use the new version)."}'
 else
-  echo "{\"systemMessage\": \"NanoThumbnail.app auto-install failed, see $LOG\"}"
+  echo "{\"systemMessage\": \"Miniature Studio.app auto-install failed, see $LOG\"}"
 fi

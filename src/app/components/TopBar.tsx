@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Bot, Check, ChevronsUpDown, Command, Folder, Monitor, Moon, Pencil, Plus, Settings, Sun, Trash2, Zap } from 'lucide-react';
-import { ViewSwitcher } from './canvas/ViewSwitcher';
+import { Bot, Check, ChevronsUpDown, Command, Folder, Monitor, Moon, Pencil, Plus, Settings, Sun, Trash2 } from 'lucide-react';
+import { TOP_BUTTON, ViewSwitcher } from './canvas/ViewSwitcher';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Kbd } from './ui/kbd';
@@ -47,8 +47,8 @@ function ProjectSwitcher() {
     <>
       <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="max-w-40 gap-2 font-medium sm:max-w-56">
-                <Folder className="text-muted-foreground" />
+              <Button variant="ghost" size="sm" className={cn(TOP_BUTTON, "max-w-40 gap-2 font-medium sm:max-w-56")}>
+                <Folder />
                 <span className="truncate">{current?.name ?? t('topbar.untitled')}</span>
                 <ChevronsUpDown className="text-muted-foreground" />
               </Button>
@@ -139,26 +139,24 @@ export function TopBar() {
   const ThemeIcon = THEME_ICON[theme];
 
   return (
-    <header className="relative flex h-12 shrink-0 items-center gap-1 border-b bg-sidebar px-2">
-      <a href={import.meta.env.BASE_URL} className="flex items-center gap-2 rounded-md px-2 py-1 font-semibold tracking-tight" title={t('topbar.home')}>
-        <span className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-          <Zap className="size-3.5" fill="currentColor" />
-        </span>
-        <span className="hidden sm:inline">NanoThumbnail</span>
-      </a>
+    <header className="topbar relative flex h-12 shrink-0 items-center gap-1 border-b-2 border-(--brand-edge) bg-sidebar px-2">
+      <div className="flex items-center gap-2 rounded-md px-2 py-1 font-heading text-[15px] font-semibold">
+        <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" width={28} height={28} className="size-7 shrink-0 rounded-md border-2 border-ink" draggable={false} />
+        <span className="hidden sm:inline">Miniature Studio</span>
+      </div>
       <span className="mx-1 h-5 w-px bg-border" />
       <ProjectSwitcher />
-      <ViewSwitcher className="absolute left-1/2 hidden -translate-x-1/2 lg:flex" />
+      <ViewSwitcher className="view-tabs absolute left-1/2 hidden -translate-x-1/2 lg:flex" />
 
-      <div className="ml-auto flex items-center gap-1">
-        <Button variant="outline" size="sm" className="hidden gap-2 text-muted-foreground md:inline-flex" onClick={() => open('commands')}>
+      <div className="ml-auto flex items-center gap-1.5">
+        <Button variant="outline" size="sm" className={cn(TOP_BUTTON, "hidden gap-2 md:inline-flex")} onClick={() => open('commands')}>
           <Command /> {t('topbar.commands')}
           <Kbd>{MOD} K</Kbd>
         </Button>
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon-sm" className="relative" onClick={() => open('agent')} aria-label={t('agent.title')}>
+            <Button variant="ghost" size="icon-sm" className={cn(TOP_BUTTON, "relative")} onClick={() => open('agent')} aria-label={t('agent.title')}>
               <Bot />
               {agentOn && <AgentStatusDot className="absolute top-1 right-1 size-1.5" />}
             </Button>
@@ -170,7 +168,7 @@ export function TopBar() {
           <Tooltip>
             <TooltipTrigger asChild>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-sm" className="hidden sm:inline-flex" aria-label={t('topbar.theme')}>
+                <Button variant="ghost" size="icon-sm" className={cn(TOP_BUTTON, "hidden sm:inline-flex")} aria-label={t('topbar.theme')}>
                   <ThemeIcon />
                 </Button>
               </DropdownMenuTrigger>
@@ -193,7 +191,7 @@ export function TopBar() {
         <Button
           variant="ghost"
           size="sm"
-          className="w-10 font-mono text-xs uppercase"
+          className={cn(TOP_BUTTON, "w-10 font-mono text-xs uppercase")}
           onClick={() => set({ lang: lang === 'fr' ? 'en' : 'fr' })}
           aria-label={t('topbar.language')}
         >
@@ -207,7 +205,7 @@ export function TopBar() {
               size={hasKey ? 'icon-sm' : 'sm'}
               onClick={() => open('settings')}
               aria-label={t('topbar.settings')}
-              className={cn(!hasKey && 'gap-2')}
+              className={cn(hasKey ? TOP_BUTTON : 'gap-2')}
             >
               <Settings />
               {!hasKey && <span className="hidden sm:inline">{t('topbar.keyMissing')}</span>}

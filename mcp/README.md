@@ -1,39 +1,38 @@
-# nanothumbnail-mcp
+# miniature-studio-mcp
 
-MCP server that lets an AI agent (Claude Code, Claude Desktop, Cursor…) drive the [NanoThumbnail](https://nanothumbnail.com) studio open in your browser: brief, generate, edit, rank, export.
+MCP server that lets an AI agent (Claude Code, Claude Desktop, Cursor…) drive Miniature Studio, open on your computer: brief, generate, edit, rank, export.
 
 ```
-agent ──MCP (stdio)──▶ nanothumbnail-mcp ──WebSocket 127.0.0.1──▶ studio tab ──▶ Nano Banana (your key)
+agent ──MCP (stdio)──▶ miniature-studio-mcp ──WebSocket 127.0.0.1──▶ studio tab ──▶ Nano Banana (your key)
 ```
 
 The server only relays. API keys, projects and images stay in the browser; the studio runs every action exactly as a click would, and you watch it happen.
 
 ## Setup
 
+From the project's folder:
+
 ```bash
-claude mcp add nanothumbnail -- npx -y nanothumbnail-mcp
+npm run build:mcp
+claude mcp add miniature-studio -- node "$PWD/mcp/dist/index.js"
 ```
 
-Then ask the agent to "open the NanoThumbnail studio": it opens a pairing link, you click **Allow** once in the studio. The studio then reconnects by itself whenever the agent runs.
+Then ask the agent to "open Miniature Studio": it opens a pairing link, you click **Allow** once in the studio. The studio then reconnects by itself whenever the agent runs.
 
 ### Companion skill
 
 The tools say *what* the agent can do; the skill teaches it *how* to make a good thumbnail (workflow, brief writing, critique, credit discipline):
 
-```bash
-npx skills add yoanbernabeu/NanoThumbnail --skill nanothumbnail
-```
-
-Source: [`skills/nanothumbnail/`](../skills/nanothumbnail/SKILL.md).
+Copy [`skills/miniature-studio/`](../skills/miniature-studio/SKILL.md) into your agent's skills folder (`~/.claude/skills/` for Claude Code).
 
 ## Configuration (env)
 
 | Variable | Default | |
 |---|---|---|
-| `NANOTHUMBNAIL_URL` | `https://nanothumbnail.com/app/` | Studio opened for pairing |
-| `NANOTHUMBNAIL_PORT` | `17821` | Local WebSocket port |
-| `NANOTHUMBNAIL_ORIGINS` | | Extra allowed page origins, comma-separated |
-| `NANOTHUMBNAIL_TOKEN` | generated, kept in `~/.config/nanothumbnail/mcp.json` | Pairing token |
+| `MINIATURE_STUDIO_URL` | `http://127.0.0.1:17830/app/` | Studio opened for pairing |
+| `MINIATURE_STUDIO_PORT` | `17821` | Local WebSocket port |
+| `MINIATURE_STUDIO_ORIGINS` | | Extra allowed page origins, comma-separated |
+| `MINIATURE_STUDIO_TOKEN` | generated, kept in `~/.config/miniature-studio/mcp.json` | Pairing token |
 
 ## Security
 
@@ -44,9 +43,9 @@ Source: [`skills/nanothumbnail/`](../skills/nanothumbnail/SKILL.md).
 ## Local development
 
 ```bash
-npm run build -w nanothumbnail-mcp        # → mcp/dist/index.js
-npm run dev                               # studio on http://localhost:4321
-claude mcp add nanothumbnail-dev -e NANOTHUMBNAIL_URL=http://localhost:4321/app -- node "$PWD/mcp/dist/index.js"
+npm run build:mcp   # → mcp/dist/index.js
+npm run dev         # studio on http://localhost:4321
+claude mcp add miniature-studio-dev -e MINIATURE_STUDIO_URL=http://localhost:4321/app -- node "$PWD/mcp/dist/index.js"
 ```
 
 Tool definitions are shared with the studio (`src/app/agent/protocol.ts`); handlers live in `src/app/agent/tools.ts`.

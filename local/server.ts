@@ -2,15 +2,15 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { extname, join, normalize, resolve, sep } from 'node:path';
-import type { Handler, HandlerEvent } from '@netlify/functions';
-import { handler as replicateProxy } from '../netlify/functions/replicate-proxy';
-import { handler as youtubeProxy } from '../netlify/functions/youtube-thumbnail-proxy';
-import { handler as youtubeChannel } from '../netlify/functions/youtube-channel';
+import { handler as replicateProxy } from './functions/replicate-proxy';
+import { handler as youtubeProxy } from './functions/youtube-thumbnail-proxy';
+import { handler as youtubeChannel } from './functions/youtube-channel';
+import type { Handler, HandlerEvent } from './functions/types';
 import { createVertexHandler, isLocalRequest } from './vertex';
 
 /**
  * Serves the built site (dist/) on 127.0.0.1 with everything the studio needs
- * locally: the Vertex AI helper and the Netlify functions. Used by the macOS
+ * locally: the Vertex AI helper and the functions. Used by the macOS
  * app and by `npm run local`.
  *
  *   NT_DIST   build directory (default: ./dist)
@@ -19,9 +19,6 @@ import { createVertexHandler, isLocalRequest } from './vertex';
 
 const DIST = resolve(process.env.NT_DIST || 'dist');
 const PORT = Number(process.env.NT_PORT) || 17830;
-
-// The functions only trust local origins in Netlify's dev context.
-process.env.CONTEXT = 'dev';
 
 const TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -42,9 +39,9 @@ const TYPES: Record<string, string> = {
 };
 
 const FUNCTIONS: Record<string, Handler> = {
-  '/.netlify/functions/replicate-proxy': replicateProxy,
-  '/.netlify/functions/youtube-thumbnail-proxy': youtubeProxy,
-  '/.netlify/functions/youtube-channel': youtubeChannel,
+  '/functions/replicate-proxy': replicateProxy,
+  '/functions/youtube-thumbnail-proxy': youtubeProxy,
+  '/functions/youtube-channel': youtubeChannel,
 };
 
 const vertex = createVertexHandler();
@@ -60,16 +57,13 @@ function readBody(req: IncomingMessage): Promise<string> {
 
 async function runFunction(fn: Handler, req: IncomingMessage, res: ServerResponse, url: URL): Promise<void> {
   const headers = Object.fromEntries(Object.entries(req.headers).map(([k, v]) => [k, Array.isArray(v) ? v.join(', ') : v]));
-  const event = {
+  const event: HandlerEvent = {
     httpMethod: req.method ?? 'GET',
     headers,
     queryStringParameters: Object.fromEntries(url.searchParams),
     body: req.method === 'GET' || req.method === 'HEAD' ? null : await readBody(req),
-    isBase64Encoded: false,
-    path: url.pathname,
-    rawUrl: url.href,
-  } as unknown as HandlerEvent;
-  const result = await (fn as (e: HandlerEvent) => Promise<{ statusCode: number; headers?: Record<string, string>; body?: string }>)(event);
+  };
+  const result = await fn(event);
   res.writeHead(result.statusCode, result.headers);
   res.end(result.body ?? '');
 }
@@ -121,5 +115,5 @@ server.on('error', (error: NodeJS.ErrnoException) => {
 });
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`NanoThumbnail ready on http://127.0.0.1:${PORT}/app/`);
+  console.log(`Miniature Studio ready on http://127.0.0.1:${PORT}/app/`);
 });

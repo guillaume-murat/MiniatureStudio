@@ -63,7 +63,7 @@ export function ChannelSection() {
   }
 
   const title = filled ? (
-    <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="flex items-center gap-1 tracking-wide uppercase">
+    <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="flex items-center gap-1">
       <ChevronRight className={cn('size-3.5 transition-transform', open && 'rotate-90')} />
       {t('brand.channel')}
     </button>

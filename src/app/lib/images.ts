@@ -2,8 +2,8 @@
  * Client-side image helpers. Everything here runs on <canvas>, no server involved.
  */
 
-/** Reference images are downscaled before upload: keeps requests small (Netlify
- * functions cap bodies at ~6 MB) and follows Replicate's advice to keep inline
+/** Reference images are downscaled before upload: keeps requests small and
+ * follows Replicate's advice to keep inline
  * data URLs around 256 KB. 1536px is plenty for identity/style preservation. */
 const REF_MAX_SIDE = 1536;
 const REF_TARGET_BYTES = 280_000;

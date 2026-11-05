@@ -140,7 +140,7 @@ export class StudioRelay {
 
   call(tool: string, args: Record<string, unknown>, timeoutMs = 5 * 60_000): Promise<ToolResult> {
     const studio = this.studio;
-    if (!studio) return Promise.reject(new StudioNotConnected('The NanoThumbnail studio is not connected.'));
+    if (!studio) return Promise.reject(new StudioNotConnected('Miniature Studio is not connected.'));
     const id = `c${++this.seq}`;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {

@@ -10,6 +10,7 @@ import type { CustomStyle, Generation, LibraryImage, Persona, Project } from './
  * replaced by a path inside the archive. Also used for the "Test & Compare" export.
  */
 
+// Keeps the project's former name: existing backups carry it.
 const FORMAT = 'nanothumbnail-backup';
 /** 2: a thumbnail has one line of versions. Older backups may hold branches. */
 const VERSION = 2;

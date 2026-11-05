@@ -199,7 +199,7 @@ function ImageActions({ gen }: { gen: Generation }) {
               <DropdownMenuSeparator />
             </>
           )}
-          <DropdownMenuItem onSelect={() => downloadBlob(gen.blob, `nanothumbnail-${gen.id.slice(2, 10)}.${extensionFor(gen.blob)}`)}>
+          <DropdownMenuItem onSelect={() => downloadBlob(gen.blob, `miniature-studio-${gen.id.slice(2, 10)}.${extensionFor(gen.blob)}`)}>
             <Download /> {t('canvas.download')} ({gen.width}×{gen.height})
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => downloadForYouTube(gen)}>

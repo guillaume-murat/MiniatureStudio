@@ -22,7 +22,7 @@ function respond(body: unknown, status = 200) {
 
 beforeEach(() => {
   api = vi.fn<(input: string, init: Init) => Promise<Response>>();
-  vi.stubGlobal('location', { origin: 'https://nanothumbnail.test' });
+  vi.stubGlobal('location', { origin: 'https://miniature-studio.test' });
   // Data URLs (image decoding) still go through the real fetch.
   vi.stubGlobal('fetch', (input: string, init: Init) => (input.startsWith('data:') ? realFetch(input) : api(input, init)));
 });

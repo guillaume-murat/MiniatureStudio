@@ -1,11 +1,120 @@
 /* Studio (/app) stylesheet: Tailwind scans everything, including shadcn components. */
 @import 'tailwindcss';
 @import 'tw-animate-css';
-@import '@fontsource-variable/geist';
-@import '@fontsource-variable/geist-mono';
+@import '@fontsource-variable/nunito';
+@import '@fontsource-variable/fredoka';
+@import '@fontsource-variable/jetbrains-mono';
 @import './tokens.css';
 
 /* Radix wraps a popup in a box of its size, which would take the pointer from what the popup covers. */
 [data-radix-popper-content-wrapper]:has(> .prompt-eye-popup) {
   pointer-events: none;
+}
+
+/* The top bar is the view's strong colour: what it holds reads on the fir green, its outlines in cream. */
+.topbar {
+  --sidebar: var(--brand);
+  --sidebar-foreground: var(--on-brand);
+  --foreground: var(--on-brand);
+  --muted-foreground: var(--on-brand);
+  --background: color-mix(in oklab, var(--on-brand) 14%, var(--brand));
+  --muted: color-mix(in oklab, var(--on-brand) 22%, var(--brand));
+  --accent: color-mix(in oklab, var(--on-brand) 22%, var(--brand));
+  --accent-foreground: var(--on-brand);
+  --border: color-mix(in oklab, var(--on-brand) 40%, var(--brand));
+  --input: color-mix(in oklab, var(--on-brand) 40%, var(--brand));
+  --ink: var(--on-brand);
+  --on-ink: var(--brand);
+  color: var(--on-brand);
+}
+
+/*
+ * The views, as folder tabs on the central panel. The active one takes the
+ * panel's colour and opens onto it: its ink outline replaces the bar's bottom
+ * edge and flares out at the foot. Each flare (::before, ::after) is a square
+ * painted by one gradient, a circle around its upper outer corner: the bar shows
+ * through inside, then the ink line, then the panel's colour, with nothing
+ * outside the square.
+ */
+.view-tabs {
+  bottom: -2px;
+  z-index: 1;
+  align-items: flex-end;
+  gap: 8px;
+  box-shadow: none;
+}
+.view-tabs [data-slot='toggle-group-item'] {
+  position: relative;
+  height: 36px;
+  margin-bottom: 2px;
+  border: 1.5px solid var(--border);
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow: none;
+  translate: none;
+}
+.view-tabs [data-slot='toggle-group-item']:hover:not([data-state='on']) {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+.view-tabs [data-slot='toggle-group-item'][data-state='on'] {
+  z-index: 1;
+  height: 40px;
+  margin-bottom: 0;
+  border: 2px solid var(--brand-edge);
+  border-bottom: 0;
+  background: var(--canvas);
+  color: var(--canvas-foreground);
+}
+.view-tabs [data-slot='toggle-group-item'][data-state='on']::before,
+.view-tabs [data-slot='toggle-group-item'][data-state='on']::after {
+  --flare: transparent 7.6px, var(--brand-edge) 8px, var(--brand-edge) 9.6px, var(--canvas) 10px;
+  content: '';
+  position: absolute;
+  bottom: 0;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+}
+.view-tabs [data-slot='toggle-group-item'][data-state='on']::before {
+  left: -10px;
+  background: radial-gradient(circle at 0 0, var(--flare));
+}
+.view-tabs [data-slot='toggle-group-item'][data-state='on']::after {
+  right: -10px;
+  background: radial-gradient(circle at 100% 0, var(--flare));
+}
+
+/*
+ * The brief panel stays pure white with grey neutrals, in both themes: brand
+ * colours must be judged against a neutral background.
+ */
+.neutral-panel {
+  --background: #ffffff;
+  --foreground: #16161a;
+  --card: #ffffff;
+  --card-foreground: #16161a;
+  --popover: #ffffff;
+  --popover-foreground: #16161a;
+  --primary: #c4242e;
+  --primary-foreground: #ffffff;
+  --secondary: #f0f0f2;
+  --secondary-foreground: #16161a;
+  --muted: #f0f0f2;
+  --muted-foreground: #5c5c64;
+  --accent: #e8e8eb;
+  --accent-foreground: #16161a;
+  --destructive: #9c1458;
+  --border: #d6d6db;
+  --input: #d6d6db;
+  --ring: #0f5c45;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #16161a;
+  --sidebar-border: #d6d6db;
+  --ink: #0c2a1e;
+  --on-ink: #ffffff;
+  background: #ffffff;
+  color: #16161a;
 }

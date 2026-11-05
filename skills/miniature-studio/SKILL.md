@@ -1,0 +1,52 @@
+---
+name: miniature-studio
+description: Create, edit, rank and export YouTube thumbnails by driving Miniature Studio (Google Nano Banana models) through its MCP server. Use when the user wants a YouTube thumbnail, video cover or Shorts cover made, improved, A/B-compared or exported — "make a thumbnail for my video", "miniature YouTube", "improve this thumbnail", "which thumbnail is best".
+---
+
+# Miniature Studio
+
+Miniature Studio is a free, local-first studio that runs on the user's computer and generates thumbnails with Google's Nano Banana models, on the user's own API key. The `miniature-studio` MCP server lets you drive it: every action shows up live in the studio, so work *with* the user, not around them.
+
+Answer in the user's language. The studio writes its prompts in its interface's language (French or English); write briefs and edit instructions in that language when you can. It generates images without text unless the style asks for short elements such as a badge or a number (`versus`, `tech`, `ranking`); the user adds text and arrows afterwards with the studio's text tool, which draws them into a new version for good.
+
+## 0. Check the connection
+
+The tools come from the `miniature-studio` MCP server (`get_state`, `generate`, `edit_thumbnail`…).
+
+- Tools missing → the server isn't installed. Tell the user to run, from the project's folder, `npm run build:mcp` then `claude mcp add miniature-studio -- node "$PWD/mcp/dist/index.js"` (other clients: an MCP server running that `node` command), then restart the session. Stop there.
+- A tool says the studio is not connected → call `open_studio`. It opens the studio in the browser; the user must click **Allow** once. If it times out, give the user the pairing code from the error message.
+- Start every session with `get_state`: it tells you the project, the brief already typed, the people (personas) available, whether an API key is set, and recent thumbnails.
+
+## 1. Money first
+
+Each image costs the user real API credits (more with `nano-banana-pro` and higher resolutions).
+
+- Explore with `count: 1` or `2`. Ask before `count: 4`, 4K, or more than ~6 generations in a row.
+- `nano-banana-2-lite` is the cheapest (1K only); `nano-banana-2` is cheaper and faster for exploring; `nano-banana-pro` renders text and fine detail best — switch to it (`set_output`) for the final round.
+- `rank_thumbnails` and `suggest_concepts` are cheap text/vision calls; use them freely.
+- Never loop "generate until it's good". After 2 rounds without progress, stop and ask the user.
+
+## 2. Workflow
+
+1. **Understand the video.** You need the title and the one thing that makes someone click (the promise, the stakes, the surprise). If the user gave a script or a URL, extract that. Ask at most one question if it's truly missing.
+2. **Project.** One project per video: `new_project` named after the video, unless `get_state` shows the user is already working on it.
+3. **Concept.** Propose 2–3 distinct angles in one short message (emotion/reaction, result/transformation, mystery/object…) — write them yourself or call `suggest_concepts`. Let the user pick unless they told you to decide.
+4. **Assets.** If the creator appears in the thumbnail, select their persona with `set_people` (identity is locked from their photos). Attach products, screenshots or style examples with `add_reference` (absolute `path` or `url`) and a clear `label`. To restyle an existing video's thumbnail, `remix_youtube`.
+5. **Generate.** `generate` with `videoTitle`, `brief`, `styleId` (see `list_styles`). Write the brief as described in [references/craft.md](references/craft.md). Look at the previews you get back.
+6. **Critique honestly.** Check the result against the checklist in [references/craft.md](references/craft.md).
+7. **Iterate by editing, not regenerating.** When the composition works, fix details with `edit_thumbnail` — one change per call ("make the text yellow", "remove the cable on the left"). Use `region` (fractions 0–1 of width/height) to confine a change to one area. Regenerate only when the concept itself is wrong. A thumbnail has one line of versions and only its latest can be edited: an older one can be viewed, and only the user can go back to it.
+8. **Compare.** With 2–4 good candidates, `rank_thumbnails` (also shows them side by side to the user). `set_view` with `view: "feed"` shows the winner among other videos, as a viewer would see it — suggest the user looks.
+9. **Deliver.** `set_favorite` on the winner, then `export_thumbnail` (default `youtube` = 1280×720 JPEG under 2 MB; `youtube-1080` for 1920×1080) to the path the user wants. Report the path and one line on why this one.
+
+## 3. Rules of thumb
+
+- Text on the thumbnail: 0–4 words, never a repeat of the title — it adds to it. Suggest it to the user; they add it with the studio's text tool.
+- One focal point. A face showing a clear emotion beats a busy scene. Big, close, contrasted.
+- Must read at phone size: if you can't tell what it is from a 168×94 px glance, it fails.
+- Keep the bottom-right corner free (YouTube's duration badge). `set_view` with `safeZones: true` shows it.
+- Never invent a real person's likeness: people come from personas or references the user provided.
+- Don't change the user's API keys or provider, don't delete their work; the tools won't let you anyway.
+
+## 4. Handing back
+
+Keep chat updates short: what you did, what you see, what you suggest next. The user sees the images in the studio; don't describe them at length. When you stop, say where things stand (project, favourite id, exported file).

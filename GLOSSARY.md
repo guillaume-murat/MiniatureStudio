@@ -1,6 +1,6 @@
 # Glossaire
 
-Le vocabulaire de NanoThumbnail, à employer tel quel dans le code, les tickets et les specs. L'anglais entre parenthèses est le nom utilisé dans le code et l'interface anglaise.
+Le vocabulaire de Miniature Studio, à employer tel quel dans le code, les tickets et les specs. L'anglais entre parenthèses est le nom utilisé dans le code et l'interface anglaise.
 
 ## Le travail du créateur
 

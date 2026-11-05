@@ -46,7 +46,7 @@ export async function fetchThumbnail(videoId: string): Promise<Blob | null> {
     }
   }
   try {
-    const res = await fetch(`/.netlify/functions/youtube-thumbnail-proxy?videoId=${videoId}`);
+    const res = await fetch(`/functions/youtube-thumbnail-proxy?videoId=${videoId}`);
     if (!res.ok) return null;
     const data = await res.json();
     return data.base64 ? dataUrlToBlob(data.base64) : null;
@@ -58,7 +58,7 @@ export async function fetchThumbnail(videoId: string): Promise<Blob | null> {
 /** Name, profile picture and banner of the channel behind a channel or video URL (through our function: youtube.com has no CORS). */
 export async function fetchChannel(url: string): Promise<{ name: string; logo?: Blob; banner?: Blob } | null> {
   try {
-    const res = await fetch(`/.netlify/functions/youtube-channel?url=${encodeURIComponent(url.trim())}`);
+    const res = await fetch(`/functions/youtube-channel?url=${encodeURIComponent(url.trim())}`);
     if (!res.ok) return null;
     const data = (await res.json()) as { name?: string; logo?: string; banner?: string };
     if (!data.name) return null;

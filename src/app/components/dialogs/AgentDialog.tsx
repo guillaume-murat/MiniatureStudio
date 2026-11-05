@@ -12,8 +12,8 @@ import { parsePairing } from '../../agent/protocol';
 import { useT } from '../../i18n';
 import { cn } from '../../lib/utils';
 
-const INSTALL_CLAUDE = 'claude mcp add nanothumbnail -- npx -y nanothumbnail-mcp';
-const INSTALL_OTHER = 'npx -y nanothumbnail-mcp';
+const INSTALL_CLAUDE = 'claude mcp add miniature-studio -- node /path/to/MiniatureStudio/mcp/dist/index.js';
+const INSTALL_OTHER = 'node /path/to/MiniatureStudio/mcp/dist/index.js';
 
 const STATUS_COLOR: Record<AgentStatus, string> = {
   off: 'bg-muted-foreground/40',

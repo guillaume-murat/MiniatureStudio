@@ -63,7 +63,7 @@ export function EditBarShell({ area, children }: { area: Size; children: ReactNo
     <div
       ref={ref}
       style={{ '--bar-x': `${offset.x}px`, '--bar-y': `${offset.y}px` } as CSSProperties}
-      className="@container shrink-0 border-t bg-background p-2 lg:absolute lg:bottom-2 lg:left-1/2 lg:z-10 lg:w-[min(42rem,calc(100%-1.5rem))] lg:translate-x-[calc(var(--bar-x)-50%)] lg:translate-y-(--bar-y) lg:rounded-xl lg:border lg:pl-5 lg:shadow-lg"
+      className="@container shrink-0 border-t bg-background p-2 lg:absolute lg:bottom-2 lg:left-1/2 lg:z-10 lg:w-[min(42rem,calc(100%-1.5rem))] lg:translate-x-[calc(var(--bar-x)-50%)] lg:translate-y-(--bar-y) lg:rounded-xl lg:border-2 lg:border-ink lg:pl-5 lg:shadow-pop-lg"
     >
       <button
         type="button"

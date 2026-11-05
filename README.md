@@ -1,17 +1,8 @@
-# NanoThumbnail
+# Miniature Studio
 
 > This project is a fork of [yoanbernabeu/NanoThumbnail](https://github.com/yoanbernabeu/NanoThumbnail).
 
-NanoThumbnail is a free, open-source studio to **generate, edit and test YouTube thumbnails** with Google's Nano Banana models (Nano Banana Pro, Nano Banana 2 and its Lite version). It runs entirely in your browser: bring your own **Replicate**, **Google Gemini**, **OpenRouter** or **Mammouth** key (or use **Vertex AI** through your gcloud, locally), your images stay on your device.
-
-![NanoThumbnail Studio](src/assets/landing/en-studio.webp)
-
-**Live:** [nanothumbnail.com](https://nanothumbnail.com) · [Studio](https://nanothumbnail.com/app/) · [English](https://nanothumbnail.com/en/) / [Français](https://nanothumbnail.com/)
-
-| Generate | Edit | Edit again |
-|---|---|---|
-| ![Generation](src/assets/landing/step-1.webp) | ![Accent switched to orange](src/assets/landing/step-2.webp) | ![Text changed to 1M](src/assets/landing/step-3.webp) |
-| “Tech tutorial” style, text “0 → 100K” | “Switch every blue accent to bright orange” | “Replace ‘100K’ with ‘1M’, same style” |
+Miniature Studio is a local studio to **generate, edit and test YouTube thumbnails** with Google's Nano Banana models (Nano Banana Pro, Nano Banana 2 and its Lite version). It runs on your computer, as a macOS app or a local server: bring your own **Replicate**, **Google Gemini**, **OpenRouter** or **Mammouth** key, or use **Vertex AI** through your gcloud. Your images stay on your device.
 
 ## Features
 
@@ -40,8 +31,8 @@ NanoThumbnail is a free, open-source studio to **generate, edit and test YouTube
 
 **AI agents (MCP)**
 - Let Claude, Cursor or any MCP-capable agent drive the studio: brief, generate, edit (whole image or a region), rank, export to disk. You watch every action live and can disconnect at any time.
-- `claude mcp add nanothumbnail -- npx -y nanothumbnail-mcp`, then ask the agent to “open the NanoThumbnail studio” and click **Allow** once.
-- Companion skill with the workflow and thumbnail craft: `npx skills add yoanbernabeu/NanoThumbnail --skill nanothumbnail`.
+- `npm run build:mcp`, then `claude mcp add miniature-studio -- node "$PWD/mcp/dist/index.js"` from the project's folder; then ask the agent to “open Miniature Studio” and click **Allow** once.
+- Companion skill with the workflow and thumbnail craft: copy `skills/miniature-studio/` into your agent's skills folder.
 
 **Keyboard-first**
 - `⌘K` command palette, `⌘↵` generate, `P` feed preview, `C` channel preview, `Z` safe zones, `T` text, `A` arrow, `M` paint an area, `R` reframe, `Esc` leave the current tool.
@@ -58,27 +49,20 @@ NanoThumbnail is a free, open-source studio to **generate, edit and test YouTube
 - **OpenRouter** is called directly from the browser too (`google/gemini-3-pro-image`, `google/gemini-3.1-flash-image`, `google/gemini-3.1-flash-lite-image`), with the key in the `Authorization` header.
 - **Mammouth** is called directly from the browser as well, through the same OpenAI-style chat completions (`gemini-3-pro-image-preview`, `gemini-3.1-flash-image-preview`, `gemini-3.1-flash-lite-image`, key in the `Authorization` header).
 - **Vertex AI** (local only) bills your own Google Cloud project. The browser can't run gcloud, so the studio calls `/vertex/*` on its own origin and a small helper (`local/vertex.ts`) adds a token from `gcloud auth print-access-token` and your gcloud project. It's mounted by `npm run dev` and by the macOS app, only answers requests from the local studio, and also accepts a Vertex express-mode key instead of gcloud. `VERTEX_LOCATION` (default `global`) and `VERTEX_PROJECT` override the defaults.
-- **Channel details**: youtube.com has no CORS either, so `netlify/functions/youtube-channel.ts` reads the channel page for a channel or video URL (name and picture from its Open Graph tags, banner from its page data); it only accepts YouTube URLs and the site's own origin.
-- **Replicate** has no browser CORS support, so calls go through a small Netlify function (`netlify/functions/replicate-proxy.ts`). It only accepts requests from the site's own origin, only relays the three Replicate routes the app needs (create, poll, cancel), and never stores or logs anything.
+- **Channel details**: youtube.com has no CORS either, so `local/functions/youtube-channel.ts` reads the channel page for a channel or video URL (name and picture from its Open Graph tags, banner from its page data); it only accepts YouTube URLs and the studio's own origin.
+- **Replicate** has no browser CORS support, so calls go through a small function on the local server (`local/functions/replicate-proxy.ts`). It only accepts requests from the studio's own origin, only relays the three Replicate routes the app needs (create, poll, cancel), and never stores or logs anything.
 - Reference images are downscaled client-side before upload, so requests stay small.
 - Prompts are built as structured natural language following Google's Nano Banana prompting guidance (declared image roles, identity locks, “change only X, keep everything else” edits), see `src/app/lib/prompt.ts`. They are written in the interface's language, French or English, and so are the style presets and the assistant's answers.
-- **AI agents**: the MCP server (`mcp/`, published as `nanothumbnail-mcp`) only relays tool calls over a WebSocket on `127.0.0.1` to the open studio tab, which runs them as store actions. Keys, projects and images never leave the browser. The socket accepts only the studio's origin and a pairing token; see [`mcp/README.md`](mcp/README.md).
+- **AI agents**: the MCP server (`mcp/`) only relays tool calls over a WebSocket on `127.0.0.1` to the open studio tab, which runs them as store actions. Keys, projects and images never leave the browser. The socket accepts only the studio's origin and a pairing token; see [`mcp/README.md`](mcp/README.md).
 - Ranking and concepts use Gemini Flash: `gemini-3.8-flash` with a Gemini key or on Vertex AI, `google/gemini-3-flash` on Replicate, `google/gemini-3.8-flash` on OpenRouter, or `gemini-3.8-flash` on Mammouth.
-
-## Landing, SEO & GEO
-
-- Static landing pre-rendered in French (`/`) and English (`/en/`), zero client JS, real studio screenshots per language.
-- Lighthouse 100 / 100 / 100 / 100 (performance, accessibility, best practices, SEO) on mobile and desktop.
-- Open Graph image per language, `hreflang`, JSON-LD (`WebApplication`, `FAQPage`, `WebSite`, `Person`), `sitemap.xml`.
-- Agent-readable: [`/llms.txt`](https://nanothumbnail.com/llms.txt) and [`/llms-full.txt`](https://nanothumbnail.com/llms-full.txt) are generated at build time from the landing copy; `robots.txt` explicitly allows AI crawlers.
 
 ## Tech stack
 
-- [Astro 7](https://astro.build/) — static site, CSP with script hashes, responsive images via `astro:assets`
+- [Astro 7](https://astro.build/) — static build, CSP with script hashes
 - React 19 island for the studio (`/app`), [shadcn/ui](https://ui.shadcn.com/) + Radix, Tailwind CSS v4, Lucide icons, Zustand
 - IndexedDB via `idb`, zip via `fflate`
 - Vitest, GitHub Actions
-- Netlify (static hosting + three functions)
+- A local Node.js server for the build, the Vertex AI helper and three functions
 
 ## Project structure
 
@@ -91,20 +75,14 @@ src/
 │   ├── lib/                # providers, prompt, ai, images, db, backup, versions, reframe, textBlocks…
 │   ├── agent/              # MCP bridge: tool definitions (protocol.ts), handlers, WebSocket client
 │   └── i18n/               # en.ts, fr.ts (typed: a missing key fails the build)
-├── assets/                 # Landing images and screenshots (fr-*/en-*), optimised at build
-├── components/site/        # Landing page (static Astro, no JS)
-├── site/                   # Landing copy (i18n.ts) and llms.txt generator (llms.ts)
-├── layouts/                # SiteLayout (SEO, JSON-LD), AppLayout, LegalLayout
-├── pages/                  # index, en/index, app, legal pages, sitemap.xml, llms.txt, llms-full.txt
-└── styles/                 # tokens.css (light/dark), tailwind.css (studio), site.css (landing, inlined)
-local/                      # Vertex AI helper (vertex.ts) and local server for the macOS app (server.ts)
-macos/                      # macOS app: WKWebView shell (NanoThumbnail.swift) and build.sh
-netlify/
-├── functions/              # replicate-proxy, youtube-channel, youtube-thumbnail-proxy
-└── lib/origin.ts           # Origin allowlist
-mcp/                        # nanothumbnail-mcp: stdio MCP server relaying to the studio
-skills/nanothumbnail/       # Companion agent skill (skills.sh)
-public/                     # sw.js, manifest, icons, og-{fr,en}.jpg, robots.txt
+├── layouts/                # AppLayout
+├── pages/                  # app (and a redirect from /)
+└── styles/                 # tokens.css (light/dark), tailwind.css
+local/                      # Local server (server.ts), Vertex AI helper (vertex.ts) and functions/: replicate-proxy, youtube-channel, youtube-thumbnail-proxy, origin allowlist
+macos/                      # macOS app: WKWebView shell (MiniatureStudio.swift) and build.sh
+mcp/                        # miniature-studio-mcp: stdio MCP server relaying to the studio
+skills/miniature-studio/    # Companion agent skill
+public/                     # sw.js, manifest, icons, feed preview data, fonts
 ```
 
 ## Getting started
@@ -112,18 +90,18 @@ public/                     # sw.js, manifest, icons, og-{fr,en}.jpg, robots.txt
 Prerequisites: Node.js 22+, and a [Replicate](https://replicate.com/account/api-tokens) or [Google Gemini](https://aistudio.google.com/apikey) or [OpenRouter](https://openrouter.ai/settings/keys) or [Mammouth](https://mammouth.ai/app/account/settings/api) API key.
 
 ```bash
-git clone https://github.com/yoanbernabeu/NanoThumbnail.git
-cd NanoThumbnail
+git clone https://github.com/guillaume-murat/MiniatureStudio.git
+cd MiniatureStudio
 npm install
 npm run dev          # http://localhost:4321
 ```
 
-With `astro dev`, Gemini, OpenRouter and Mammouth work out of the box, and so does Vertex AI if `gcloud` is logged in (`gcloud auth login`) with a project set (`gcloud config set project <id>`). To use Replicate locally, run `netlify dev` so the proxy function is available.
+With `astro dev`, Gemini, OpenRouter and Mammouth work out of the box, and so does Vertex AI if `gcloud` is logged in (`gcloud auth login`) with a project set (`gcloud config set project <id>`). To use Replicate or fetch channel details, run `npm run local`, which also serves the proxy functions.
 
 ### macOS app
 
 ```bash
-npm run app:mac:install   # builds NanoThumbnail.app and copies it to /Applications
+npm run app:mac:install   # builds Miniature Studio.app and copies it to /Applications
 ```
 
 The app is a native window (WKWebView) around the studio. It starts a bundled local server on `127.0.0.1:17830` with your Node.js (found through your login shell's `PATH`) that serves the build, the Vertex AI helper and the Replicate/YouTube proxies, so every provider works. Needs the Xcode Command Line Tools to build, and Node.js 22+ at runtime. Its data (projects, images, keys) is separate from your browser's: use Settings → Export / Import to move it over. `npm run local` runs the same server without the app.
@@ -145,6 +123,6 @@ The app is a native window (WKWebView) around the studio. It starts a bundled lo
 
 MIT — see [LICENSE](LICENSE).
 
-## Author
+## Credits
 
-**Yoan Bernabeu** — [YoanDev.co](https://yoandev.co) · [@yOyO38](https://twitter.com/yOyO38)
+Miniature Studio is a fork of [NanoThumbnail](https://github.com/yoanbernabeu/NanoThumbnail), created by **Yoan Bernabeu** — [YoanDev.co](https://yoandev.co) · [@yOyO38](https://twitter.com/yOyO38)

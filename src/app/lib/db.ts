@@ -15,6 +15,7 @@ interface NanoDB extends DBSchema {
 }
 
 /** A new name for the single line of versions: the data of the earlier databases is left as it is, unread. */
+// Keeps the project's former name: renaming it would leave the user's data behind.
 const DB_NAME = 'NanoThumbnailStudio';
 const DB_VERSION = 1;
 /** Only ever deleted, by the app's reset. */

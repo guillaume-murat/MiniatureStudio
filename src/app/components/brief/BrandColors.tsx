@@ -80,7 +80,7 @@ export function BrandColors({ number }: { number: number }) {
           <SelectTrigger id="brandPalette" className="w-full">
             <SelectValue placeholder={t('brand.presetsPlaceholder')} />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="neutral-panel">
             {BRAND_PALETTES.map((p) => (
               <SelectItem key={p.id} value={p.id}>
                 <Swatches colors={p.colors} />

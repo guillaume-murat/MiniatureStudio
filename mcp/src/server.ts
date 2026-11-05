@@ -11,11 +11,11 @@ export const VERSION = '0.1.0';
 const OPEN_STUDIO: ToolDef = {
   name: 'open_studio',
   description:
-    'Open the NanoThumbnail studio in the browser and pair it with this agent. Call it when another tool says the studio is not connected. The user must click "Allow" in the studio once.',
+    'Open Miniature Studio in the browser and pair it with this agent. Call it when another tool says the studio is not connected. The user must click "Allow" in the studio once.',
   inputSchema: { type: 'object', properties: {}, additionalProperties: false },
 };
 
-const INSTRUCTIONS = `NanoThumbnail is a YouTube thumbnail studio running in the user's browser (Google Nano Banana models, the user's own API key). These tools drive it live: the user watches every change.
+const INSTRUCTIONS = `Miniature Studio is a YouTube thumbnail studio running in the user's browser (Google Nano Banana models, the user's own API key). These tools drive it live: the user watches every change.
 Typical flow: get_state → (new_project) → set_brief / suggest_concepts → generate → view_thumbnail → edit_thumbnail (one change at a time) → rank_thumbnails → export_thumbnail.
 Generations cost the user API credits: prefer count 1-2 while exploring and ask before large batches. If a tool says the studio is not connected, call open_studio.`;
 
@@ -34,18 +34,18 @@ function openInBrowser(url: string): void {
 }
 
 export function createServer(config: Config, relay: StudioRelay): Server {
-  const server = new Server({ name: 'nanothumbnail', version: VERSION }, { capabilities: { tools: {} }, instructions: INSTRUCTIONS });
+  const server = new Server({ name: 'miniature-studio', version: VERSION }, { capabilities: { tools: {} }, instructions: INSTRUCTIONS });
   const pairingUrl = `${config.studioUrl}#agent=${config.port}:${config.token}`;
   const pairingCode = `${config.port}:${config.token}`;
 
   function notConnected(): CallToolResult {
     if (relay.listenError) {
       return text(
-        `The bridge could not listen on 127.0.0.1:${config.port} (${relay.listenError.message}). Another NanoThumbnail MCP server is probably running (another agent session): close it, or set NANOTHUMBNAIL_PORT.`,
+        `The bridge could not listen on 127.0.0.1:${config.port} (${relay.listenError.message}). Another Miniature Studio MCP server is probably running (another agent session): close it, or set MINIATURE_STUDIO_PORT.`,
         true,
       );
     }
-    return text(`The NanoThumbnail studio is not connected. Call open_studio, or ask the user to open ${config.studioUrl} → Agent (MCP) → pairing code ${pairingCode}.`, true);
+    return text(`Miniature Studio is not connected. Call open_studio, or ask the user to open ${config.studioUrl} → Agent (MCP) → pairing code ${pairingCode}.`, true);
   }
 
   async function openStudio(): Promise<CallToolResult> {

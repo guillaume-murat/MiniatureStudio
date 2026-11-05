@@ -1,77 +1,101 @@
-/* Shared design tokens — imported by tailwind.css (studio) and site.css (landing). */
+/* Shared design tokens — imported by tailwind.css. */
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Design tokens — NanoThumbnail v2
- * Neutral zinc surfaces, a single desaturated violet accent.
- * The image is the only thing allowed to be colourful.
+ * Design tokens — Miniature Studio
+ * A mix of two screens, UI by Made Good Designs: the thick outlines and hard
+ * shadows of « Create photo post » retro, the rounded type (Fredoka, Nunito) of
+ * its playful version, in fir green and red.
+ * https://madegooddesigns.com/inspiration/ui/create-post-web-retro-679d6c96880e
+ * https://madegooddesigns.com/inspiration/ui/create-post-web-playful-9597dc774b65
+ * Ink draws the outlines and hard shadows, kept for the key elements (`shadow-pop`).
+ * Destructive is raspberry, so that it does not read as the red primary.
  */
 :root {
   --radius: 0.625rem;
 
-  --background: oklch(0.985 0 0);
-  --foreground: oklch(0.21 0.006 285.9);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.21 0.006 285.9);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.21 0.006 285.9);
-  --primary: oklch(0.52 0.17 285);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.955 0.003 286.3);
-  --secondary-foreground: oklch(0.21 0.006 285.9);
-  --muted: oklch(0.955 0.003 286.3);
-  --muted-foreground: oklch(0.5 0.014 285.9);
-  --accent: oklch(0.945 0.012 285);
-  --accent-foreground: oklch(0.21 0.006 285.9);
-  --destructive: oklch(0.577 0.245 27.3);
+  --background: #fbfcf5;
+  --foreground: #0c2a1e;
+  --card: #fbfcf5;
+  --card-foreground: #0c2a1e;
+  --popover: #fbfcf5;
+  --popover-foreground: #0c2a1e;
+  --primary: #c4242e;
+  --primary-foreground: #ffffff;
+  --secondary: color-mix(in oklab, #0f5c45 12%, #e6f1e4);
+  --secondary-foreground: #0c2a1e;
+  --muted: color-mix(in oklab, #0f5c45 12%, #e6f1e4);
+  --muted-foreground: #3f5c4f;
+  --accent: color-mix(in oklab, #0f5c45 18%, #e6f1e4);
+  --accent-foreground: #0c2a1e;
+  --destructive: #9c1458;
   --success: oklch(0.6 0.15 155);
   --warning: oklch(0.75 0.15 75);
-  --border: oklch(0.915 0.004 286.3);
-  --input: oklch(0.915 0.004 286.3);
-  --ring: oklch(0.52 0.17 285);
-  --canvas: oklch(0.955 0.003 286.3);
+  --border: #bbd3b8;
+  --input: #bbd3b8;
+  --ring: #0f5c45;
+  --canvas: #fbfcf5;
+  --canvas-foreground: #0c2a1e;
 
-  --sidebar: oklch(0.975 0.001 286);
-  --sidebar-foreground: oklch(0.21 0.006 285.9);
-  --sidebar-border: oklch(0.915 0.004 286.3);
+  --sidebar: #e6f1e4;
+  --sidebar-foreground: #0c2a1e;
+  --sidebar-border: #bbd3b8;
+
+  --ink: #0c2a1e;
+  --on-ink: #fbfcf5;
+  --brand: #0f5c45;
+  --on-brand: #fbfcf5;
+  --brand-edge: #0c2a1e;
 }
 
 .dark {
-  --background: oklch(0.155 0.004 285.8);
-  --foreground: oklch(0.96 0.002 286);
-  --card: oklch(0.19 0.005 285.8);
-  --card-foreground: oklch(0.96 0.002 286);
-  --popover: oklch(0.2 0.005 285.8);
-  --popover-foreground: oklch(0.96 0.002 286);
-  --primary: oklch(0.68 0.14 285);
-  --primary-foreground: oklch(0.16 0.01 285);
-  --secondary: oklch(0.245 0.006 285.9);
-  --secondary-foreground: oklch(0.96 0.002 286);
-  --muted: oklch(0.245 0.006 285.9);
-  --muted-foreground: oklch(0.68 0.012 286);
-  --accent: oklch(0.26 0.02 285);
-  --accent-foreground: oklch(0.96 0.002 286);
-  --destructive: oklch(0.66 0.2 22);
+  --background: #0d1713;
+  --foreground: #eef5ee;
+  --card: #16241d;
+  --card-foreground: #eef5ee;
+  --popover: #16241d;
+  --popover-foreground: #eef5ee;
+  --primary: #ff8a92;
+  --primary-foreground: #111111;
+  --secondary: color-mix(in oklab, #5fb795 14%, #16241d);
+  --secondary-foreground: #eef5ee;
+  --muted: color-mix(in oklab, #5fb795 14%, #16241d);
+  --muted-foreground: #aebfb4;
+  --accent: color-mix(in oklab, #5fb795 22%, #16241d);
+  --accent-foreground: #eef5ee;
+  --destructive: #ff7fb0;
   --success: oklch(0.7 0.15 155);
   --warning: oklch(0.8 0.14 75);
-  --border: oklch(1 0 0 / 9%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.68 0.14 285);
-  --canvas: oklch(0.12 0.003 285.8);
+  --border: #2d4136;
+  --input: #2d4136;
+  --ring: #7fd0ae;
+  --canvas: #0d1713;
+  --canvas-foreground: #eef5ee;
 
-  --sidebar: oklch(0.175 0.005 285.8);
-  --sidebar-foreground: oklch(0.96 0.002 286);
-  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar: #16241d;
+  --sidebar-foreground: #eef5ee;
+  --sidebar-border: #2d4136;
+
+  --ink: #5fb795;
+  --on-ink: #0d1713;
+  --brand: #0f5c45;
+  --on-brand: #fbfcf5;
+  --brand-edge: #5fb795;
 }
 
 @theme inline {
-  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'Geist Mono Variable', ui-monospace, monospace;
+  --font-sans: 'Nunito Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'Fredoka Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-sm: 5px;
+  --radius-md: 10px;
+  --radius-lg: 20px;
+  --radius-xl: 20px;
+
+  --shadow-pop-sm: 2px 2px 0 var(--brand-edge);
+  --shadow-pop: 3px 3px 0 var(--ink);
+  --shadow-pop-lg: 6px 6px 0 var(--ink);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -94,51 +118,12 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-canvas: var(--canvas);
+  --color-ink: var(--ink);
+  --color-on-ink: var(--on-ink);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-border: var(--sidebar-border);
 
-  --animate-marquee: marquee 60s linear infinite;
-  --animate-float: float 6s ease-in-out infinite;
-  /* Hero edit loop (12 s): generated → edit 1 → edit 2. Each layer/bubble owns a slice of the cycle. */
-  --animate-hero-step-2: hero-step-2 12s ease-in-out infinite;
-  --animate-hero-step-3: hero-step-3 12s ease-in-out infinite;
-  --animate-hero-bubble-1: hero-bubble-1 12s ease-in-out infinite;
-  --animate-hero-bubble-2: hero-bubble-2 12s ease-in-out infinite;
-  --animate-reveal: reveal linear both;
-
-  @keyframes marquee {
-    from { transform: translateX(0); }
-    to { transform: translateX(-50%); }
-  }
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
-  }
-  @keyframes hero-step-2 {
-    0%, 27% { opacity: 0; }
-    33%, 94% { opacity: 1; }
-    100% { opacity: 0; }
-  }
-  @keyframes hero-step-3 {
-    0%, 60% { opacity: 0; }
-    66%, 94% { opacity: 1; }
-    100% { opacity: 0; }
-  }
-  @keyframes hero-bubble-1 {
-    0%, 20% { opacity: 0; transform: translateY(6px); }
-    25%, 58% { opacity: 1; transform: translateY(0); }
-    62%, 100% { opacity: 0; transform: translateY(-6px); }
-  }
-  @keyframes hero-bubble-2 {
-    0%, 54% { opacity: 0; transform: translateY(6px); }
-    60%, 94% { opacity: 1; transform: translateY(0); }
-    100% { opacity: 0; transform: translateY(-6px); }
-  }
-  @keyframes reveal {
-    from { opacity: 0; transform: translateY(100%); }
-    to { opacity: 1; transform: translateY(0); }
-  }
 }
 
 @layer base {
@@ -153,7 +138,6 @@
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-feature-settings: 'ss01', 'cv11';
   }
   .tabular {
     font-variant-numeric: tabular-nums;

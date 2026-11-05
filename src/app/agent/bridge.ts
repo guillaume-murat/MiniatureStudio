@@ -1,5 +1,5 @@
 /**
- * WebSocket client to the local MCP server (npx nanothumbnail-mcp). Off until the user
+ * WebSocket client to the local MCP server (mcp/). Off until the user
  * pairs it; then it keeps reconnecting in the background, since the server comes and
  * goes with the agent's sessions.
  */

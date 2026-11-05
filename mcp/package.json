@@ -1,11 +1,12 @@
 {
-  "name": "nanothumbnail-mcp",
+  "name": "miniature-studio-mcp",
+  "private": true,
   "version": "0.1.0",
-  "description": "MCP server that lets an AI agent (Claude, Cursor…) drive the NanoThumbnail studio open in your browser.",
+  "description": "MCP server that lets an AI agent (Claude, Cursor…) drive Miniature Studio open in your browser.",
   "license": "MIT",
   "type": "module",
   "bin": {
-    "nanothumbnail-mcp": "dist/index.js"
+    "miniature-studio-mcp": "dist/index.js"
   },
   "files": [
     "dist"
@@ -19,16 +20,14 @@
     "thumbnail",
     "nano-banana"
   ],
-  "homepage": "https://nanothumbnail.com",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yoanbernabeu/NanoThumbnail.git",
+    "url": "git+https://github.com/guillaume-murat/MiniatureStudio.git",
     "directory": "mcp"
   },
   "scripts": {
     "build": "esbuild src/index.ts --bundle --platform=node --format=esm --target=node20 --packages=external --outfile=dist/index.js --banner:js=\"#!/usr/bin/env node\"",
     "typecheck": "tsc --noEmit -p .",
-    "prepublishOnly": "npm run typecheck && npm run build",
     "start": "node dist/index.js"
   },
   "dependencies": {

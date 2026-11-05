@@ -3,12 +3,12 @@ import { dataUrlToBlob, fetchBlob } from './images';
 
 /**
  * Provider layer. Replicate has no browser CORS support, so its calls go through
- * our own Netlify function; Gemini, OpenRouter and Mammouth support CORS and are called directly.
+ * our local function; Gemini, OpenRouter and Mammouth support CORS and are called directly.
  * Vertex AI needs an OAuth token from gcloud, so it goes through the local helper
  * (`local/vertex.ts`, served by `npm run dev` and the macOS app).
  */
 
-const PROXY_URL = '/.netlify/functions/replicate-proxy?url=';
+const PROXY_URL = '/functions/replicate-proxy?url=';
 
 const REPLICATE_IMAGE_MODELS: Record<ModelId, string> = {
   'nano-banana-pro': 'google/nano-banana-pro',
@@ -153,7 +153,7 @@ async function replicateRun(
   const headers = { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' };
 
   // `Prefer: wait` makes Replicate hold the request until the prediction ends.
-  // Kept below the Netlify function limit (10 s); we poll past that.
+  // Kept short; we poll past that.
   const res = await fetch(proxied(`https://api.replicate.com/v1/models/${model}/predictions`), {
     method: 'POST',
     headers: { ...headers, Prefer: 'wait=8' },
@@ -345,7 +345,7 @@ async function openRouterCall(
   if (provider === 'openrouter') {
     // App attribution on openrouter.ai (optional headers).
     headers['HTTP-Referer'] = location.origin;
-    headers['X-Title'] = 'NanoThumbnail';
+    headers['X-Title'] = 'Miniature Studio';
   }
   const res = await fetch(CHAT_PROVIDERS[provider].url, { method: 'POST', headers, body: JSON.stringify(body), signal });
   if (!res.ok) throw await readError(res, provider);

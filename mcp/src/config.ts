@@ -13,7 +13,7 @@ export interface Config {
   token: string;
 }
 
-const CONFIG_FILE = join(homedir(), '.config', 'nanothumbnail', 'mcp.json');
+const CONFIG_FILE = join(homedir(), '.config', 'miniature-studio', 'mcp.json');
 
 /** The token is kept across runs so the studio stays paired: agents restart the server every session. */
 function persistentToken(): string {
@@ -34,15 +34,13 @@ function persistentToken(): string {
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
-  const port = Number(env.NANOTHUMBNAIL_PORT) || DEFAULT_PORT;
-  const studioUrl = env.NANOTHUMBNAIL_URL || 'https://nanothumbnail.com/app/';
+  const port = Number(env.MINIATURE_STUDIO_PORT) || DEFAULT_PORT;
+  const studioUrl = env.MINIATURE_STUDIO_URL || 'http://127.0.0.1:17830/app/';
   const origins = [
     new URL(studioUrl).origin,
-    'https://nanothumbnail.com',
     'http://localhost:4321',
     'http://127.0.0.1:4321',
-    'http://localhost:8888',
-    ...(env.NANOTHUMBNAIL_ORIGINS?.split(',').map((o) => o.trim()).filter(Boolean) ?? []),
+    ...(env.MINIATURE_STUDIO_ORIGINS?.split(',').map((o) => o.trim()).filter(Boolean) ?? []),
   ];
-  return { port, studioUrl, origins: [...new Set(origins)], token: env.NANOTHUMBNAIL_TOKEN || persistentToken() };
+  return { port, studioUrl, origins: [...new Set(origins)], token: env.MINIATURE_STUDIO_TOKEN || persistentToken() };
 }

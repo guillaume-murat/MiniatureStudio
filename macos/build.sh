@@ -1,19 +1,19 @@
 #!/bin/sh
-# Builds macos/build/NanoThumbnail.app from dist/ and local/dist/server.mjs
+# Builds "macos/build/Miniature Studio.app" from dist/ and local/dist/server.mjs
 # (run through `npm run app:mac`). `--install` copies it to /Applications
 # (or $NT_INSTALL_DIR).
 # Needs only the Xcode Command Line Tools; the app needs Node.js at runtime.
 set -eu
 cd "$(dirname "$0")/.."
 
-APP=macos/build/NanoThumbnail.app
+APP="macos/build/Miniature Studio.app"
 
 if [ "${1:-}" = "--install" ]; then
   DEST=${NT_INSTALL_DIR:-/Applications}
   mkdir -p "$DEST"
-  rm -rf "$DEST/NanoThumbnail.app"
+  rm -rf "$DEST/Miniature Studio.app" "$DEST/NanoThumbnail.app" # the app's name before the rename
   cp -R "$APP" "$DEST/"
-  echo "Installed: $DEST/NanoThumbnail.app"
+  echo "Installed: $DEST/Miniature Studio.app"
   exit 0
 fi
 
@@ -24,7 +24,7 @@ VERSION=$(node -p "require('./package.json').version")
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
-swiftc -O -o "$APP/Contents/MacOS/NanoThumbnail" macos/NanoThumbnail.swift
+swiftc -O -o "$APP/Contents/MacOS/MiniatureStudio" macos/MiniatureStudio.swift
 
 cp -R dist "$APP/Contents/Resources/dist"
 cp local/dist/server.mjs "$APP/Contents/Resources/server.mjs"
@@ -39,17 +39,18 @@ for size in 16 32 128 256 512; do
 done
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
 
+# The bundle identifier keeps the former name: WebKit stores the app's data (projects, keys) under it.
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>CFBundleName</key><string>NanoThumbnail</string>
-  <key>CFBundleDisplayName</key><string>NanoThumbnail</string>
+  <key>CFBundleName</key><string>Miniature Studio</string>
+  <key>CFBundleDisplayName</key><string>Miniature Studio</string>
   <key>CFBundleIdentifier</key><string>com.nanothumbnail.studio</string>
   <key>CFBundleVersion</key><string>$VERSION</string>
   <key>CFBundleShortVersionString</key><string>$VERSION</string>
-  <key>CFBundleExecutable</key><string>NanoThumbnail</string>
+  <key>CFBundleExecutable</key><string>MiniatureStudio</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>

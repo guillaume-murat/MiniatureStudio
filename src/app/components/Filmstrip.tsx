@@ -55,7 +55,7 @@ function Tile({
             aria-label={title || t('filmstrip.untitled')}
             className={cn(
               'group relative shrink-0 cursor-pointer overflow-hidden rounded-md border bg-muted transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring',
-              selected ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : 'opacity-80 hover:opacity-100',
+              selected ? 'border-2 border-ink shadow-pop' : 'opacity-80 hover:opacity-100',
             )}
             style={{ width, height: TILE_HEIGHT }}
           >

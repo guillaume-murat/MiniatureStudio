@@ -18,7 +18,7 @@ let api: ReturnType<typeof vi.fn<(input: string, init: Init) => Promise<Response
 
 beforeEach(() => {
   api = vi.fn<(input: string, init: Init) => Promise<Response>>();
-  vi.stubGlobal('location', { origin: 'https://nanothumbnail.test' });
+  vi.stubGlobal('location', { origin: 'https://miniature-studio.test' });
   vi.stubGlobal('fetch', (input: string, init: Init) => (input.startsWith('data:') ? realFetch(input) : api(input, init)));
 });
 afterEach(() => vi.unstubAllGlobals());

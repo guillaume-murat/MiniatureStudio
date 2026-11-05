@@ -127,8 +127,6 @@ dist-ssr/
 *.local
 
 
-# Local Netlify folder
-.netlify
 
 # macOS app build
 macos/build/
