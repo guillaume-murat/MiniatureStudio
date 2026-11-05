@@ -1,5 +1,7 @@
 # NanoThumbnail
 
+> This project is a fork of [yoanbernabeu/NanoThumbnail](https://github.com/yoanbernabeu/NanoThumbnail).
+
 NanoThumbnail is a free, open-source studio to **generate, edit and test YouTube thumbnails** with Google's Nano Banana models (Nano Banana Pro, Nano Banana 2 and its Lite version). It runs entirely in your browser: bring your own **Replicate**, **Google Gemini**, **OpenRouter** or **Mammouth** key (or use **Vertex AI** through your gcloud, locally), your images stay on your device.
 
 ![NanoThumbnail Studio](src/assets/landing/en-studio.webp)
