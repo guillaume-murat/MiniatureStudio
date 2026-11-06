@@ -125,3 +125,11 @@
   --on-ink: #ffffff;
   --brand-edge: #0c2a1e;
 }
+
+/* Paints an area: Lucide's brush, ink with a white outline to show on any image; the tip is the hotspot. */
+.cursor-brush {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke='white' stroke-width='4.5'%3E%3Cpath d='m11 10 3 3'/%3E%3Cpath d='M6.5 21A3.5 3.5 0 1 0 3 17.5a2.62 2.62 0 0 1-.708 1.792A1 1 0 0 0 3 21z'/%3E%3Cpath d='M9.969 17.031 21.378 5.624a1 1 0 0 0-3.002-3.002L6.967 14.031'/%3E%3C/g%3E%3Cg stroke='%230c2a1e' stroke-width='2'%3E%3Cpath d='m11 10 3 3'/%3E%3Cpath d='M6.5 21A3.5 3.5 0 1 0 3 17.5a2.62 2.62 0 0 1-.708 1.792A1 1 0 0 0 3 21z'/%3E%3Cpath d='M9.969 17.031 21.378 5.624a1 1 0 0 0-3.002-3.002L6.967 14.031'/%3E%3C/g%3E%3C/svg%3E")
+      3 21,
+    crosshair;
+}

@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { RemoveThumbnailDialog } from '../iterate/VersionDialogs';
 import {
   Bandage,
+  ScanFace,
   Check,
   Blend,
   Brush,
@@ -21,8 +22,9 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button } from '../ui/button';
+import { Button, buttonVariants } from '../ui/button';
 import { Slider } from '../ui/slider';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Kbd } from '../ui/kbd';
 import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
@@ -63,10 +65,16 @@ function IconTip({ label, children }: { label: string; children: React.ReactElem
 function FailedJob({ job }: { job: Job }) {
   const t = useT();
   const dismissJob = useWorkspace((s) => s.dismissJob);
+  const showError = useWorkspace((s) => s.showError);
   return (
-    <div className="flex items-center gap-2 rounded-full border-[1.5px] border-ink bg-card py-1 pr-1 pl-3 text-xs text-destructive shadow-pop-sm">
+    <div className="flex items-center gap-2 rounded-full border-[1.5px] border-ink bg-card py-2 pr-2 pl-3 text-xs text-destructive shadow-pop-sm">
       <AlertCircle className="size-3.5" />
       <span className="max-w-64 truncate">{job.error || t('canvas.failed')}</span>
+      {job.report && (
+        <Button variant="ghost" size="xs" onClick={() => showError(job.report!)}>
+          {t('errors.details')}
+        </Button>
+      )}
       <Button variant="ghost" size="icon-xs" onClick={() => dismissJob(job.id)} aria-label={t('common.close')}>
         <X />
       </Button>
@@ -98,8 +106,17 @@ function EmptyState({ running }: { running: number }) {
   );
 }
 
-function ImageView({ gen, tool, brushSize, clearSignal }: { gen: Generation; tool: MaskTool; brushSize: number; clearSignal: number }) {
-  const { safeZones, tool: active } = useWorkspace();
+function ImageView({ gen, tool, brushSize }: { gen: Generation; tool: MaskTool; brushSize: number }) {
+  const { safeZones, tool: active, setTool } = useWorkspace();
+  const older = useWorkspace(viewingOlder);
+  const busy = useWorkspace((s) => runningJobs(s.jobs).length > 0);
+  // A press on the image with no tool opens the area tool and paints from there.
+  const [strokeStart, setStrokeStart] = useState<{ clientX: number; clientY: number; pointerId: number } | null>(null);
+  const paintable = !active && !older && !busy;
+  // Only for the press that opened it: the M key or the edit bar open it without a stroke.
+  useEffect(() => {
+    if (active !== 'mask') setStrokeStart(null);
+  }, [active]);
   const url = useBlobUrl(gen.blob);
   const [ref, box] = useElementSize<HTMLDivElement>();
   const size = fit(gen.width / gen.height, { width: box.width - 48, height: box.height - 48 });
@@ -132,12 +149,18 @@ function ImageView({ gen, tool, brushSize, clearSignal }: { gen: Generation; too
       {size.width > 0 && (
         <ImageMenu gen={gen} disabled={!!active}>
         <div
-          className="relative overflow-hidden rounded-lg ring-1 ring-border"
+          className={cn('relative overflow-hidden rounded-lg ring-1 ring-border', paintable && 'cursor-brush touch-none')}
           style={{ ...size, transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.z})` }}
+          onPointerDown={(e) => {
+            // The main button only: a right click opens the image's menu.
+            if (!paintable || e.button !== 0) return;
+            setStrokeStart({ clientX: e.clientX, clientY: e.clientY, pointerId: e.pointerId });
+            setTool('mask');
+          }}
         >
           <img src={url} alt={gen.prompt} className="size-full select-none" draggable={false} />
           {safeZones && <SafeZones aspectRatio={gen.params.aspectRatio} />}
-          {active === 'mask' && <MaskLayer width={gen.width} height={gen.height} tool={tool} brushSize={brushSize} clearSignal={clearSignal} />}
+          {active === 'mask' && <MaskLayer width={gen.width} height={gen.height} tool={tool} brushSize={brushSize} start={strokeStart} />}
           {isLayerTool(active) && <TextOverlay width={size.width} height={size.height} kind={active} />}
         </div>
         </ImageMenu>
@@ -240,6 +263,60 @@ function ImageActions({ gen }: { gen: Generation }) {
   );
 }
 
+/** An area tool action: its tip says to paint first while nothing is painted (a disabled button gets no hover). */
+function AreaAction({ hint, ready, children }: { hint: string; ready: boolean; children: ReactNode }) {
+  const t = useT();
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span tabIndex={ready ? -1 : 0}>{children}</span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-64">{ready ? hint : t('canvas.paintFirst')}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+/** « Corriger visage (avec IA) »: a list of the people selected for the project; choosing one starts the fix. */
+function FaceFixSelect({ disabled }: { disabled: boolean }) {
+  const t = useT();
+  const personas = useWorkspace((s) => s.personas);
+  const personaIds = useWorkspace((s) => s.personaIds);
+  const hasMask = useWorkspace((s) => s.hasMask);
+  const fixFace = useWorkspace((s) => s.fixFace);
+  const people = personaIds.flatMap((id) => personas.filter((p) => p.id === id));
+  const hint = !people.length ? t('face.needPerson') : hasMask ? t('face.hint') : t('canvas.paintFirst');
+  // The tip would cover the list, which opens above too.
+  const [open, setOpen] = useState(false);
+  return (
+    <Tooltip open={open ? false : undefined}>
+      <TooltipTrigger asChild>
+        <span tabIndex={!people.length || !hasMask ? 0 : -1}>
+          {/* Always empty: a choice starts the fix, nothing stays selected. */}
+          <Select value="" open={open} onOpenChange={setOpen} onValueChange={(id) => void fixFace(id)} disabled={disabled || !hasMask || !people.length}>
+            {/* Raised like the buttons beside it: it starts an action, it is not a field. */}
+            <SelectTrigger
+              size="sm"
+              className={cn(buttonVariants({ variant: 'outline', size: 'xs' }), "data-[size=sm]:h-6 data-[placeholder]:text-foreground [&_svg:not([class*='text-'])]:text-foreground")}
+              aria-label={t('face.button')}
+            >
+              <ScanFace />
+              <SelectValue placeholder={t('face.button')} />
+            </SelectTrigger>
+            <SelectContent position="popper" side="top" align="end">
+              {people.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-64">{hint}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function CanvasArea() {
   const t = useT();
   const ws = useWorkspace();
@@ -248,7 +325,6 @@ export function CanvasArea() {
   const gen = useWorkspace(selectedGeneration);
   const [maskTool, setMaskTool] = useState<MaskTool>('brush');
   const [brushSize, setBrushSize] = useState(0.05);
-  const [clearSignal, setClearSignal] = useState(0);
   const [instruction, setInstruction] = useState('');
   const [areaRef, area] = useElementSize<HTMLDivElement>();
   const running = ws.jobs.filter((j) => j.status === 'running' && j.kind === 'generate').length;
@@ -256,51 +332,50 @@ export function CanvasArea() {
   const busy = runningJobs(ws.jobs).length > 0;
   const failed = ws.jobs.filter((j) => j.status === 'failed');
   const onImage = !!gen && ws.view === 'image';
-  // Replaces the tools in the edit bar. No way back through them, and no Esc on a tablet: it has its own way out.
-  const maskControls = ws.tool === 'mask' && (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <ToggleGroup type="single" size="sm" disabled={busy} value={maskTool} onValueChange={(v) => v && setMaskTool(v as MaskTool)}>
-        <ToggleGroupItem value="brush" aria-label={t('canvas.brush')}>
-          <Brush />
-        </ToggleGroupItem>
-        <ToggleGroupItem value="eraser" aria-label={t('canvas.eraser')}>
-          <Eraser />
-        </ToggleGroupItem>
-      </ToggleGroup>
-      <Slider
-        className="max-w-32 min-w-10 flex-1"
-        disabled={busy}
-        min={0.01}
-        max={0.15}
-        step={0.005}
-        value={[brushSize]}
-        onValueChange={([v]) => setBrushSize(v)}
-        aria-label={t('canvas.brush')}
-      />
-      <Button variant="ghost" size="xs" disabled={busy} onClick={() => setClearSignal((n) => n + 1)} aria-label={t('canvas.clearMask')}>
-        <Trash2 /> <span className="hidden @min-[34rem]:inline">{t('canvas.clearMask')}</span>
-      </Button>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button variant="outline" size="xs" className="ml-auto" disabled={busy || !ws.hasMask} onClick={() => ws.smooth()}>
+  // Replaces the tools in the edit bar: preparing the area above the instruction, the one-click fixes under it.
+  // No way back through the tools, and no Esc on a tablet: it has its own way out.
+  const maskControls = ws.tool === 'mask' && {
+    tools: (
+      <div className="flex items-center gap-2">
+        <ToggleGroup type="single" size="sm" disabled={busy} value={maskTool} onValueChange={(v) => v && setMaskTool(v as MaskTool)}>
+          <ToggleGroupItem value="brush" aria-label={t('canvas.brush')}>
+            <Brush />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="eraser" aria-label={t('canvas.eraser')}>
+            <Eraser />
+          </ToggleGroupItem>
+        </ToggleGroup>
+        <Slider
+          className="max-w-32 min-w-10 flex-1"
+          disabled={busy}
+          min={0.01}
+          max={0.15}
+          step={0.005}
+          value={[brushSize]}
+          onValueChange={([v]) => setBrushSize(v)}
+          aria-label={t('canvas.brushSize')}
+        />
+        <Button variant="ghost" size="xs" className="ml-auto" disabled={busy} onClick={() => ws.setTool(null)}>
+          <X /> {t('canvas.quitTool')}
+        </Button>
+      </div>
+    ),
+    fixes: (
+      <div className="flex flex-wrap items-center gap-2">
+        <AreaAction hint={t('smooth.hint')} ready={ws.hasMask}>
+          <Button variant="outline" size="xs" disabled={busy || !ws.hasMask} onClick={() => ws.smooth()}>
             <Blend /> {t('smooth.button')}
           </Button>
-        </TooltipTrigger>
-        <TooltipContent className="max-w-64">{t('smooth.hint')}</TooltipContent>
-      </Tooltip>
-      <Tooltip>
-        <TooltipTrigger asChild>
+        </AreaAction>
+        <AreaAction hint={t('heal.hint')} ready={ws.hasMask}>
           <Button variant="outline" size="xs" disabled={busy || !ws.hasMask} onClick={() => ws.heal()}>
             <Bandage /> {t('heal.button')}
           </Button>
-        </TooltipTrigger>
-        <TooltipContent className="max-w-64">{t('heal.hint')}</TooltipContent>
-      </Tooltip>
-      <Button variant="ghost" size="xs" disabled={busy} onClick={() => ws.setTool(null)} aria-label={t('common.cancel')}>
-        <X /> <span className="hidden @min-[34rem]:inline">{t('common.cancel')}</span>
-      </Button>
-    </div>
-  );
+        </AreaAction>
+        <FaceFixSelect disabled={busy} />
+      </div>
+    ),
+  };
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col bg-canvas">
@@ -316,7 +391,7 @@ export function CanvasArea() {
           ) : gen && ws.tool === 'reframe' ? (
             <ReframeView gen={gen} />
           ) : gen ? (
-            <ImageView gen={gen} tool={maskTool} brushSize={brushSize} clearSignal={clearSignal} />
+            <ImageView gen={gen} tool={maskTool} brushSize={brushSize} />
           ) : (
             <div className="flex size-full items-center justify-center">
               <EmptyState running={running} />
@@ -351,13 +426,13 @@ export function CanvasArea() {
 
           {/* Over the image rather than in a toolbar row: the image gets the height. */}
           {gen && ws.view === 'image' && ws.tool !== 'reframe' && (
-            <div className="absolute top-3 right-3 z-10 flex items-center gap-0.5 rounded-lg p-0.5">
+            <div className="absolute top-3 right-3 z-10 flex items-center gap-2 rounded-lg p-0.5">
               <ImageActions gen={gen} />
             </div>
           )}
 
           {failed.length > 0 && !busy && (
-            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1.5">
+            <div className="absolute top-3 left-3 z-10 flex flex-col items-start gap-1.5">
               {failed.map((j) => (
                 <FailedJob key={j.id} job={j} />
               ))}
@@ -373,7 +448,7 @@ export function CanvasArea() {
             ) : ws.tool === 'reframe' ? (
               <ReframeToolbar />
             ) : (
-              <EditBar gen={gen} instruction={instruction} onInstruction={setInstruction} maskControls={maskControls} />
+              <EditBar gen={gen} instruction={instruction} onInstruction={setInstruction} maskControls={maskControls || undefined} />
             )}
           </EditBarShell>
         )}

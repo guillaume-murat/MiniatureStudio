@@ -10,12 +10,15 @@ export function PromptEye({
   title,
   side = 'right',
   onOpenChange,
+  large,
   children,
 }: {
   text?: string;
   title?: string;
   side?: 'right' | 'top';
   onOpenChange?: (open: boolean) => void;
+  /** Beside a large button (Generate). */
+  large?: boolean;
   children?: ReactNode;
 }) {
   const t = useT();
@@ -32,9 +35,9 @@ export function PromptEye({
           type="button"
           onClick={() => change(true)}
           aria-label={heading}
-          className="inline-flex size-5 shrink-0 cursor-help items-center justify-center rounded text-warning transition-colors hover:bg-highlight/15"
+          className={cn('inline-flex shrink-0 cursor-help items-center justify-center rounded text-warning transition-colors hover:bg-highlight/15', large ? 'size-8' : 'size-5')}
         >
-          <Eye className="size-3.5" />
+          <Eye className={large ? 'size-5' : 'size-3.5'} />
         </button>
       </HoverCard.Trigger>
       <HoverCard.Portal>

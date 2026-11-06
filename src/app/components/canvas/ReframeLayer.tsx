@@ -113,7 +113,7 @@ export function ReframeView({ gen }: { gen: Generation }) {
             style={{ ...imgStyle, clipPath: movedClip }}
           />
           {/* The frame: checkerboard where nothing covers it, the image on top */}
-          <div className="absolute inset-0 overflow-hidden rounded-lg ring-2 ring-highlight" style={frameBg}>
+          <div className="absolute inset-0 overflow-hidden rounded-lg ring-2 ring-ink" style={frameBg}>
             {zoneMoves && (
               <img src={url} alt="" draggable={false} className="pointer-events-none absolute inset-0 size-full max-w-none select-none" style={{ clipPath: holed }} />
             )}
@@ -187,7 +187,7 @@ export function ReframeToolbar() {
           <Sparkles className="size-3" /> {t('reframe.aiFill')}
         </span>
       )}
-      <div className="ml-auto flex flex-wrap justify-end gap-1.5">
+      <div className="ml-auto flex flex-wrap justify-end gap-2">
         <Button variant="ghost" size="sm" onClick={() => setTool(null)}>
           <X /> {t('common.cancel')}
         </Button>

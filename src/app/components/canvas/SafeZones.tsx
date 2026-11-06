@@ -7,11 +7,11 @@ import type { OutputRatio } from '../../lib/types';
  * - 9:16 (Shorts): title and channel at the bottom, action buttons on the right.
  */
 const hatch =
-  'repeating-linear-gradient(135deg, color-mix(in srgb, var(--highlight) 40%, transparent) 0 6px, color-mix(in srgb, var(--highlight) 14%, transparent) 6px 12px)';
+  'repeating-linear-gradient(135deg, color-mix(in srgb, var(--highlight) 70%, transparent) 0 6px, color-mix(in srgb, var(--on-image-edge) 55%, transparent) 6px 12px)';
 
 function Zone({ style, label }: { style: React.CSSProperties; label: string }) {
   return (
-    <div className="absolute flex items-center justify-center rounded-sm border border-highlight/80" style={{ background: hatch, ...style }}>
+    <div className="absolute flex items-center justify-center rounded-sm border-2 border-on-image-edge" style={{ background: hatch, ...style }}>
       <span className="rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white">{label}</span>
     </div>
   );
@@ -31,7 +31,7 @@ export function SafeZones({ aspectRatio }: { aspectRatio: OutputRatio }) {
       <div className="absolute inset-[10%] rounded-sm border border-dashed border-white/80 mix-blend-difference" />
       <Zone style={{ right: '1.5%', bottom: '3%', width: '13%', height: '11%' }} label="12:34" />
       <Zone style={{ right: '1.5%', top: '3%', width: '8%', height: '26%' }} label="⏱ ≡" />
-      <div className="absolute inset-x-0 bottom-0 h-[2.5%] bg-highlight/80" />
+      <div className="absolute inset-x-0 bottom-0 h-[2.5%] border-t-2 border-on-image-edge bg-highlight" />
     </div>
   );
 }

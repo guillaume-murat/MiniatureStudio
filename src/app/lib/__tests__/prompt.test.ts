@@ -1,11 +1,57 @@
 import { describe, expect, it } from 'vitest';
-import { brandWeightLine, buildEditPrompt, buildGenerationPrompt, buildHealPrompt, buildOutpaintPrompt, buildRegionEditPrompt, buildUpscalePrompt, colorsLine, DEFAULT_PROMPT_OPTIONS, describeImages, formatLine, imagesHeader, marginLine, outputRatio, priorityLine, qualityLine, sceneLine, styleLine, textLine, titleLine, titlePreviewLine, titleZoneLine } from '../prompt';
+import { brandWeightLine, buildEditPrompt, buildFaceFixPrompt, buildGenerationPrompt, buildHealPrompt, identityLine, buildOutpaintPrompt, buildRegionEditPrompt, buildUpscalePrompt, colorsLine, DEFAULT_PROMPT_OPTIONS, describeImages, formatLine, imagesHeader, marginLine, outputRatio, priorityLine, qualityLine, sceneLine, styleLine, textLine, titleLine, titlePreviewLine, titleZoneLine } from '../prompt';
 
 const base = { lang: 'fr' as const, brief: 'Une développeuse sur Mars', aspectRatio: '16:9' as const, roles: [] };
 
 describe('option previews', () => {
   it('shows the text sent for the brand weight', () => {
     expect(colorsLine('fr', ['#ff0000'], 'dominant')).toContain(brandWeightLine('fr', 'dominant'));
+  });
+});
+
+describe('identityLine', () => {
+  const alex = { kind: 'persona', name: 'Alex' } as const;
+  const ines = { kind: 'persona', name: 'In�s' } as const;
+
+  it('names the featured person with the numbers of their photos', () => {
+    const line = identityLine('fr', [ines, ines, ines, { kind: 'reference' }]);
+    expect(line).toContain('La personne mise en avant est In�s (images 1–3).');
+    expect(line).toContain('même personne, immédiatement reconnaissable');
+    expect(line).toContain('Seule l’expression change');
+  });
+
+  it('names every person when there are several', () => {
+    const line = identityLine('fr', [ines, ines, alex]);
+    expect(line).toContain('Les personnes mises en avant sont In�s (images 1–2) et Alex (image 3).');
+    expect(identityLine('en', [ines, alex])).toContain('The featured people are In�s (image 1) and Alex (image 2).');
+  });
+
+  it('adds nothing without photos of people', () => {
+    expect(identityLine('fr', [{ kind: 'reference' }])).toBe('');
+  });
+
+  it('comes right after the scene', () => {
+    const p = buildGenerationPrompt({ ...base, roles: [ines], style: 'Flat' });
+    expect(p.indexOf(identityLine('fr', [ines]))).toBeGreaterThan(p.indexOf(sceneLine('fr', base.brief)));
+    expect(p.indexOf(identityLine('fr', [ines]))).toBeLessThan(p.indexOf(styleLine('fr', 'Flat', 1)));
+  });
+});
+
+describe('photos of a person', () => {
+  it('keep the face when the expression changes', () => {
+    const [line] = describeImages('fr', [{ kind: 'persona', name: 'Alex' }]);
+    expect(line).toContain('même si son expression change');
+    expect(buildEditPrompt('en', 'x', [{ kind: 'persona', name: 'Alex' }])).toContain('even if the expression changes');
+  });
+});
+
+describe('buildFaceFixPrompt', () => {
+  it('replaces the face in the marked area with the person of the photos sent after it', () => {
+    const p = buildFaceFixPrompt('fr', [{ kind: 'persona', name: 'In�s' }, { kind: 'persona', name: 'In�s' }]);
+    expect(p).toContain('L’image 2 est la même miniature');
+    expect(p).toContain('remplace le visage par celui d’In�s (images 3–4)');
+    expect(p).toContain('Garde l’expression, l’orientation de la tête');
+    expect(p).toContain('- Images 3–4 : photos d’In�s');
   });
 });
 
@@ -33,7 +79,7 @@ describe('buildGenerationPrompt', () => {
   it('sends nothing beyond the blocks shown in the brief panel', () => {
     const roles = [{ kind: 'persona', name: 'Alex' }, { kind: 'reference' }] as const;
     let p = buildGenerationPrompt({ ...base, roles: [...roles], videoTitle: 'Mars', style: 'Flat', colors: ['#ff0000'] });
-    const shown = [formatLine('fr', '16:9'), titleLine('fr', 'Mars'), sceneLine('fr', base.brief), styleLine('fr', 'Flat', 1), textLine('fr'), titleZoneLine('fr'), imagesHeader('fr'), ...describeImages('fr', [...roles]), colorsLine('fr', ['#ff0000']), qualityLine('fr'), marginLine('fr'), priorityLine('fr')];
+    const shown = [formatLine('fr', '16:9'), titleLine('fr', 'Mars'), sceneLine('fr', base.brief), identityLine('fr', [...roles]), styleLine('fr', 'Flat', 1), textLine('fr'), titleZoneLine('fr'), imagesHeader('fr'), ...describeImages('fr', [...roles]), colorsLine('fr', ['#ff0000']), qualityLine('fr'), marginLine('fr'), priorityLine('fr')];
     for (const block of shown) {
       expect(p).toContain(block);
       p = p.replace(block, '');
@@ -158,6 +204,14 @@ describe('edit prompts', () => {
     expect(p).toContain('Modifie l’image 1');
     expect(p).toContain('L’image 2 est la même miniature avec un calque magenta translucide');
     expect(p).toContain('à l’intérieur de la zone marquée sur l’image 2 : ajoute un chapeau');
+  });
+
+  it('region edits describe the selected people after the two images of the thumbnail', () => {
+    const p = buildRegionEditPrompt('fr', 'remplace ce visage', [{ kind: 'persona', name: 'Alex' }, { kind: 'persona', name: 'Alex' }, { kind: 'persona', name: 'Sam' }]);
+    expect(p).toContain('Autres images jointes :');
+    expect(p).toContain('- Images 3–4 : photos d’Alex');
+    expect(p).toContain('- Image 5 : photos de Sam');
+    expect(buildRegionEditPrompt('fr', 'x')).not.toContain('Autres images jointes');
   });
 });
 

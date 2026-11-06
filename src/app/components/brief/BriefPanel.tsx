@@ -1,10 +1,9 @@
-import { Eye, Loader2, Plus, Sparkles, Square, Users, Wand2 } from 'lucide-react';
+import { Loader2, Plus, Sparkles, Square, Users, Wand2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Kbd } from '../ui/kbd';
 import { ScrollArea } from '../ui/scroll-area';
-import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { Field, Section } from '../Section';
 import { ReferencesSection } from './ReferencesSection';
@@ -16,14 +15,29 @@ import { ChannelSection } from './ChannelSection';
 import { AdvancedOptions } from './AdvancedOptions';
 import { BrandColors } from './BrandColors';
 import { PersonaChip } from './PersonaChip';
+import { PromptEye } from './PromptEye';
 import { MOD } from '../TopBar';
 import { MAX_PERSONAS, useWorkspace } from '../../stores/workspace';
 import { useSettings } from '../../stores/settings';
 import { useUI } from '../../stores/ui';
-import { formatLine, OUTPUT_RATIOS, sceneLine, styleLine, titlePreviewLine } from '../../lib/prompt';
+import { sceneLine, styleLine, titlePreviewLine } from '../../lib/prompt';
 import { findStyle } from '../../lib/styles';
 import { useT } from '../../i18n';
-import type { OutputRatio } from '../../lib/types';
+
+/** The prompt the next generation would send, on hover of an eye beside Generate (same code path as `generate`). */
+function NextPromptEye() {
+  const t = useT();
+  const previewPrompt = useWorkspace((s) => s.previewPrompt);
+  const scene = useWorkspace((s) => s.brief.brief);
+  // Read on each render: the store changes as the brief does.
+  useWorkspace();
+  return (
+    <PromptEye title={t('prompt.next')} side="top" large>
+      {!scene.trim() && <p className="mb-1 font-sans not-italic">{t('prompt.emptyBrief')}</p>}
+      <p className="whitespace-pre-wrap italic">{previewPrompt()}</p>
+    </PromptEye>
+  );
+}
 
 function PeopleSection({ number }: { number: number }) {
   const t = useT();
@@ -50,7 +64,7 @@ function PeopleSection({ number }: { number: number }) {
             <Plus /> {t('persona.new')}
           </Button>
         ) : (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {personas.map((p) => (
               <PersonaChip key={p.id} persona={p} active={personaIds.includes(p.id)} onToggle={() => togglePersona(p.id)} />
             ))}
@@ -58,24 +72,6 @@ function PeopleSection({ number }: { number: number }) {
         )}
       </Field>
     </Section>
-  );
-}
-
-function FormatField() {
-  const t = useT();
-  const aspectRatio = useSettings((s) => s.aspectRatio);
-  const lang = useSettings((s) => s.lang);
-  const set = useSettings((s) => s.set);
-  return (
-    <Field label={t('brief.ratio')} prompt={formatLine(lang, aspectRatio)}>
-      <ToggleGroup type="single" variant="outline" className="w-full" value={aspectRatio} onValueChange={(v) => v && set({ aspectRatio: v as OutputRatio })}>
-        {OUTPUT_RATIOS.map((r) => (
-          <ToggleGroupItem key={r} value={r} className="tabular flex-1">
-            {r}
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
-    </Field>
   );
 }
 
@@ -105,7 +101,6 @@ export function BriefPanel() {
               </Tooltip>
             }
           >
-            <FormatField />
             <Field label={t('brief.videoTitle')} htmlFor="videoTitle" prompt={titlePreviewLine(lang, brief.videoTitle)}>
               <Input
                 id="videoTitle"
@@ -139,7 +134,8 @@ export function BriefPanel() {
         </div>
       </ScrollArea>
 
-      <div className="flex gap-2 border-t bg-sidebar p-3">
+      <div className="flex items-center gap-2 border-t bg-sidebar p-3">
+        <NextPromptEye />
         <Button
           size="lg"
           className="flex-1 gap-2"
@@ -152,14 +148,6 @@ export function BriefPanel() {
           {running ? t('brief.generating') : t('brief.generate')}
           <Kbd className="ml-1 bg-on-brand/15 text-on-brand">{MOD} ↵</Kbd>
         </Button>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button size="icon-lg" variant="honey" onClick={() => open('prompt')} aria-label={t('prompt.open')}>
-              <Eye />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{t('prompt.open')}</TooltipContent>
-        </Tooltip>
         {running > 0 && (
           <Tooltip>
             <TooltipTrigger asChild>

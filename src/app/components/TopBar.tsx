@@ -139,7 +139,7 @@ export function TopBar() {
   const ThemeIcon = THEME_ICON[theme];
 
   return (
-    <header className="topbar relative flex h-12 shrink-0 items-center gap-1 border-b-2 border-(--brand-edge) bg-sidebar px-2">
+    <header className="topbar relative flex h-13 shrink-0 items-center gap-1 border-b-2 border-(--brand-edge) bg-sidebar px-2">
       <div className="flex items-center gap-2 rounded-md px-2 py-1 font-heading text-[15px] font-semibold">
         <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" width={28} height={28} className="size-7 shrink-0 rounded-md border-2 border-ink" draggable={false} />
         <span className="hidden xl:inline">Miniature Studio</span>

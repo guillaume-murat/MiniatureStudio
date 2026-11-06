@@ -17,7 +17,6 @@ import { AssistantDialog } from './components/dialogs/AssistantDialog';
 import { ErrorDialog } from './components/dialogs/ErrorDialog';
 import { CommandMenu } from './components/dialogs/CommandMenu';
 import { AgentDialog } from './components/dialogs/AgentDialog';
-import { PromptDialog } from './components/dialogs/PromptDialog';
 import { NewProjectDialog } from './components/dialogs/NewProjectDialog';
 import { useAgent } from './agent/bridge';
 import { useApplyTheme } from './hooks/use-theme';
@@ -135,7 +134,6 @@ export default function App() {
       <ErrorDialog />
       <CommandMenu />
       <AgentDialog />
-      <PromptDialog />
       <NewProjectDialog />
       <BlockingJobOverlay />
       <Toaster position="bottom-right" />

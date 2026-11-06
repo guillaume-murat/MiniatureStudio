@@ -19,12 +19,11 @@ import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group';
 import { Field } from '../Section';
 import { useUI } from '../../stores/ui';
 import { useSettings, type KeyPersistence, type Theme } from '../../stores/settings';
-import { useWorkspace } from '../../stores/workspace';
+import { useWorkspace, toastError } from '../../stores/workspace';
 import { exportBackup, importBackup } from '../../lib/backup';
 import { storageEstimate } from '../../lib/db';
 import { resetApp } from '../../lib/reset';
 import { downloadBlob } from '../../lib/images';
-import { explainError } from '../../lib/errors';
 import { useT } from '../../i18n';
 import type { Provider } from '../../lib/types';
 
@@ -89,7 +88,7 @@ export function SettingsDialog() {
       const blob = await exportBackup();
       downloadBlob(blob, `miniature-studio-backup-${new Date().toISOString().slice(0, 10)}.zip`);
     } catch (error) {
-      toast.error(explainError(error).message);
+      toastError(error);
     } finally {
       setBusy(null);
     }
@@ -102,7 +101,7 @@ export function SettingsDialog() {
       await useWorkspace.getState().init();
       toast.success(t('settings.imported'));
     } catch (error) {
-      toast.error(explainError(error).message);
+      toastError(error);
     } finally {
       setBusy(null);
     }
@@ -114,8 +113,7 @@ export function SettingsDialog() {
       await resetApp();
     } catch (error) {
       setBusy(null);
-      const info = explainError(error);
-      toast.error(t(info.key), { description: info.message });
+      toastError(error);
     }
   }
 

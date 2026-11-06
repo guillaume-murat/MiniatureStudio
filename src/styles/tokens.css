@@ -37,6 +37,7 @@
   --success: #2e8b57;
   --warning: #a67c00;
   --highlight: #ffd23f;
+  --on-image-edge: #0c2a1e;
   --honey: #fbbf24;
   --on-honey: #000000;
   --border: #bbd3b8;
@@ -54,6 +55,8 @@
   --brand: #0f5c45;
   --on-brand: #fbfcf5;
   --brand-edge: #0c2a1e;
+  /* Fir at 60 %: the outline of text fields and the hard shadow of buttons. */
+  --edge-soft: color-mix(in srgb, var(--brand) 60%, transparent);
 }
 
 .dark {
@@ -79,6 +82,7 @@
   --success: #5fb795;
   --warning: #ffd24d;
   --highlight: #ffd23f;
+  --on-image-edge: #0c2a1e;
   --honey: #fbbf24;
   --on-honey: #000000;
   --border: #2d4136;
@@ -96,6 +100,7 @@
   --brand: #0f5c45;
   --on-brand: #fbfcf5;
   --brand-edge: #5fb795;
+  --edge-soft: color-mix(in srgb, var(--ink) 60%, transparent);
 }
 
 @theme inline {
@@ -108,10 +113,13 @@
   --radius-lg: 20px;
   --radius-xl: 20px;
 
+  --shadow-pressed: inset 2px 2px 0 color-mix(in srgb, var(--ink) 30%, transparent);
   --shadow-pop-soft: 2px 2px 0 var(--border);
   --shadow-pop-sm: 2px 2px 0 var(--brand-edge);
   --shadow-pop: 3px 3px 0 var(--ink);
   --shadow-pop-lg: 6px 6px 0 var(--ink);
+  --shadow-btn-sm: 2px 2px 0 var(--edge-soft);
+  --shadow-btn: 3px 3px 0 var(--edge-soft);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -133,6 +141,7 @@
   --color-on-danger: var(--on-danger);
   --color-danger-text: var(--danger-text);
   --color-highlight: var(--highlight);
+  --color-on-image-edge: var(--on-image-edge);
   --color-honey: var(--honey);
   --color-on-honey: var(--on-honey);
   --color-brand: var(--brand);
@@ -144,6 +153,7 @@
   --color-ring: var(--ring);
   --color-canvas: var(--canvas);
   --color-ink: var(--ink);
+  --color-edge-soft: var(--edge-soft);
   --color-on-ink: var(--on-ink);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);

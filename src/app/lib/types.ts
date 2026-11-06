@@ -22,7 +22,7 @@ export interface GenerationParams {
 export type GenerationKind = 'generate' | 'edit' | 'region' | 'import' | 'text' | 'upscale';
 
 /** The tool behind a version, when its kind alone doesn't say it (named in the versions panel). */
-export type GenerationAction = 'reframe' | 'smooth' | 'heal' | 'arrow';
+export type GenerationAction = 'reframe' | 'smooth' | 'heal' | 'face' | 'arrow';
 
 export interface Generation {
   id: string;

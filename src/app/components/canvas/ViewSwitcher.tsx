@@ -6,7 +6,7 @@ import { cn } from '../../lib/utils';
 
 /** A top bar button: its own outline, fill and small relief, so it stands out on the bar's green. */
 export const TOP_BUTTON =
-  'border-[1.5px] border-border bg-background text-foreground shadow-pop-sm hover:bg-accent hover:text-accent-foreground dark:bg-background dark:hover:bg-accent';
+  'border-[1.5px] border-border bg-background text-foreground shadow-btn-sm hover:bg-accent hover:text-accent-foreground dark:bg-background dark:hover:bg-accent';
 
 /** Image / feed preview / channel preview / compare: in the top bar. */
 export function ViewSwitcher({ className }: { className?: string }) {

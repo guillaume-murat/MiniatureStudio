@@ -1,5 +1,5 @@
 import { deleteDB, openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import { putWithBlobRetry } from './blobStore';
+import { inMemory, putWithBlobRetry } from './blobStore';
 import type { CustomStyle, Generation, LibraryImage, Persona, Project } from './types';
 
 interface NanoDB extends DBSchema {
@@ -68,7 +68,7 @@ export function uid(prefix = ''): string {
 
 export async function listProjects(): Promise<Project[]> {
   const db = await getDB();
-  const all = await db.getAllFromIndex('projects', 'byUpdatedAt');
+  const all = await inMemory(await db.getAllFromIndex('projects', 'byUpdatedAt'));
   return all.reverse();
 }
 
@@ -91,9 +91,7 @@ export async function deleteProject(id: string): Promise<void> {
 
 export async function listGenerations(projectId?: string): Promise<Generation[]> {
   const db = await getDB();
-  const items = projectId
-    ? await db.getAllFromIndex('generations', 'byProject', projectId)
-    : await db.getAll('generations');
+  const items = await inMemory(projectId ? await db.getAllFromIndex('generations', 'byProject', projectId) : await db.getAll('generations'));
   return items.sort((a, b) => b.createdAt - a.createdAt);
 }
 
@@ -120,7 +118,7 @@ export async function deleteGenerations(ids: string[]): Promise<void> {
 // ─── Personas / styles / library / brand ─────────────────
 
 export async function listPersonas(): Promise<Persona[]> {
-  const items = await (await getDB()).getAll('personas');
+  const items = await inMemory(await (await getDB()).getAll('personas'));
   return items.sort((a, b) => b.createdAt - a.createdAt);
 }
 export async function putPersona(persona: Persona): Promise<void> {
@@ -142,7 +140,7 @@ export async function deleteStyle(id: string): Promise<void> {
 }
 
 export async function listLibrary(): Promise<LibraryImage[]> {
-  const items = await (await getDB()).getAll('library');
+  const items = await inMemory(await (await getDB()).getAll('library'));
   return items.sort((a, b) => b.createdAt - a.createdAt);
 }
 export async function putLibraryImage(image: LibraryImage): Promise<void> {

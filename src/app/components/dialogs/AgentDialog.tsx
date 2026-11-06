@@ -33,7 +33,7 @@ export function AgentStatusDot({ className }: { className?: string }) {
 function CopyLine({ text }: { text: string }) {
   const t = useT();
   return (
-    <div className="flex items-center gap-1 rounded-md bg-muted py-1 pr-1 pl-3">
+    <div className="flex items-center gap-2 rounded-md bg-muted py-2 pr-2 pl-3">
       <code className="min-w-0 flex-1 overflow-x-auto font-mono text-xs whitespace-nowrap">{text}</code>
       <Button
         size="icon-sm"

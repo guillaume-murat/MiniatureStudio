@@ -55,6 +55,8 @@ interface PromptCopy {
   /** What each kind of reference asks of the model. Text in an image is never to be copied. */
   references: Record<ReferenceUse, (label: string) => string>;
   person: (name: string, description: string, expressions: string[]) => string;
+  identity: (people: string[]) => string;
+  faceFix: (who: string) => string;
   title: (title: string) => string;
   titlePlaceholder: string;
   scene: (brief: string) => string;
@@ -83,6 +85,13 @@ interface PromptCopy {
 }
 
 /** « de Sam », « d’Alex ». */
+function joinFr(items: string[]): string {
+  return items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} et ${items[items.length - 1]}`;
+}
+function joinEn(items: string[]): string {
+  return items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
 function ofName(name: string): string {
   return /^[aeiouyàâäéèêëîïôöùûü]/i.test(name) ? `d’${name}` : `de ${name}`;
 }
@@ -103,8 +112,13 @@ const COPY: Record<Lang, PromptCopy> = {
     },
     person: (name, description, expressions) =>
       `photos ${ofName(name)}${description ? ` (${description})` : ''}. ` +
-      `Garde les traits du visage ${ofName(name)} exactement identiques à ces photos : forme du visage, yeux, nez, teint, cheveux.` +
+      `Garde les traits du visage ${ofName(name)} exactement identiques à ces photos (forme du visage, yeux, nez, bouche, teint, cheveux), même si son expression change.` +
       (expressions.length ? ` Elles montrent aussi ses expressions typiques : ${expressions.join(', ')}.` : ''),
+    identity: (people) =>
+      (people.length === 1 ? `La personne mise en avant est ${people[0]}. Cette personne doit` : `Les personnes mises en avant sont ${joinFr(people)}. Chacune doit`) +
+      ' rester la même personne, immédiatement reconnaissable, avec les traits du visage de ses photos. Seule l’expression change quand la scène ou la direction artistique le demande : la forme du visage, les yeux, le nez, la bouche, le teint et les cheveux restent les siens.',
+    faceFix: (who) =>
+      `remplace le visage par celui ${who}, avec exactement les mêmes traits (forme du visage, yeux, nez, bouche, teint, cheveux). Garde l’expression, l’orientation de la tête, la lumière, les couleurs et le grain de l’image 1, pour que le visage s’intègre sans raccord.`,
     title: (title) => `La miniature s’affichera à côté du titre de la vidéo : ${title}. Ce titre est un contexte, à ne pas écrire dans l’image : la miniature doit ajouter de la curiosité au titre plutôt que le répéter.`,
     titlePlaceholder: '[titre de la vidéo]',
     scene: (brief) => `Scène : ${brief}`,
@@ -178,8 +192,13 @@ const COPY: Record<Lang, PromptCopy> = {
     },
     person: (name, description, expressions) =>
       `photos of ${name}${description ? ` (${description})` : ''}. ` +
-      `Keep ${name}’s facial features exactly the same as in these photos: face shape, eyes, nose, skin tone, hair.` +
+      `Keep ${name}’s facial features exactly the same as in these photos (face shape, eyes, nose, mouth, skin tone, hair), even if the expression changes.` +
       (expressions.length ? ` They also show typical expressions: ${expressions.join(', ')}.` : ''),
+    identity: (people) =>
+      (people.length === 1 ? `The featured person is ${people[0]}. This person must` : `The featured people are ${joinEn(people)}. Each must`) +
+      ' remain the same person, instantly recognisable, with the facial features of their photos. Only the expression changes when the scene or the art direction asks for it: the face shape, eyes, nose, mouth, skin tone and hair stay their own.',
+    faceFix: (who) =>
+      `replace the face with the face of ${who}, with exactly the same features (face shape, eyes, nose, mouth, skin tone, hair). Keep the expression, head angle, lighting, colours and grain of image 1, so the face blends in with no seam.`,
     title: (title) => `The thumbnail will appear next to the video title: ${title}. This title is context, not to be written in the image: the thumbnail should add curiosity to the title rather than repeat it.`,
     titlePlaceholder: '[video title]',
     scene: (brief) => `Scene: ${brief}`,
@@ -242,6 +261,26 @@ const COPY: Record<Lang, PromptCopy> = {
 
 function imageLabel(from: number, to: number): string {
   return from === to ? `Image ${from}` : `Images ${from}–${to}`;
+}
+
+/** Each person and the numbers of their photos ("In�s (images 1–3)"), in order. */
+function peopleWithImages(roles: ImageRole[], offset = 0): string[] {
+  const out: string[] = [];
+  roles.forEach((role, i) => {
+    if (role.kind !== 'persona') return;
+    const prev = roles[i - 1];
+    if (prev?.kind === 'persona' && prev.name === role.name) return;
+    let j = i;
+    while (roles[j + 1]?.kind === 'persona' && (roles[j + 1] as typeof role).name === role.name) j++;
+    out.push(`${role.name} (${imageLabel(offset + i + 1, offset + j + 1).toLowerCase()})`);
+  });
+  return out;
+}
+
+/** Right after the scene: who the featured people are, and that only their expression may change. */
+export function identityLine(lang: Lang, roles: ImageRole[]): string {
+  const people = peopleWithImages(roles);
+  return people.length ? COPY[lang].identity(people) : '';
 }
 
 /** "Images 1–3: photos of Alex…": consecutive photos of the same person are grouped. */
@@ -357,6 +396,8 @@ export function buildGenerationPrompt(input: BriefInput): string {
 
   sections.push([formatLine(lang, aspectRatio), titleLine(lang, videoTitle)].filter(Boolean).join(' '));
   sections.push(sceneLine(lang, brief));
+  const identity = identityLine(lang, roles);
+  if (identity) sections.push(identity);
   sections.push(styleLine(lang, style, people));
   sections.push(textLine(lang, options.text));
 
@@ -401,8 +442,21 @@ export function buildHealPrompt(lang: Lang): string {
   return buildRegionEditPrompt(lang, COPY[lang].heal);
 }
 
-export function buildRegionEditPrompt(lang: Lang, instruction: string): string {
-  return COPY[lang].region(instruction.trim()).join('\n\n');
+/** `people`: the selected people, sent after the clean and the marked copies of the thumbnail. */
+/**
+ * « Corriger le visage »: the face in the painted area becomes the person's of the
+ * photos, sent after the thumbnail and its marked copy (images 3 and on).
+ */
+export function buildFaceFixPrompt(lang: Lang, photos: ImageRole[]): string {
+  const [who = ''] = peopleWithImages(photos, 2);
+  return buildRegionEditPrompt(lang, COPY[lang].faceFix(lang === 'fr' ? ofName(who) : who), photos);
+}
+
+export function buildRegionEditPrompt(lang: Lang, instruction: string, people: ImageRole[] = []): string {
+  const copy = COPY[lang];
+  const lines = copy.region(instruction.trim());
+  if (people.length) lines.push([copy.otherImages, ...describeImages(lang, people, 2)].join('\n'));
+  return lines.join('\n\n');
 }
 
 function lowerFirst(s: string): string {

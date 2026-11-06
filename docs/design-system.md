@@ -19,6 +19,8 @@ Style rétro et joueur, d'après [« Create photo post » retro](https://madegoo
 
 Toujours utiliser un token, jamais une valeur en dur. Le nuancier montre le thème clair ; le thème sombre a ses propres valeurs pour le texte, les contours et les fonds.
 
+Un repère posé sur une image (sélection, poignée, zone peinte, zones de sécurité) est toujours jaune avec un contour encre fixe, pour rester visible sur n'importe quelle image.
+
 Échappent à la règle : les couleurs choisies par l'utilisateur (marque, textes, flèches), les images et illustrations, les aperçus qui imitent YouTube et les couleurs envoyées au modèle.
 
 ## Boutons
@@ -33,6 +35,14 @@ Toujours utiliser un token, jamais une valeur en dur. Le nuancier montre le thè
 | `outline` | Une action secondaire | Exporter |
 | `ghost` | Les actions fréquentes et les barres denses | Annuler |
 
+Le relief des boutons est une ombre dure en vert sapin à 60 % (`--edge-soft`), sous un contour encre. Les champs de saisie restent à plat : contour de 2 px dans ce même sapin à 60 %, sans ombre. En relief, ils ressembleraient à des boutons. Les listes déroulantes et les pastilles de personnes ont le relief d'un bouton `outline` ; une pastille choisie paraît enfoncée.
+
+Des boutons en relief gardent au moins 8 px entre eux et avec le bord de ce qui les contient, pour que leurs ombres ne touchent rien.
+
+Des boutons attachés forment un seul bloc en relief : contour encre et ombre de 2 px en sapin à 60 % autour du groupe, et le choix actif paraît enfoncé.
+
+![Un groupe de trois boutons en relief, en thème clair et en thème sombre](design-system/groupes.svg)
+
 ![Les quatre états d'un bouton : repos, survol, clic et désactivé](design-system/etats.svg)
 
 ## Typographie
@@ -46,8 +56,10 @@ Jamais de titres en capitales.
 | Élément | Rayon | Ombre |
 |---|---|---|
 | Bouton `ghost`, bascule | 10 px | 2 px, couleur de bordure |
-| Bouton `outline` | 10 px | 2 px, encre |
-| Bouton principal, miel ou dangereux | 10 px | 3 px, encre |
+| Bouton `outline`, groupe de boutons, liste déroulante | 10 px | 2 px, sapin 60 % |
+| Pastille de personne | arrondie | 2 px, sapin 60 % |
+| Bouton principal, miel ou dangereux | 10 px | 3 px, sapin 60 % |
 | Menu, liste déroulante, notification | 10 px | 3 px, encre |
 | Dialogue, confirmation, barre de retouche | 20 px | 6 px, encre |
-| Champ, case à cocher, interrupteur | 10 px | aucune |
+| Champ de saisie | 10 px | aucune |
+| Case à cocher, interrupteur | 4 px, arrondi | aucune |

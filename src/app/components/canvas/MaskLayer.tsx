@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { registerMaskCanvas, useWorkspace } from '../../stores/workspace';
+import { cn } from '../../lib/utils';
 
 export type MaskTool = 'brush' | 'eraser';
 
@@ -12,14 +13,15 @@ export function MaskLayer({
   height,
   tool,
   brushSize,
-  clearSignal,
+  start,
 }: {
   width: number;
   height: number;
   tool: MaskTool;
   /** Brush diameter as a fraction of the image width. */
   brushSize: number;
-  clearSignal: number;
+  /** A press on the image that opened the tool: painting starts from it, in the same gesture. */
+  start?: { clientX: number; clientY: number; pointerId: number } | null;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
@@ -34,9 +36,24 @@ export function MaskLayer({
   useEffect(() => {
     ref.current?.getContext('2d')?.clearRect(0, 0, width, height);
     setHasMask(false);
-  }, [clearSignal, width, height, setHasMask]);
+  }, [width, height, setHasMask]);
 
-  function point(e: React.PointerEvent) {
+  // Once, on opening: the canvas takes over the pointer that is still down.
+  useEffect(() => {
+    if (!start || !ref.current) return;
+    try {
+      ref.current.setPointerCapture(start.pointerId);
+    } catch {
+      // Already released (a quick tap): the dot alone is painted.
+    }
+    drawing.current = true;
+    last.current = null;
+    stroke(point(start));
+    setHasMask(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function point(e: { clientX: number; clientY: number }) {
     const rect = ref.current!.getBoundingClientRect();
     return { x: ((e.clientX - rect.left) / rect.width) * width, y: ((e.clientY - rect.top) / rect.height) * height };
   }
@@ -72,7 +89,7 @@ export function MaskLayer({
       ref={ref}
       width={width}
       height={height}
-      className="absolute inset-0 size-full cursor-crosshair touch-none opacity-50"
+      className={cn('absolute inset-0 size-full touch-none', tool === 'eraser' ? 'cursor-crosshair' : 'cursor-brush', ' opacity-70 [filter:drop-shadow(1.5px_0_0_var(--on-image-edge))_drop-shadow(-1.5px_0_0_var(--on-image-edge))_drop-shadow(0_1.5px_0_var(--on-image-edge))_drop-shadow(0_-1.5px_0_var(--on-image-edge))]')}
       onPointerDown={(e) => {
         e.currentTarget.setPointerCapture(e.pointerId);
         drawing.current = true;

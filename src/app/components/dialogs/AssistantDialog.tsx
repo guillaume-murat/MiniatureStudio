@@ -10,11 +10,10 @@ import { Field } from '../Section';
 import { PromptCode } from '../brief/PromptCode';
 import { useBlobUrl } from '../../hooks/use-blob-url';
 import { useUI } from '../../stores/ui';
-import { useWorkspace, type ConceptPreview } from '../../stores/workspace';
+import { useWorkspace, type ConceptPreview, toastError } from '../../stores/workspace';
 import { useSettings } from '../../stores/settings';
 import { conceptIdea, conceptPoints, conceptsPrompt, suggestConcepts, type Concept, type ConceptsInput } from '../../lib/ai';
 import { conceptStyles, findStyle } from '../../lib/styles';
-import { explainError } from '../../lib/errors';
 import { isAbort } from '../../lib/providers';
 import { useT } from '../../i18n';
 import { cn } from '../../lib/utils';
@@ -135,8 +134,7 @@ export function AssistantDialog() {
     } catch (error) {
       done(({ [index]: _, ...others }) => others);
       if (isAbort(error)) return;
-      const info = explainError(error);
-      toast.error(t(info.key), { description: info.message });
+      toastError(error);
     }
   }
 
@@ -161,8 +159,7 @@ export function AssistantDialog() {
             applyConcept(concepts[i]);
             setAdded((all) => ({ ...all, [i]: (all[i] ?? 0) + 1 }));
           } catch (error) {
-            const info = explainError(error);
-            toast.error(t(info.key), { description: info.message });
+            toastError(error);
           }
         }}
       >
@@ -198,8 +195,7 @@ export function AssistantDialog() {
         result.forEach((concept, i) => void preview(concept, i, id, controller.signal));
       }
     } catch (error) {
-      const info = explainError(error);
-      toast.error(t(info.key), { description: info.message });
+      toastError(error);
     } finally {
       setBusy(false);
     }

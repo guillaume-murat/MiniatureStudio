@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isBlobStoreError, putWithBlobRetry } from '../blobStore';
+import { inMemory, isBlobStoreError, putWithBlobRetry } from '../blobStore';
 
 const webkitError = () => new DOMException('Error preparing Blob/File data to be stored in object store', 'UnknownError');
 const item = () => ({ id: 'g1', blob: new Blob(['image'], { type: 'image/png' }) });
@@ -52,5 +52,20 @@ describe('saving an image in IndexedDB', () => {
     expect(isBlobStoreError(webkitError())).toBe(true);
     expect(isBlobStoreError(new DOMException('Quota exceeded', 'QuotaExceededError'))).toBe(false);
     expect(isBlobStoreError(new Error('Bad request'))).toBe(false);
+  });
+});
+
+describe('reading records from IndexedDB', () => {
+  it('replaces every image, however deep, with a copy of its bytes', async () => {
+    const logo = new Blob(['logo'], { type: 'image/webp' });
+    const photo = new Blob(['photo'], { type: 'image/png' });
+    const record = { id: 'p1', name: 'Alex', brand: { logo }, photos: [{ slot: 'front', blob: photo }], tags: ['a'], empty: null };
+    const copy = await inMemory(record);
+    expect(copy).toEqual({ ...record, brand: { logo: expect.any(Blob) }, photos: [{ slot: 'front', blob: expect.any(Blob) }] });
+    expect(copy.brand.logo).not.toBe(logo);
+    expect(copy.brand.logo.type).toBe('image/webp');
+    expect(await copy.brand.logo.text()).toBe('logo');
+    expect(copy.photos[0].blob).not.toBe(photo);
+    expect(await copy.photos[0].blob.text()).toBe('photo');
   });
 });

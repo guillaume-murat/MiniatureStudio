@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ArrowUpRight,
   Bandage,
+  ScanFace,
   Blend,
   ChevronRight,
   Copy,
@@ -37,6 +38,7 @@ const STEP_ICONS = {
   reframe: Crop,
   smooth: Blend,
   heal: Bandage,
+  face: ScanFace,
   arrow: ArrowUpRight,
 } as const;
 
@@ -55,7 +57,7 @@ function RowActions({ gen, canRevert, className }: { gen: Generation; canRevert:
   const running = useWorkspace((s) => runningJobs(s.jobs).length > 0);
   return (
     <>
-      <div className={cn('absolute inset-y-0 right-1 flex items-center gap-0.5 bg-gradient-to-l from-accent from-75% to-transparent pl-5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 pointer-events-none [&_button]:pointer-events-auto [@media(pointer:coarse)]:opacity-100', className)}>
+      <div className={cn('absolute inset-y-0 right-2 flex items-center gap-2 bg-gradient-to-l from-accent from-75% to-transparent pl-5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 pointer-events-none [&_button]:pointer-events-auto [@media(pointer:coarse)]:opacity-100', className)}>
         {canRevert && (
           <Button variant="ghost" size="icon-xs" disabled={running} aria-label={t('versions.revert')} title={t('versions.revert')} onClick={() => setReverting(true)}>
             <Undo2 />

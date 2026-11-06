@@ -4,8 +4,10 @@ import * as db from '../lib/db';
 import { generateImage, isAbort } from '../lib/providers';
 import {
   buildEditPrompt,
+  buildFaceFixPrompt,
   buildGenerationPrompt,
   describeImages,
+  identityLine,
   imagesHeader,
   buildOutpaintPrompt,
   buildRegionEditPrompt,
@@ -16,7 +18,7 @@ import {
 import { composeReframe, composeZoneReframe, isIdentity, isZone, type Point, type Reframe } from '../lib/reframe';
 import { useReframe } from './reframe';
 import { dimensions, highlightRegion, mergeWithMask, normaliseUpload, prepareReference } from '../lib/images';
-import { explainError } from '../lib/errors';
+import { errorLog, explainError, type JobContext, type JobStep } from '../lib/errors';
 import { smoothRegion } from '../lib/smooth';
 import { randomSeed } from '../lib/channel';
 import { newGeneration, type VersionInput, historyOf, isOlderVersion, versionsAfter } from '../lib/versions';
@@ -64,6 +66,8 @@ export interface Job {
   elapsed: number;
   parentId?: string;
   error?: string;
+  /** What the error dialog shows for a failed job. */
+  report?: ErrorReport;
   controller: AbortController;
   /** The tool behind it (reframe, heal), for its label. The studio is locked while any job runs (BlockingJobOverlay). */
   action?: GenerationAction;
@@ -84,10 +88,12 @@ export interface Outcome<T> {
   error?: string;
 }
 
-interface ErrorReport {
+export interface ErrorReport {
   message: string;
   status?: number;
   details?: unknown;
+  /** Everything known about the failure, as text (image jobs). */
+  log?: string;
 }
 
 interface WorkspaceState {
@@ -153,6 +159,8 @@ interface WorkspaceState {
   edit: (instruction: string, opts?: { mask?: HTMLCanvasElement }) => Promise<Outcome<Generation>[]>;
   /** Healing brush: the painted area is repainted to erase seams and hard edges. */
   heal: () => Promise<Outcome<Generation> | null>;
+  /** « Corriger le visage »: the painted face becomes this person's, from their photos (Nano Banana Pro). */
+  fixFace: (personaId: string) => Promise<Outcome<Generation> | null>;
   /** A version copied as a new, independent thumbnail, shown at once. */
   duplicateVersion: (id: string) => Promise<Generation | null>;
   /** « Lisser »: the painted area is refilled from its surroundings, locally, without AI. */
@@ -283,15 +291,32 @@ async function flushSave() {
   await db.putProject(updated);
 }
 
-function reportError(error: unknown, set: (s: Partial<WorkspaceState>) => void): string {
+/** The report of any error: its message, the provider's response, and the job's log when there is one. */
+export function errorReport(error: unknown, context?: JobContext): ErrorReport {
   const info = explainError(error);
-  if (isAbort(error)) return info.message;
-  const report = { message: info.message, status: info.status, details: info.details };
-  toast.error(t(info.key), {
-    description: info.message,
-    action: info.details ? { label: t('errors.details'), onClick: () => set({ lastError: report }) } : undefined,
-  });
-  return t(info.key);
+  const stack = error instanceof Error ? error.stack : undefined;
+  return {
+    message: info.message,
+    status: info.status,
+    details: info.details,
+    log: context ? errorLog(error, context) : [`${error instanceof Error || error instanceof DOMException ? error.name : typeof error}: ${info.message}`, stack].filter(Boolean).join('\n\n'),
+  };
+}
+
+/** Shows an error with a button to its technical details. Returns its translated title. */
+export function toastError(error: unknown, context?: JobContext): { title: string; report: ErrorReport } {
+  const info = explainError(error);
+  const report = errorReport(error, context);
+  if (!isAbort(error)) {
+    toast.error(t(info.key), {
+      description: info.message,
+      // Kept until closed: the details are read when it fails, not ten seconds later.
+      duration: Infinity,
+      closeButton: true,
+      action: { label: t('errors.details'), onClick: () => useWorkspace.getState().showError(report) },
+    });
+  }
+  return { title: t(info.key), report };
 }
 
 /** What the next edit sends, for the eye of the edit bar. */
@@ -300,8 +325,6 @@ export interface EditPreview {
   prompt: string;
   params: GenerationParams;
   images: Array<{ blob: Blob; role: 'current' | 'marked' | 'person'; person?: string }>;
-  /** Selected people that a region edit does not send. */
-  peopleLeftOut: boolean;
 }
 
 export const useWorkspace = create<WorkspaceState>((set, get) => {
@@ -395,6 +418,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     apiKey: string,
     action?: GenerationAction,
     model?: ModelId,
+    people: Blob[] = [],
   ) {
     const highlighted = await highlightRegion(source.blob, mask);
     return runJob({
@@ -404,7 +428,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       fullPrompt,
       // Clean image first (what gets edited), marked copy second (where to edit):
       // sending only the marked copy lets the magenta tint bleed into the result.
-      images: [source.blob, highlighted],
+      images: [source.blob, highlighted, ...people],
       params: { ...useSettings.getState().params(), aspectRatio: source.params.aspectRatio, ...(model ? { model } : {}) },
       parent: source,
       apiKey,
@@ -422,9 +446,17 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     return { ...useSettings.getState().params(), aspectRatio: source.params.aspectRatio };
   }
 
-  /** Selected people are sent again with an edit, so their identity doesn't drift over successive edits. */
-  function editPeople() {
-    return personaImages().slice(0, MAX_IMAGES - 1);
+  /**
+   * Selected people are sent again with an edit, so their identity doesn't drift over successive edits.
+   * `sent`: the images of the thumbnail sent before them (a region edit adds the marked copy).
+   */
+  function editPeople(sent = 1) {
+    return personaImages().slice(0, MAX_IMAGES - sent);
+  }
+
+  /** The people of an edit as the edit bar's eye lists them. */
+  function sentPeople(people: ReturnType<typeof editPeople>) {
+    return people.map(({ blob, role }) => ({ blob, role: 'person' as const, person: role.kind === 'persona' ? role.name : undefined }));
   }
 
   /** What a concept's preview is generated with. */
@@ -503,8 +535,10 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     const patchJob = (patch: Partial<Job>) =>
       set({ jobs: get().jobs.map((j) => (j.id === job.id ? { ...j, ...patch } : j)) });
 
+    let step: JobStep = 'prepare';
     try {
       const images = await Promise.all(opts.images.map((b) => prepareReference(b, opts.reference?.maxSide, opts.reference?.bytes)));
+      step = 'call';
       let blob = await generateImage({
         prompt: opts.fullPrompt,
         images,
@@ -513,7 +547,9 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         signal: job.controller.signal,
         onProgress: (elapsed) => patchJob({ elapsed }),
       });
+      step = 'finalize';
       if (opts.finalize) blob = await opts.finalize(blob);
+      step = 'save';
       // The first result of a batch gets shown.
       const show = !opts.batch.shown && projectId === get().projectId;
       if (show) opts.batch.shown = true;
@@ -536,9 +572,20 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         set({ jobs: get().jobs.filter((j) => j.id !== job.id) });
         return { error: t('agent.canceled') };
       }
-      const message = reportError(error, set);
-      patchJob({ status: 'failed', error: message });
-      return { error: message };
+      const { title, report } = toastError(error, {
+        at: Date.now(),
+        step,
+        kind: opts.kind,
+        action: opts.action,
+        params: opts.params,
+        images: opts.images,
+        promptLength: opts.fullPrompt.length,
+        elapsedMs: Date.now() - job.startedAt,
+        userAgent: navigator.userAgent,
+        secret: opts.apiKey,
+      });
+      patchJob({ status: 'failed', error: title, report });
+      return { error: title };
     }
   }
 
@@ -672,7 +719,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
           const blob = await normaliseUpload(file);
           if (!get().addRef(blob, source)) break;
         } catch (error) {
-          reportError(error, set);
+          toastError(error).title;
         }
       }
     },
@@ -719,6 +766,20 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       return regionEdit({ ...source, blob: patched }, mask, t('heal.done'), buildHealPrompt(promptLang()), apiKey, 'heal', 'nano-banana-2');
     },
 
+    fixFace: async (personaId) => {
+      const source = selectedGeneration(get());
+      const person = get().personas.find((p) => p.id === personaId);
+      if (!source || !person || !get().hasMask || !maskCanvas) return null;
+      const apiKey = checkKey();
+      if (!apiKey) return null;
+      // The thumbnail and its marked copy come first.
+      const photos = personaImages([personaId]).slice(0, MAX_IMAGES - 2);
+      const mask = snapshotMask(maskCanvas);
+      const prompt = buildFaceFixPrompt(promptLang(), photos.map((p) => p.role));
+      // Always Nano Banana Pro, whatever the model chosen for generating: the most faithful to a face.
+      return regionEdit(source, mask, t('face.done', { name: person.name }), prompt, apiKey, 'face', 'nano-banana-pro', photos.map((p) => p.blob));
+    },
+
     duplicateVersion: async (id) => {
       const source = get().generations.find((g) => g.id === id);
       if (!source) return null;
@@ -741,7 +802,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         const blob = await smoothRegion(source.blob, snapshotMask(maskCanvas));
         return await saveVersion({ parent: source, kind: 'region', action: 'smooth', prompt: t('smooth.done'), blob });
       } catch (error) {
-        reportError(error, set);
+        toastError(error).title;
         return null;
       }
     },
@@ -754,7 +815,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       const people = personaImages().map((a) => a.role);
       const references = referenceImages().map((a) => a.role);
       return {
-        people: (people.length ? [imagesHeader(promptLang()), ...describeImages(promptLang(), people)] : []).join('\n'),
+        people: (people.length ? [identityLine(promptLang(), people), '', imagesHeader(promptLang()), ...describeImages(promptLang(), people)] : []).join('\n'),
         references: (references.length && !people.length ? [imagesHeader(promptLang())] : []).concat(describeImages(promptLang(), references, people.length)).join('\n'),
       };
     },
@@ -841,12 +902,12 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       const painted = paintedMask();
       if (painted) {
         const mask = snapshotMask(painted);
+        const people = editPeople(2);
         return {
           region: true,
-          prompt: buildRegionEditPrompt(promptLang(), text),
+          prompt: buildRegionEditPrompt(promptLang(), text, people.map((p) => p.role)),
           params,
-          images: [{ blob: source.blob, role: 'current' }, { blob: await highlightRegion(source.blob, mask), role: 'marked' }],
-          peopleLeftOut: personaImages().length > 0,
+          images: [{ blob: source.blob, role: 'current' }, { blob: await highlightRegion(source.blob, mask), role: 'marked' }, ...sentPeople(people)],
         };
       }
       const people = editPeople();
@@ -854,11 +915,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         region: false,
         prompt: buildEditPrompt(promptLang(), text, people.map((p) => p.role)),
         params,
-        images: [
-          { blob: source.blob, role: 'current' },
-          ...people.map(({ blob, role }) => ({ blob, role: 'person' as const, person: role.kind === 'persona' ? role.name : undefined })),
-        ],
-        peopleLeftOut: false,
+        images: [{ blob: source.blob, role: 'current' }, ...sentPeople(people)],
       };
     },
 
@@ -870,7 +927,11 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
 
       const painted = paintedMask();
       const mask = opts?.mask ?? (painted ? snapshotMask(painted) : null);
-      if (mask) return [await regionEdit(source, mask, instruction, buildRegionEditPrompt(promptLang(), instruction), apiKey)];
+      if (mask) {
+        const people = editPeople(2);
+        const prompt = buildRegionEditPrompt(promptLang(), instruction, people.map((p) => p.role));
+        return [await regionEdit(source, mask, instruction, prompt, apiKey, undefined, undefined, people.map((p) => p.blob))];
+      }
 
       const people = editPeople();
       const outcome = await runJob({
@@ -943,7 +1004,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         set({ ranking: { ids: gens.map((g) => g.id), result } });
         return { value: result };
       } catch (error) {
-        return { error: reportError(error, set) };
+        return { error: toastError(error).title };
       } finally {
         set({ ranking_busy: false });
       }
@@ -1034,7 +1095,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
           batch: { shown: false },
         });
       } catch (error) {
-        reportError(error, set);
+        toastError(error).title;
         return null;
       }
     },
@@ -1057,7 +1118,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         get().setTool(null);
         return generation;
       } catch (error) {
-        reportError(error, set);
+        toastError(error).title;
         return null;
       }
     },

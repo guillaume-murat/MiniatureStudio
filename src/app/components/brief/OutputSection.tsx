@@ -4,10 +4,28 @@ import { Field, Section } from '../Section';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group';
 import { useSettings } from '../../stores/settings';
+import { formatLine, OUTPUT_RATIOS } from '../../lib/prompt';
 import { useT } from '../../i18n';
-import type { OutputFormat, SafetyLevel } from '../../lib/types';
+import type { OutputFormat, OutputRatio, SafetyLevel } from '../../lib/types';
 import { cn } from '../../lib/utils';
 
+function FormatField() {
+  const t = useT();
+  const aspectRatio = useSettings((s) => s.aspectRatio);
+  const lang = useSettings((s) => s.lang);
+  const set = useSettings((s) => s.set);
+  return (
+    <Field label={t('brief.ratio')} prompt={formatLine(lang, aspectRatio)}>
+      <ToggleGroup type="single" variant="outline" className="w-full" value={aspectRatio} onValueChange={(v) => v && set({ aspectRatio: v as OutputRatio })}>
+        {OUTPUT_RATIOS.map((r) => (
+          <ToggleGroupItem key={r} value={r} className="tabular flex-1">
+            {r}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+    </Field>
+  );
+}
 
 export function OutputSection({ number }: { number: number }) {
   const t = useT();
@@ -16,6 +34,7 @@ export function OutputSection({ number }: { number: number }) {
 
   return (
     <Section foldable title={`${number}. ${t('brief.settings')}`}>
+      <FormatField />
       <Field label={t('brief.count')}>
         <ToggleGroup
           type="single"

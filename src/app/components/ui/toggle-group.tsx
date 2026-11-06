@@ -36,7 +36,7 @@ function ToggleGroup({
       data-spacing={spacing}
       style={{ "--gap": spacing } as React.CSSProperties}
       className={cn(
-        "group/toggle-group flex w-fit items-center gap-[--spacing(var(--gap))] rounded-md data-[spacing=default]:data-[variant=outline]:shadow-xs",
+        "group/toggle-group flex w-fit items-center gap-[--spacing(var(--gap))] rounded-md data-[spacing=0]:shadow-btn-sm",
         className
       )}
       {...props}
@@ -70,7 +70,8 @@ function ToggleGroupItem({
           size: context.size || size,
         }),
         "w-auto min-w-0 shrink-0 px-3 focus:z-10 focus-visible:z-10",
-        "data-[spacing=0]:rounded-none data-[spacing=0]:shadow-none data-[spacing=0]:first:rounded-l-md data-[spacing=0]:last:rounded-r-md data-[spacing=0]:data-[variant=outline]:border-l-0 data-[spacing=0]:data-[variant=outline]:first:border-l",
+        // Attached items: the group is the raised block, the chosen item is pressed into it.
+        "data-[spacing=0]:rounded-none data-[spacing=0]:border-ink data-[spacing=0]:shadow-none data-[spacing=0]:not-first:border-l-0 data-[spacing=0]:first:rounded-l-md data-[spacing=0]:last:rounded-r-md data-[spacing=0]:active:translate-x-0 data-[spacing=0]:active:translate-y-0 data-[spacing=0]:data-[state=on]:translate-x-0 data-[spacing=0]:data-[state=on]:translate-y-0 data-[spacing=0]:data-[state=on]:shadow-pressed",
         className
       )}
       {...props}

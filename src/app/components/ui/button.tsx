@@ -11,14 +11,14 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: `border-2 border-ink bg-brand text-on-brand shadow-pop hover:bg-brand/90 ${PRESS}`,
+        default: `border-2 border-ink bg-brand text-on-brand shadow-btn hover:bg-brand/90 ${PRESS}`,
         destructive:
-          `border-2 border-ink bg-danger text-on-danger shadow-pop hover:bg-danger/90 focus-visible:ring-danger/20 dark:focus-visible:ring-danger/40 ${PRESS}`,
-        honey: `border-2 border-ink bg-honey text-on-honey shadow-pop hover:bg-honey/85 ${PRESS}`,
+          `border-2 border-ink bg-danger text-on-danger shadow-btn hover:bg-danger/90 focus-visible:ring-danger/20 dark:focus-visible:ring-danger/40 ${PRESS}`,
+        honey: `border-2 border-ink bg-honey text-on-honey shadow-btn hover:bg-honey/85 ${PRESS}`,
         outline:
-          `border-[1.5px] border-ink bg-background shadow-pop-sm hover:bg-accent hover:text-accent-foreground ${PRESS}`,
+          `border-[1.5px] border-ink bg-background shadow-btn-sm hover:bg-accent hover:text-accent-foreground ${PRESS}`,
         secondary:
-          `border-[1.5px] border-ink bg-secondary text-secondary-foreground shadow-pop-sm hover:bg-accent ${PRESS}`,
+          `border-[1.5px] border-ink bg-secondary text-secondary-foreground shadow-btn-sm hover:bg-accent ${PRESS}`,
         ghost:
           `border-[1.5px] border-border bg-background shadow-pop-soft hover:bg-accent hover:text-accent-foreground ${PRESS}`,
         link: "text-primary underline-offset-4 hover:underline",

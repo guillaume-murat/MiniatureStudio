@@ -1,9 +1,8 @@
 import { useRef } from 'react';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
-import { explainError } from '../../lib/errors';
 import { historyOf, versionsAfter } from '../../lib/versions';
-import { useWorkspace } from '../../stores/workspace';
+import { useWorkspace, toastError } from '../../stores/workspace';
 import { useT } from '../../i18n';
 import type { Generation } from '../../lib/types';
 
@@ -31,8 +30,7 @@ function ConfirmDialog({ open, onOpenChange, title, description, action, destruc
             variant={destructive ? 'destructive' : 'default'}
             onClick={() =>
               void onConfirm().catch((error) => {
-                const info = explainError(error);
-                toast.error(t(info.key), { description: info.message });
+                toastError(error);
               })
             }
           >

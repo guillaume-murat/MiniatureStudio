@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-type DialogId = 'settings' | 'personas' | 'newPersona' | 'styles' | 'assistant' | 'commands' | 'agent' | 'prompt' | 'newProject' | null;
+type DialogId = 'settings' | 'personas' | 'newPersona' | 'styles' | 'assistant' | 'commands' | 'agent' | 'newProject' | null;
 
 interface UIState {
   dialog: DialogId;

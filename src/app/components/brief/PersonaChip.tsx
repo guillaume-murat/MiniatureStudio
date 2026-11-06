@@ -12,8 +12,9 @@ export function PersonaChip({ persona, active, onToggle }: { persona: Persona; a
       onClick={onToggle}
       aria-pressed={active}
       className={cn(
-        'flex items-center gap-2 rounded-full border py-1 pr-3 pl-1 text-sm transition-colors hover:bg-accent',
-        active && 'border-primary bg-primary/10 text-foreground ring-1 ring-primary/40',
+        // Raised like a toggle: pressed in when selected.
+        'flex items-center gap-2 rounded-full border-[1.5px] border-ink bg-background py-1 pr-3 pl-1 text-sm shadow-btn-sm transition-colors hover:bg-accent active:translate-x-px active:translate-y-px active:shadow-none',
+        active && 'translate-x-px translate-y-px bg-primary/10 text-foreground shadow-pressed',
       )}
     >
       {url ? <img src={url} alt="" className="size-6 rounded-full object-cover" /> : <span className="size-6 rounded-full bg-muted" />}

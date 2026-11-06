@@ -68,7 +68,6 @@ export function EditPromptEye({ instruction }: { instruction: string }) {
                 <SentImage key={i} blob={image.blob} position={i + 1} label={image.person ?? t(image.role === 'marked' ? 'editPrompt.imageMarked' : 'editPrompt.imageCurrent')} />
               ))}
             </ul>
-            {preview.peopleLeftOut && <p>{t('editPrompt.peopleLeftOut')}</p>}
           </div>
           <div className="space-y-1">
             <p className="font-medium text-foreground">{t('editPrompt.prompt')}</p>

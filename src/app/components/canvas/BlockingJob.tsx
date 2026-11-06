@@ -9,7 +9,7 @@ export function runningJobs(jobs: Job[]): Job[] {
 }
 
 function busyLabel(job: Job): TKey {
-  if (job.action === 'reframe' || job.action === 'heal') return `busy.${job.action}`;
+  if (job.action === 'reframe' || job.action === 'heal' || job.action === 'face') return `busy.${job.action}`;
   if (job.kind === 'generate' || job.kind === 'upscale' || job.kind === 'region') return `busy.${job.kind}`;
   return 'busy.edit';
 }
@@ -29,7 +29,7 @@ export function BlockingJobOverlay() {
   const elapsed = Math.max(...jobs.map((j) => j.elapsed));
   return (
     <div className="fixed inset-0 z-50 flex cursor-wait items-center justify-center" role="alertdialog" aria-busy="true" aria-label={label}>
-      <div className="flex cursor-default items-center gap-3 rounded-full border-2 border-ink bg-background py-1.5 pr-1.5 pl-4 text-sm shadow-pop">
+      <div className="flex cursor-default items-center gap-3 rounded-full border-2 border-ink bg-background py-2.5 pr-2.5 pl-5 text-sm shadow-pop">
         <Loader2 className="size-4 animate-spin text-primary" />
         {label}
         {jobs.length > 1 && <span className="text-muted-foreground">{t('busy.images', { n: jobs.length })}</span>}

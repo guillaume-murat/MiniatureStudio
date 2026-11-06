@@ -105,9 +105,9 @@ export function Filmstrip() {
 
   return (
     <div className="shrink-0 border-t bg-background">
-      <div className="flex h-9 items-center gap-2 overflow-hidden px-3 text-xs">
+      <div className="@container flex h-10 items-center gap-2 overflow-hidden px-3 text-xs">
         {/* The project and its counts come first; the export hint gives way when space runs out. */}
-        <span className="min-w-0 shrink-0 truncate text-muted-foreground">
+        <span className="min-w-0 truncate text-muted-foreground">
           <span className="font-medium text-foreground">{projectName}</span>
           <span className="tabular">
             {' · '}
@@ -130,12 +130,14 @@ export function Filmstrip() {
             </Button>
             <Button
               size="xs"
+              aria-label={t('filmstrip.exportTestCompare', { n: Math.min(pickedIds.length, 3) })}
+              title={t('filmstrip.exportTestCompare', { n: Math.min(pickedIds.length, 3) })}
               onClick={async () => {
                 await exportTestCompare(pickedIds.map((id) => generations.find((g) => g.id === id)).filter((g): g is Generation => !!g));
                 toast.success(t('filmstrip.exported'));
               }}
             >
-              <Download /> {t('filmstrip.exportTestCompare', { n: Math.min(pickedIds.length, 3) })}
+              <Download /> <span className="hidden @min-[42rem]:inline">{t('filmstrip.exportTestCompare', { n: Math.min(pickedIds.length, 3) })}</span>
             </Button>
             <Button size="icon-xs" variant="ghost" onClick={clearPicks} aria-label={t('common.close')}>
               <X />

@@ -1,6 +1,5 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { ArrowUp, ChevronUp, GripVertical, History, Lightbulb, Loader2, SquareDashedMousePointer, Undo2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { ArrowUp, ChevronUp, GripVertical, History, Lightbulb, Loader2, Undo2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Kbd } from '../ui/kbd';
 import { Textarea } from '../ui/textarea';
@@ -13,10 +12,9 @@ import { runningJobs } from './BlockingJob';
 import { COMMANDS, isAvailable } from '../../commands';
 import { usePinch } from '../../hooks/use-pinch';
 import { useSettings } from '../../stores/settings';
-import { useWorkspace, viewingOlder } from '../../stores/workspace';
+import { useWorkspace, viewingOlder, toastError } from '../../stores/workspace';
 import { clampBarOffset, type BarOffset, type Size } from '../../lib/editBar';
 import { historyOf } from '../../lib/versions';
-import { explainError } from '../../lib/errors';
 import { useT, type TKey } from '../../i18n';
 import type { Generation } from '../../lib/types';
 
@@ -121,7 +119,7 @@ function ToolButtons({ locked }: { locked: boolean }) {
   const t = useT();
   const ws = useWorkspace();
   return (
-    <div className="flex items-center gap-0.5">
+    <div className="flex items-center gap-2">
       {TOOLS.map((c) => (
         <Tooltip key={c.id}>
           <TooltipTrigger asChild>
@@ -159,8 +157,8 @@ export function EditBar({
   gen: Generation;
   instruction: string;
   onInstruction: (text: string) => void;
-  /** The area tool's controls, in place of the tools while it is on. */
-  maskControls?: ReactNode;
+  /** The area tool's controls, in place of the tools while it is on: its brush above the instruction, its fixes under it. */
+  maskControls?: { tools: ReactNode; fixes: ReactNode };
 }) {
   const t = useT();
   const { edit, tool, setTool, hasMask, jobs } = useWorkspace();
@@ -182,14 +180,14 @@ export function EditBar({
       if (outcomes.some((o) => o.error !== undefined)) onInstruction(instruction);
     } catch (error) {
       onInstruction(instruction);
-      const info = explainError(error);
-      toast.error(t(info.key), { description: info.message });
+      toastError(error);
     }
   };
 
   return (
     <div className="space-y-1.5">
       {older && <OlderVersionNotice gen={gen} />}
+      {maskControls?.tools}
       <Textarea
         ref={field}
         rows={1}
@@ -209,9 +207,10 @@ export function EditBar({
         aria-label={t('iterate.instruction')}
         className="max-h-32 min-h-9 resize-none"
       />
-      {maskControls}
-      <div className="flex items-center gap-1">
-        {!maskControls && <ToolButtons locked={locked} />}
+      <div className="flex items-center gap-2">
+        {maskControls ? maskControls.fixes : <ToolButtons locked={locked} />}
+        {/* Not with the area tool: they are whole-image edits. */}
+        {!maskControls && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="text-muted-foreground" disabled={locked} aria-label={t('iterate.suggestions')}>
@@ -246,11 +245,6 @@ export function EditBar({
             })}
           </DropdownMenuContent>
         </DropdownMenu>
-        {/* In the row, so painting doesn't change the bar's height. */}
-        {region && (
-          <p className="flex min-w-0 items-center gap-1.5 text-xs text-primary" title={t('iterate.regionActive')}>
-            <SquareDashedMousePointer className="size-3.5 shrink-0" /> <span className="truncate">{t('iterate.regionActive')}</span>
-          </p>
         )}
         <span className="ml-auto flex">
           <EditPromptEye instruction={instruction} />
