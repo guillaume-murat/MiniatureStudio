@@ -71,7 +71,7 @@ npm run app:mac:install  # macOS app → /Applications (macos/auto-install.sh do
 
 ### Issue tracker
 
-GitHub Issues of the private repo `guillaume-murat/MiniatureStudio`, never `origin`. See `docs/agents/issue-tracker.md`.
+GitHub Issues of `guillaume-murat/MiniatureStudio`, never `yoanbernabeu/NanoThumbnail`. See `docs/agents/issue-tracker.md`.
 
 ### Domain docs
 

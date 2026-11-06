@@ -11,19 +11,19 @@ describe('option previews', () => {
 
 describe('identityLine', () => {
   const alex = { kind: 'persona', name: 'Alex' } as const;
-  const ines = { kind: 'persona', name: 'In�s' } as const;
+  const ines = { kind: 'persona', name: 'Inès' } as const;
 
   it('names the featured person with the numbers of their photos', () => {
     const line = identityLine('fr', [ines, ines, ines, { kind: 'reference' }]);
-    expect(line).toContain('La personne mise en avant est In�s (images 1–3).');
+    expect(line).toContain('La personne mise en avant est Inès (images 1–3).');
     expect(line).toContain('même personne, immédiatement reconnaissable');
     expect(line).toContain('Seule l’expression change');
   });
 
   it('names every person when there are several', () => {
     const line = identityLine('fr', [ines, ines, alex]);
-    expect(line).toContain('Les personnes mises en avant sont In�s (images 1–2) et Alex (image 3).');
-    expect(identityLine('en', [ines, alex])).toContain('The featured people are In�s (image 1) and Alex (image 2).');
+    expect(line).toContain('Les personnes mises en avant sont Inès (images 1–2) et Alex (image 3).');
+    expect(identityLine('en', [ines, alex])).toContain('The featured people are Inès (image 1) and Alex (image 2).');
   });
 
   it('adds nothing without photos of people', () => {
@@ -47,11 +47,11 @@ describe('photos of a person', () => {
 
 describe('buildFaceFixPrompt', () => {
   it('replaces the face in the marked area with the person of the photos sent after it', () => {
-    const p = buildFaceFixPrompt('fr', [{ kind: 'persona', name: 'In�s' }, { kind: 'persona', name: 'In�s' }]);
+    const p = buildFaceFixPrompt('fr', [{ kind: 'persona', name: 'Inès' }, { kind: 'persona', name: 'Inès' }]);
     expect(p).toContain('L’image 2 est la même miniature');
-    expect(p).toContain('remplace le visage par celui d’In�s (images 3–4)');
+    expect(p).toContain('remplace le visage par celui d’Inès (images 3–4)');
     expect(p).toContain('Garde l’expression, l’orientation de la tête');
-    expect(p).toContain('- Images 3–4 : photos d’In�s');
+    expect(p).toContain('- Images 3–4 : photos d’Inès');
   });
 });
 

@@ -263,7 +263,7 @@ function imageLabel(from: number, to: number): string {
   return from === to ? `Image ${from}` : `Images ${from}–${to}`;
 }
 
-/** Each person and the numbers of their photos ("In�s (images 1–3)"), in order. */
+/** Each person and the numbers of their photos ("Inès (images 1–3)"), in order. */
 function peopleWithImages(roles: ImageRole[], offset = 0): string[] {
   const out: string[] = [];
   roles.forEach((role, i) => {

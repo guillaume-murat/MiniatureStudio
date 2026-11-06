@@ -14,9 +14,9 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
 - **Close**: post the explanation with `gh issue comment <number> --body "..."`, then `gh issue close <number>`. On an already-closed issue, `gh issue close --comment` drops the comment and still exits 0.
 
-This clone has two GitHub remotes. Issues live in the user's own private repo, `guillaume-murat/MiniatureStudio` (remote `private`). `origin` (`yoanbernabeu/NanoThumbnail`) belongs to someone else: never file anything there.
+Issues live in `guillaume-murat/MiniatureStudio`. A clone may also have the project this one is forked from, `yoanbernabeu/NanoThumbnail`, as a remote: it belongs to someone else, never file anything there.
 
-`gh repo set-default` points this clone at the private repo, but that setting is local to the clone. Before the first `gh issue create` of a session, check the target with `gh repo view --json nameWithOwner`. If it isn't the private repo, stop and fix it.
+Before the first `gh issue create` of a session, check the target with `gh repo view --json nameWithOwner` (`gh repo set-default` is local to each clone). If it isn't `guillaume-murat/MiniatureStudio`, stop and fix it.
 
 ## Pull requests as a triage surface
 
