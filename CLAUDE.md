@@ -18,6 +18,7 @@ npm run typecheck  # tsc --noEmit (src + local)
 npm run check      # typecheck + test + build (CI)
 npm run local      # build + local server (dist + Vertex helper + functions) on 127.0.0.1:17830
 npm run app:mac:install  # macOS app → /Applications (macos/auto-install.sh does it when sources changed)
+npm run app:mac:dmg      # macOS app (universal) → macos/build/Miniature-Studio-<version>.dmg, for a GitHub release
 ```
 
 ## Architecture

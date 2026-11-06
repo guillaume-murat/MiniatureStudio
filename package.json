@@ -1,7 +1,7 @@
 {
   "name": "miniature-studio",
   "private": true,
-  "version": "2.2.0",
+  "version": "1.0.0",
   "type": "module",
   "workspaces": [
     "mcp"
@@ -21,7 +21,8 @@
     "build:local": "esbuild local/server.ts --bundle --platform=node --format=esm --target=node22 --outfile=local/dist/server.mjs",
     "local": "npm run build && npm run build:local && node local/dist/server.mjs",
     "app:mac": "npm run build && npm run build:local && sh macos/build.sh",
-    "app:mac:install": "npm run app:mac && sh macos/build.sh --install"
+    "app:mac:install": "npm run app:mac && sh macos/build.sh --install",
+    "app:mac:dmg": "npm run app:mac && sh macos/make-dmg.sh"
   },
   "dependencies": {
     "@astrojs/react": "^7.0.0",

@@ -4,6 +4,15 @@
 
 Miniature Studio is a local studio to **generate, edit and test YouTube thumbnails** with Google's Nano Banana models (Nano Banana Pro, Nano Banana 2 and its Lite version). It runs on your computer, as a macOS app or a local server, and is made for computer screens and large tablets (1024 px wide or more), not phones: bring your own **Replicate**, **Google Gemini**, **OpenRouter** or **Mammouth** key, or use **Vertex AI** through your gcloud. Your images stay on your device.
 
+## Download
+
+**[Miniature Studio 1.0.0 for macOS (DMG)](https://github.com/guillaume-murat/MiniatureStudio/releases/download/v1.0.0/Miniature-Studio-1.0.0.dmg)**: macOS 14 or later, Apple silicon or Intel. All releases are on the [Releases page](https://github.com/guillaume-murat/MiniatureStudio/releases).
+
+1. Open the DMG and drag **Miniature Studio** onto **Applications**.
+2. Install [Node.js](https://nodejs.org) 22 or later if you don't have it: the app runs its local server with it.
+3. The app is not notarized by Apple, so macOS blocks it the first time. Open it once, then go to **System Settings → Privacy & Security** and click **Open Anyway**.
+4. Add your API key in the studio's settings (Replicate, Gemini, OpenRouter or Mammouth), or log in to `gcloud` for Vertex AI.
+
 ## Features
 
 **Create**
@@ -116,6 +125,7 @@ The app is a native window (WKWebView) around the studio. It starts a bundled lo
 | `npm run check` | Typecheck + tests + build (what CI runs) |
 | `npm run local` | Build and serve the studio with the local helpers on http://127.0.0.1:17830/app/ |
 | `npm run app:mac` | Build the macOS app into `macos/build/` (`app:mac:install` also copies it to `/Applications`) |
+| `npm run app:mac:dmg` | Build the macOS app and pack it into `macos/build/Miniature-Studio-<version>.dmg` |
 | `npm run feed:update` | Refresh the feed preview's snapshot of YouTube videos (needs a YouTube Data API key) |
 | `npm run fonts:download` | Download the Google Fonts shipped for text blocks |
 

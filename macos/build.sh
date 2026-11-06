@@ -24,7 +24,12 @@ VERSION=$(node -p "require('./package.json').version")
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
-swiftc -O -o "$APP/Contents/MacOS/MiniatureStudio" macos/MiniatureStudio.swift
+# Universal: Apple silicon and Intel Macs.
+TMP=$(mktemp -d)
+swiftc -O -target arm64-apple-macos14 -o "$TMP/arm64" macos/MiniatureStudio.swift
+swiftc -O -target x86_64-apple-macos14 -o "$TMP/x86_64" macos/MiniatureStudio.swift
+lipo -create "$TMP/arm64" "$TMP/x86_64" -output "$APP/Contents/MacOS/MiniatureStudio"
+rm -rf "$TMP"
 
 cp -R dist "$APP/Contents/Resources/dist"
 cp local/dist/server.mjs "$APP/Contents/Resources/server.mjs"
