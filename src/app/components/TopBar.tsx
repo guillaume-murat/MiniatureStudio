@@ -31,6 +31,7 @@ import { useAgent } from '../agent/bridge';
 import { AgentStatusDot } from './dialogs/AgentDialog';
 import { useT } from '../i18n';
 import { cn } from '../lib/utils';
+import { AUTHOR_URL, ORIGIN_REPO_URL } from '../lib/about';
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 export const MOD = isMac ? '⌘' : 'Ctrl';
@@ -130,6 +131,24 @@ function ProjectSwitcher() {
 
 const THEME_ICON: Record<Theme, typeof Sun> = { light: Sun, dark: Moon, system: Monitor };
 
+/** Who made it: the author's site, and the project it is forked from. Short names in a narrow window. */
+function Credit() {
+  const t = useT();
+  const link = 'w-fit underline-offset-2 hover:underline focus-visible:underline';
+  return (
+    <span className="flex flex-col font-sans leading-tight font-normal whitespace-nowrap">
+      <a href={AUTHOR_URL} target="_blank" rel="noreferrer" className={cn(link, 'text-xs text-[color-mix(in_oklab,var(--on-brand)_85%,var(--brand))]')}>
+        <span className="hidden min-[1440px]:inline">{t('credit.by')}</span>
+        <span className="min-[1440px]:hidden">{t('credit.byShort')}</span>
+      </a>
+      <a href={ORIGIN_REPO_URL} target="_blank" rel="noreferrer" className={cn(link, 'text-[11px] text-[color-mix(in_oklab,var(--on-brand)_68%,var(--brand))]')}>
+        <span className="hidden min-[1440px]:inline">{t('credit.fork')}</span>
+        <span className="min-[1440px]:hidden">{t('credit.forkShort')}</span>
+      </a>
+    </span>
+  );
+}
+
 export function TopBar() {
   const t = useT();
   const { theme, lang, set } = useSettings();
@@ -142,13 +161,14 @@ export function TopBar() {
     <header className="topbar relative flex h-13 shrink-0 items-center gap-1 border-b-2 border-(--brand-edge) bg-sidebar px-2">
       <div className="flex items-center gap-2 rounded-md px-2 py-1 font-heading text-[15px] font-semibold">
         <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" width={28} height={28} className="size-7 shrink-0 rounded-md border-2 border-ink" draggable={false} />
-        <span className="hidden xl:inline">Miniature Studio</span>
+        <span className="hidden whitespace-nowrap xl:inline">Miniature Studio</span>
+        <Credit />
       </div>
       <span className="mx-1 h-5 w-px bg-border" />
       <ProjectSwitcher />
-      <ViewSwitcher className="view-tabs absolute left-1/2 -translate-x-1/2" />
+      <ViewSwitcher className="view-tabs relative mx-auto shrink-0 self-end" />
 
-      <div className="ml-auto flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5">
         <Button variant="outline" size="sm" className={cn(TOP_BUTTON, "gap-2")} onClick={() => open('commands')} aria-label={t('topbar.commands')}>
           <Command /> <span className="hidden xl:inline">{t('topbar.commands')}</span>
           <Kbd className="hidden xl:inline-flex">{MOD} K</Kbd>

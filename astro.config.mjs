@@ -1,7 +1,11 @@
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
+import { readFileSync } from 'node:fs';
 import { createVertexHandler } from './local/vertex.ts';
+
+/** Shown in Settings → About. */
+const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 
 /** Vertex AI through the user's gcloud credentials, in dev only (local/vertex.ts). */
 const vertexLocal = {
@@ -50,6 +54,7 @@ export default defineConfig({
   markdown: { syntaxHighlight: false },
   vite: {
     plugins: [tailwindcss()],
+    define: { 'import.meta.env.PUBLIC_APP_VERSION': JSON.stringify(version) },
     // Pre-bundle the studio's deps up front: otherwise Vite re-optimizes them
     // mid-session (e.g. after a build) and the island fails with "Outdated Optimize Dep".
     optimizeDeps: {

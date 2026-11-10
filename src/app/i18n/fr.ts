@@ -459,6 +459,16 @@ export const fr: Dict = {
     openHistory: 'Afficher l’historique',
     closeHistory: 'Masquer l’historique',
   },
+  credit: {
+    by: 'par Guillaume Murat',
+    byShort: 'par G. Murat',
+    fork: 'fork Yoan Bernabeu',
+    forkShort: 'fork Y. Bernabeu',
+    about: 'À propos',
+    version: 'Version {version}',
+    source: 'Code source',
+    origin: 'Projet d’origine, par Yoan Bernabeu',
+  },
   sketch: {
     clear: 'Tout effacer',
     clearTitle: 'Effacer le croquis ?',

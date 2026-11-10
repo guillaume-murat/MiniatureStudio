@@ -18,19 +18,19 @@ export function ViewSwitcher({ className }: { className?: string }) {
   return (
     <ToggleGroup type="single" size="sm" spacing={1.5} value={view} onValueChange={(v) => v && setView(v as ViewMode)} className={className}>
       <ToggleGroupItem value="image" className={cn(TOP_BUTTON, 'gap-1.5 px-2.5 text-xs data-[state=on]:border-ink data-[state=on]:bg-ink data-[state=on]:text-on-ink')} title={t('canvas.viewImage')} aria-label={t('canvas.viewImage')}>
-        <ImageIcon /> <span>{t('canvas.viewImage')}</span>
+        <ImageIcon /> <span className="hidden min-[1600px]:inline">{t('canvas.viewImage')}</span>
       </ToggleGroupItem>
       <ToggleGroupItem value="sketch" className={cn(TOP_BUTTON, 'gap-1.5 px-2.5 text-xs data-[state=on]:border-ink data-[state=on]:bg-ink data-[state=on]:text-on-ink')} title={t('canvas.viewSketch')} aria-label={t('canvas.viewSketch')}>
-        <Pencil /> <span>{t('canvas.viewSketch')}</span>
+        <Pencil /> <span className="hidden min-[1600px]:inline">{t('canvas.viewSketch')}</span>
       </ToggleGroupItem>
       <ToggleGroupItem value="feed" className={cn(TOP_BUTTON, 'gap-1.5 px-2.5 text-xs data-[state=on]:border-ink data-[state=on]:bg-ink data-[state=on]:text-on-ink')} title={t('canvas.viewFeed')} aria-label={t('canvas.viewFeed')} disabled={!gen}>
-        <Tv /> <span>{t('canvas.viewFeed')}</span>
+        <Tv /> <span className="hidden min-[1600px]:inline">{t('canvas.viewFeed')}</span>
       </ToggleGroupItem>
       <ToggleGroupItem value="channel" className={cn(TOP_BUTTON, 'gap-1.5 px-2.5 text-xs data-[state=on]:border-ink data-[state=on]:bg-ink data-[state=on]:text-on-ink')} title={t('canvas.viewChannel')} aria-label={t('canvas.viewChannel')}>
-        <PanelsTopLeft /> <span>{t('canvas.viewChannel')}</span>
+        <PanelsTopLeft /> <span className="hidden min-[1600px]:inline">{t('canvas.viewChannel')}</span>
       </ToggleGroupItem>
       <ToggleGroupItem value="compare" className={cn(TOP_BUTTON, 'gap-1.5 px-2.5 text-xs data-[state=on]:border-ink data-[state=on]:bg-ink data-[state=on]:text-on-ink')} title={t('canvas.viewCompare')} aria-label={t('canvas.viewCompare')}>
-        <Grid2x2 /> <span>{t('canvas.viewCompare')}</span>
+        <Grid2x2 /> <span className="hidden min-[1600px]:inline">{t('canvas.viewCompare')}</span>
         {picked > 0 && <span className="tabular text-muted-foreground">{picked}</span>}
       </ToggleGroupItem>
     </ToggleGroup>

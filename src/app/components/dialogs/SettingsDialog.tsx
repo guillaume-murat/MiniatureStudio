@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Download, Loader2, ShieldCheck, TriangleAlert, Upload } from 'lucide-react';
+import { Download, ExternalLink, Loader2, ShieldCheck, TriangleAlert, Upload } from 'lucide-react';
+import { APP_VERSION, AUTHOR_URL, ORIGIN_REPO_URL, SOURCE_URL } from '../../lib/about';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -135,6 +136,25 @@ export function SettingsDialog() {
             <Button variant="destructive" size="lg" className="w-full" onClick={() => setConfirmReset(true)} disabled={!!busy}>
               {busy === 'reset' ? <Loader2 className="animate-spin" /> : <TriangleAlert />} {t('settings.resetButton')}
             </Button>
+          </Field>
+
+          <Separator />
+
+          <Field label={t('credit.about')} hint={APP_VERSION ? t('credit.version', { version: APP_VERSION }) : undefined}>
+            <ul className="space-y-1 text-sm">
+              {[
+                [t('credit.source'), SOURCE_URL],
+                [t('credit.origin'), ORIGIN_REPO_URL],
+                [t('credit.by'), AUTHOR_URL],
+              ].map(([label, url]) => (
+                <li key={url}>
+                  <a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-primary underline-offset-2 hover:underline">
+                    {label} <ExternalLink className="size-3.5" />
+                  </a>
+                  <span className="ml-1.5 text-xs text-muted-foreground">{url.replace('https://', '')}</span>
+                </li>
+              ))}
+            </ul>
           </Field>
         </div>
       </DialogContent>

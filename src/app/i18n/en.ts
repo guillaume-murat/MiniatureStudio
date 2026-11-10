@@ -457,6 +457,16 @@ export const en = {
     openHistory: 'Show the history',
     closeHistory: 'Hide the history',
   },
+  credit: {
+    by: 'by Guillaume Murat',
+    byShort: 'by G. Murat',
+    fork: 'forked from Yoan Bernabeu',
+    forkShort: 'fork of Y. Bernabeu',
+    about: 'About',
+    version: 'Version {version}',
+    source: 'Source code',
+    origin: 'Original project, by Yoan Bernabeu',
+  },
   sketch: {
     clear: 'Clear all',
     clearTitle: 'Clear the sketch?',

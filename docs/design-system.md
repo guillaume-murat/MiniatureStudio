@@ -21,6 +21,8 @@ Toujours utiliser un token, jamais une valeur en dur. Le nuancier montre le thè
 
 Un repère posé sur une image (sélection, poignée, zone peinte, zones de sécurité) est toujours jaune avec un contour encre fixe, pour rester visible sur n'importe quelle image.
 
+Un lien texte sur la barre du haut (le crédit) reste dans ses couleurs : le texte clair de la barre, un peu atténué (85 %, puis 68 % pour une ligne secondaire plus petite), souligné au survol. Pas de couleur nouvelle.
+
 Échappent à la règle : les couleurs choisies par l'utilisateur (marque, textes, flèches), les images et illustrations, les aperçus qui imitent YouTube et les couleurs envoyées au modèle.
 
 ## Boutons
