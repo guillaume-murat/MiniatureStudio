@@ -65,15 +65,6 @@ export function resolvedResolution(model: ModelId, provider: Provider, chosen: R
 }
 
 /**
- * The area tools, reframing and upscaling stay on Nano Banana: Pro stands in for GPT Image and a model
- * typed by hand. OpenAI has no Nano Banana: there they use the chosen model.
- */
-export function editModel(model: ModelId, provider?: Provider): ModelId {
-  if (provider === 'openai') return model;
-  return isGptImage(model) || isCustomModel(model) ? 'nano-banana-pro' : model;
-}
-
-/**
  * Google's standard price per image, in dollars (Gemini API price list, checked in November 2026).
  * Indicative with the other providers. Lite only exists in 1K.
  */
@@ -150,24 +141,3 @@ export function textModelNote(provider: Provider): string {
   return `${TEXT_MODEL_IDS[provider]} · ${PROVIDER_NAMES[provider]}`;
 }
 
-// ─── The tools' own model ──────────────────────────────────
-
-/** The provider and model chosen for the image tools (area, heal, face fix, reframe, upscale, concept previews). */
-export interface ToolModelChoice {
-  provider: Provider;
-  model: ModelId;
-}
-
-/** The params of a tool call sent to the provider and model chosen for the tools. */
-export function toolParams(base: GenerationParams, choice: ToolModelChoice, customModels: Record<Provider, string>): GenerationParams {
-  const { quality, customModel: _customModel, ...rest } = base;
-  return {
-    ...rest,
-    provider: choice.provider,
-    model: choice.model,
-    resolution: resolvedResolution(choice.model, choice.provider, base.resolution) ?? base.resolution,
-    format: choice.provider === 'replicate' ? base.format : 'png',
-    ...(isGptImage(choice.model) ? { quality: quality ?? 'medium' } : {}),
-    ...(isCustomModel(choice.model) ? { customModel: customModels[choice.provider].trim() } : {}),
-  };
-}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CUSTOM_MODEL, editModel, toolParams, modelNote, textModelId, textModelNote, firstAvailableModel, gptSize, isCustomModel, imagePrice, modelAvailable, outputSize, resolutionsFor, resolvedResolution } from '../models';
+import { CUSTOM_MODEL, modelNote, textModelId, textModelNote, firstAvailableModel, gptSize, isCustomModel, imagePrice, modelAvailable, outputSize, resolutionsFor, resolvedResolution } from '../models';
 
 describe('image models', () => {
   it('serves GPT Image 2.5 Sunburst on Replicate, OpenRouter and OpenAI only', () => {
@@ -37,10 +37,6 @@ describe('image models', () => {
     expect(resolvedResolution('gpt-image-2.5-sunburst', 'openrouter', '2K')).toBeNull();
   });
 
-  it('keeps the area tools, reframing and upscaling on Nano Banana', () => {
-    expect(editModel('gpt-image-2.5-sunburst')).toBe('nano-banana-pro');
-    expect(editModel('nano-banana-2')).toBe('nano-banana-2');
-  });
 
   it('estimates the GPT Image price from its quality and size', () => {
     expect(imagePrice('gpt-image-2.5-sunburst', '1K', 'en', 'medium')).toBe('≈ $0.028');
@@ -54,10 +50,9 @@ describe('image models', () => {
     expect(isCustomModel(CUSTOM_MODEL)).toBe(true);
     expect(['replicate', 'gemini', 'openrouter', 'mammouth', 'vertex'].every((p) => modelAvailable(CUSTOM_MODEL, p as never))).toBe(true);
     expect(resolutionsFor(CUSTOM_MODEL, 'openrouter')).toEqual(['1K', '2K', '4K']);
-    // Its price is unknown; the area tools stay on Nano Banana Pro.
+    // Its price is unknown.
     expect(imagePrice(CUSTOM_MODEL, '1K', 'fr')).toBe('prix inconnu');
     expect(imagePrice(CUSTOM_MODEL, '1K', 'en')).toBe('unknown price');
-    expect(editModel(CUSTOM_MODEL)).toBe('nano-banana-pro');
   });
 
   it('offers only GPT Image and a model typed by hand with OpenAI', () => {
@@ -68,10 +63,6 @@ describe('image models', () => {
     expect(resolutionsFor('custom', 'openai')).toEqual(['1K', '2K']);
   });
 
-  it('keeps the area tools on the chosen model with OpenAI, which has no Nano Banana', () => {
-    expect(editModel('gpt-image-2.5-sunburst', 'openai')).toBe('gpt-image-2.5-sunburst');
-    expect(editModel('gpt-image-2.5-sunburst', 'replicate')).toBe('nano-banana-pro');
-  });
 
   it('names the model and provider a prompt goes to', () => {
     expect(modelNote({ model: 'nano-banana-2', provider: 'gemini' })).toBe('Nano Banana 2 · Google Gemini');
@@ -82,13 +73,4 @@ describe('image models', () => {
     expect(textModelId('replicate')).toBe('google/gemini-3-flash');
   });
 
-  it('sends the tools to the provider and model chosen for them', () => {
-    const base = { provider: 'openai', model: 'gpt-image-2.5-sunburst', aspectRatio: '9:16', resolution: '2K', format: 'jpg', safety: 'block_only_high', quality: 'high' } as const;
-    const customModels = { replicate: '', gemini: '', openrouter: 'black-forest-labs/flux-2-pro', mammouth: '', vertex: '', openai: '' };
-    expect(toolParams(base, { provider: 'gemini', model: 'nano-banana-pro' }, customModels)).toEqual({ provider: 'gemini', model: 'nano-banana-pro', aspectRatio: '9:16', resolution: '2K', format: 'png', safety: 'block_only_high' });
-    // GPT Image keeps the quality and stops at 2K; Lite is 1K only.
-    expect(toolParams({ ...base, resolution: '4K' }, { provider: 'replicate', model: 'gpt-image-2.5-sunburst' }, customModels)).toMatchObject({ resolution: '2K', quality: 'high', format: 'jpg' });
-    expect(toolParams(base, { provider: 'gemini', model: 'nano-banana-2-lite' }, customModels).resolution).toBe('1K');
-    expect(toolParams(base, { provider: 'openrouter', model: 'custom' }, customModels).customModel).toBe('black-forest-labs/flux-2-pro');
-  });
 });

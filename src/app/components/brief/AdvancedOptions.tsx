@@ -5,7 +5,6 @@ import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group';
 import { brandWeightLine, marginLine, priorityLine, qualityLine } from '../../lib/prompt';
 import { CUSTOM_MODEL, GPT_IMAGE, IMAGE_QUALITIES, isCustomModel, imagePrice, isGptImage, modelAvailable, outputSize, resolutionsFor, resolvedResolution } from '../../lib/models';
 import { ProviderFields } from './ProviderFields';
-import { ToolModelField } from './ToolModelField';
 import { useSettings } from '../../stores/settings';
 import { useWorkspace } from '../../stores/workspace';
 import { useT } from '../../i18n';
@@ -123,8 +122,6 @@ export function AdvancedOptions({ number }: { number: number }) {
           ))}
         </ToggleGroup>
       </Field>
-
-      <ToolModelField />
 
       <Field label={t('promptOptions.brandWeight')} hint={t('promptOptions.brandHint')} prompt={brandWeightLine(lang, options.brandWeight)}>
         <ToggleGroup type="single" variant="outline" className="w-full" value={options.brandWeight} onValueChange={(v) => v && set({ brandWeight: v as PromptOptions['brandWeight'] })}>

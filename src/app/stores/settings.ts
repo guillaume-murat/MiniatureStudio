@@ -1,4 +1,4 @@
-import { firstAvailableModel, IMAGE_QUALITIES, isCustomModel, type ToolModelChoice, isGptImage, modelAvailable, resolvedResolution } from '../lib/models';
+import { firstAvailableModel, IMAGE_QUALITIES, isCustomModel, isGptImage, modelAvailable, resolvedResolution } from '../lib/models';
 import { parseClosedPanels, type ClosedPanels } from '../lib/panels';
 import { create } from 'zustand';
 import { VERTEX_GCLOUD } from '../lib/providers';
@@ -25,8 +25,6 @@ interface SettingsState {
   quality: ImageQuality;
   /** The model typed by hand, per provider (each names its models its own way). */
   customModels: Record<Provider, string>;
-  /** The provider and model of the image tools; null: automatic (Nano Banana Pro, or the chosen model at OpenAI). */
-  toolModel: ToolModelChoice | null;
   theme: Theme;
   lang: Lang;
   /** Where the edit bar was moved to on this device; null at its default place. */
@@ -77,15 +75,6 @@ function detectLang(): Lang {
   return 'en';
 }
 
-const MODEL_IDS: ModelId[] = ['nano-banana-pro', 'nano-banana-2', 'nano-banana-2-lite', 'gpt-image-2.5-sunburst', 'custom'];
-
-/** A saved tools choice, kept only when its provider still serves its model. */
-function parseToolModel(value: unknown): ToolModelChoice | null {
-  const v = value as Partial<ToolModelChoice> | null;
-  if (!v || !PROVIDERS.includes(v.provider as Provider) || !MODEL_IDS.includes(v.model as ModelId)) return null;
-  return modelAvailable(v.model as ModelId, v.provider as Provider) ? { provider: v.provider as Provider, model: v.model as ModelId } : null;
-}
-
 function load() {
   const prefs = JSON.parse(safeGet(local, PREFS_KEY) || '{}');
   const keyPersistence: KeyPersistence = prefs.keyPersistence === 'session' ? 'session' : 'local';
@@ -96,7 +85,6 @@ function load() {
     keyPersistence,
     model: (['nano-banana-2', 'nano-banana-2-lite', 'gpt-image-2.5-sunburst', 'custom'].includes(prefs.model) ? prefs.model : 'nano-banana-pro') as ModelId,
     quality: (IMAGE_QUALITIES.includes(prefs.quality) ? prefs.quality : 'medium') as ImageQuality,
-    toolModel: parseToolModel(prefs.toolModel),
     customModels: Object.fromEntries(PROVIDERS.map((p) => [p, typeof prefs.customModels?.[p] === 'string' ? prefs.customModels[p] : ''])) as Record<Provider, string>,
     aspectRatio: outputRatio(prefs.aspectRatio),
     resolution: (prefs.resolution ?? '1K') as Resolution,
@@ -111,8 +99,8 @@ function load() {
 }
 
 function persistPrefs(s: SettingsState): void {
-  const { provider, keyPersistence, model, aspectRatio, resolution, format, safety, count, quality, customModels, toolModel, theme, editBarOffset, closedPanels } = s;
-  safeSet(local, PREFS_KEY, JSON.stringify({ provider, keyPersistence, model, aspectRatio, resolution, format, safety, count, quality, customModels, toolModel, theme, editBarOffset, closedPanels }));
+  const { provider, keyPersistence, model, aspectRatio, resolution, format, safety, count, quality, customModels, theme, editBarOffset, closedPanels } = s;
+  safeSet(local, PREFS_KEY, JSON.stringify({ provider, keyPersistence, model, aspectRatio, resolution, format, safety, count, quality, customModels, theme, editBarOffset, closedPanels }));
   safeSet(local, 'nano_lang', s.lang);
 }
 

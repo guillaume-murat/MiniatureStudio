@@ -21,7 +21,7 @@ import { dimensions, highlightRegion, mergeWithMask, normaliseUpload, prepareRef
 import { errorLog, explainError, type JobContext, type JobStep } from '../lib/errors';
 import { smoothRegion } from '../lib/smooth';
 import { isMakingView, type View as PanelView } from '../lib/panels';
-import { editModel, PROVIDER_NAMES, resolvedResolution, toolParams } from '../lib/models';
+import { resolvedResolution } from '../lib/models';
 import { addStroke, EMPTY_SKETCH, isEmptySketch, isSketch, sketchBlob, undoStroke, type Sketch, type SketchStroke } from '../lib/sketch';
 import { randomSeed } from '../lib/channel';
 import { newGeneration, type VersionInput, historyOf, isOlderVersion, versionsAfter } from '../lib/versions';
@@ -433,7 +433,6 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     fullPrompt: string,
     apiKey: string,
     action?: GenerationAction,
-    model?: ModelId,
     people: Blob[] = [],
   ) {
     const highlighted = await highlightRegion(source.blob, mask);
@@ -445,8 +444,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       // Clean image first (what gets edited), marked copy second (where to edit):
       // sending only the marked copy lets the magenta tint bleed into the result.
       images: [source.blob, highlighted, ...people],
-      // The area tools stay on Nano Banana (`editModel`): GPT Image is for generating and whole-image edits.
-      params: nanoBananaParams({ aspectRatio: source.params.aspectRatio, ...(model ? { model } : {}) }),
+      params: toolCallParams({ aspectRatio: source.params.aspectRatio }),
       parent: source,
       apiKey,
       finalize: (edited) => mergeWithMask(source.blob, edited, mask),
@@ -459,34 +457,20 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     return get().tool === 'mask' && get().hasMask ? maskCanvas : null;
   }
 
-  /** The settings' params on Nano Banana: GPT Image becomes Pro (area tools, reframing, upscaling). */
-  function nanoBananaParams(patch: Partial<GenerationParams> = {}): GenerationParams {
-    const settings = useSettings.getState().params();
-    // A provider and model chosen for the tools win over every automatic rule (including heal's and face fix's own).
-    const choice = useSettings.getState().toolModel;
-    if (choice) {
-      const { model: _model, ...rest } = patch;
-      return toolParams({ ...settings, ...rest }, choice, useSettings.getState().customModels);
-    }
-    // OpenAI has no Nano Banana: the area tools, reframing and upscaling use the chosen model there,
-    // whatever model a tool asks for (heal, face fix), within GPT Image's sizes.
-    if (settings.provider === 'openai') {
-      const { model: _model, ...rest } = patch;
-      return { ...settings, ...rest, resolution: resolvedResolution(settings.model, 'openai', rest.resolution ?? settings.resolution) ?? settings.resolution };
-    }
-    const params = { ...settings, ...patch };
-    const model = editModel(params.model, params.provider);
-    if (model === params.model) return params;
-    const { quality: _quality, customModel: _customModel, ...rest } = params;
-    return { ...rest, model, resolution: patch.resolution ?? useSettings.getState().resolution };
+  /**
+   * The chosen provider and model, for every call: area tools, smoothing, face fix, reframing and
+   * upscaling included. Only the resolution moves, to the highest the model reaches up to the asked one.
+   */
+  function toolCallParams(patch: Partial<Pick<GenerationParams, 'aspectRatio' | 'resolution'>> = {}): GenerationParams {
+    const settings = useSettings.getState();
+    const params = settings.params();
+    const asked = patch.resolution ?? settings.resolution;
+    return { ...params, ...patch, resolution: resolvedResolution(params.model, params.provider, asked) ?? asked };
   }
 
-  /** 2K is above 1920×1080 at every aspect ratio, and Lite does not reach it. */
+  /** 2K is above 1920×1080 at every aspect ratio (Lite stays at 1K: the export then resizes). */
   function upscaleParams(aspectRatio: GenerationParams['aspectRatio']): GenerationParams {
-    return {
-      ...nanoBananaParams({ aspectRatio, resolution: '2K' }),
-      ...(useSettings.getState().model === 'nano-banana-2-lite' ? { model: 'nano-banana-2' as const } : {}),
-    };
+    return toolCallParams({ aspectRatio, resolution: '2K' });
   }
 
   function editParams(source: Generation): GenerationParams {
@@ -506,14 +490,9 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     return people.map(({ blob, role }) => ({ blob, role: 'person' as const, person: role.kind === 'persona' ? role.name : undefined }));
   }
 
-  /** What a concept's preview is generated with. */
+  /** What a concept's preview is generated with: the chosen model, at its smallest resolution. */
   function conceptParams(): GenerationParams {
-    const params = useSettings.getState().params();
-    const choice = useSettings.getState().toolModel;
-    if (choice) return { ...toolParams(params, choice, useSettings.getState().customModels), resolution: '1K' };
-    // OpenAI has no Nano Banana Lite: its cheapest image instead.
-    if (params.provider === 'openai') return { ...params, model: 'gpt-image-2.5-sunburst', quality: 'low', resolution: '1K' };
-    return { ...params, model: 'nano-banana-2-lite', resolution: '1K' };
+    return toolCallParams({ resolution: '1K' });
   }
 
   /** Images and full prompt for the current brief, shared by `generate` and `previewPrompt`. */
@@ -586,14 +565,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     /** Shared by the jobs of one batch: the first result to arrive gets shown. */
     batch: { shown: boolean };
   }): Promise<Outcome<Generation>> {
-    // A tool sent to another provider than the chosen one: its own key.
-    const settings = useSettings.getState();
-    const apiKey = opts.params.provider === settings.provider ? opts.apiKey : settings.apiKeyFor(opts.params.provider);
-    if (!apiKey) {
-      const message = t('toolModel.needKey', { provider: PROVIDER_NAMES[opts.params.provider] });
-      toast.error(message);
-      return { error: message };
-    }
+    const apiKey = opts.apiKey;
     // Before paying for an image that couldn't be saved.
     const parentId = opts.parent?.id;
     if (parentId && (isOlderVersion(get().generations, parentId) || get().jobs.some((j) => j.status === 'running' && j.parentId === parentId))) return { error: t('versions.olderLocked') };
@@ -843,7 +815,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       // Filled locally first: the model then only restores texture, it has no hole to invent into.
       const patched = await smoothRegion(source.blob, mask);
       // Always Nano Banana 2, whatever the model chosen for generating.
-      return regionEdit({ ...source, blob: patched }, mask, t('heal.done'), buildHealPrompt(promptLang()), apiKey, 'heal', 'nano-banana-2');
+      return regionEdit({ ...source, blob: patched }, mask, t('heal.done'), buildHealPrompt(promptLang()), apiKey, 'heal');
     },
 
     fixFace: async (personaId) => {
@@ -857,7 +829,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       const mask = snapshotMask(maskCanvas);
       const prompt = buildFaceFixPrompt(promptLang(), photos.map((p) => p.role));
       // Always Nano Banana Pro, whatever the model chosen for generating: the most faithful to a face.
-      return regionEdit(source, mask, t('face.done', { name: person.name }), prompt, apiKey, 'face', 'nano-banana-pro', photos.map((p) => p.blob));
+      return regionEdit(source, mask, t('face.done', { name: person.name }), prompt, apiKey, 'face', photos.map((p) => p.blob));
     },
 
     duplicateVersion: async (id) => {
@@ -896,16 +868,12 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
           return useSettings.getState().params();
         case 'edit':
           return { ...useSettings.getState().params(), aspectRatio };
-        case 'heal':
-          return nanoBananaParams({ aspectRatio, model: 'nano-banana-2' });
-        case 'face':
-          return nanoBananaParams({ aspectRatio, model: 'nano-banana-pro' });
         case 'upscale':
           return upscaleParams(aspectRatio);
         case 'concept':
           return conceptParams();
         default:
-          return nanoBananaParams({ aspectRatio });
+          return toolCallParams({ aspectRatio });
       }
     },
 
@@ -1014,7 +982,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
           region: true,
           prompt: buildRegionEditPrompt(promptLang(), text, people.map((p) => p.role)),
           // As `regionEdit` sends it: on Nano Banana.
-          params: nanoBananaParams({ aspectRatio: source.params.aspectRatio }),
+          params: toolCallParams({ aspectRatio: source.params.aspectRatio }),
           images: [{ blob: source.blob, role: 'current' }, { blob: await highlightRegion(source.blob, mask), role: 'marked' }, ...sentPeople(people)],
         };
       }
@@ -1038,7 +1006,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       if (mask) {
         const people = editPeople(2);
         const prompt = buildRegionEditPrompt(promptLang(), instruction, people.map((p) => p.role));
-        return [await regionEdit(source, mask, instruction, prompt, apiKey, undefined, undefined, people.map((p) => p.blob))];
+        return [await regionEdit(source, mask, instruction, prompt, apiKey, undefined, people.map((p) => p.blob))];
       }
 
       if (!hasCustomModelId()) return [{ error: t('brief.needCustomModel') }];
@@ -1212,7 +1180,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
           prompt: t('reframe.done'),
           fullPrompt: buildOutpaintPrompt(promptLang()),
           images: [composed],
-          params: nanoBananaParams({ aspectRatio: source.params.aspectRatio }),
+          params: toolCallParams({ aspectRatio: source.params.aspectRatio }),
           parent: source,
           apiKey,
           // Only the empty areas come from the model; the moved image stays pixel-exact.
