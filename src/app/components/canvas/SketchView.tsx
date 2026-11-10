@@ -64,7 +64,7 @@ export function SketchView() {
   }
 
   return (
-    <div ref={areaRef} className="relative flex size-full items-center justify-center pb-24">
+    <div ref={areaRef} className="relative flex size-full items-center justify-center pt-10 pb-24">
       <canvas
         ref={canvas}
         width={width}

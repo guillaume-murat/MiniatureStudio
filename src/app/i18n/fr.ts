@@ -444,6 +444,12 @@ export const fr: Dict = {
     hint: 'Lisser (sans IA) : remplit la zone peinte avec les couleurs autour, sans IA. Instantané, idéal pour un trait ou une couture sur un fond flou.',
     done: 'Lissage',
   },
+  panels: {
+    openBrief: 'Afficher le brief',
+    closeBrief: 'Masquer le brief',
+    openHistory: 'Afficher l’historique',
+    closeHistory: 'Masquer l’historique',
+  },
   sketch: {
     clear: 'Tout effacer',
     clearTitle: 'Effacer le croquis ?',

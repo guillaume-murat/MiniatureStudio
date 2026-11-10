@@ -1,3 +1,4 @@
+import { parseClosedPanels, type ClosedPanels } from '../lib/panels';
 import { create } from 'zustand';
 import { VERTEX_GCLOUD } from '../lib/providers';
 import { parseBarOffset, type BarOffset } from '../lib/editBar';
@@ -23,6 +24,8 @@ interface SettingsState {
   lang: Lang;
   /** Where the edit bar was moved to on this device; null at its default place. */
   editBarOffset: BarOffset | null;
+  /** The side panels folded by the user on this device (they also fold by themselves where unused). */
+  closedPanels: ClosedPanels;
 
   set: (patch: Partial<Omit<SettingsState, 'set' | 'setKey' | 'params' | 'apiKey'>>) => void;
   setKey: (provider: Provider, key: string) => void;
@@ -82,12 +85,13 @@ function load() {
     theme: (['light', 'dark', 'system'].includes(prefs.theme) ? prefs.theme : 'system') as Theme,
     lang: detectLang(),
     editBarOffset: parseBarOffset(prefs.editBarOffset),
+    closedPanels: parseClosedPanels(prefs.closedPanels),
   };
 }
 
 function persistPrefs(s: SettingsState): void {
-  const { provider, keyPersistence, model, aspectRatio, resolution, format, safety, count, theme, editBarOffset } = s;
-  safeSet(local, PREFS_KEY, JSON.stringify({ provider, keyPersistence, model, aspectRatio, resolution, format, safety, count, theme, editBarOffset }));
+  const { provider, keyPersistence, model, aspectRatio, resolution, format, safety, count, theme, editBarOffset, closedPanels } = s;
+  safeSet(local, PREFS_KEY, JSON.stringify({ provider, keyPersistence, model, aspectRatio, resolution, format, safety, count, theme, editBarOffset, closedPanels }));
   safeSet(local, 'nano_lang', s.lang);
 }
 

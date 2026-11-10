@@ -442,6 +442,12 @@ export const en = {
     hint: 'Smooth (no AI): fills the painted area with the colours around it, no AI. Instant, ideal for a line or seam on a soft background.',
     done: 'Smoothing',
   },
+  panels: {
+    openBrief: 'Show the brief',
+    closeBrief: 'Hide the brief',
+    openHistory: 'Show the history',
+    closeHistory: 'Hide the history',
+  },
   sketch: {
     clear: 'Clear all',
     clearTitle: 'Clear the sketch?',

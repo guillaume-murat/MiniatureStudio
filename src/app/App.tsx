@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { Toaster } from './components/ui/sonner';
 import { TooltipProvider } from './components/ui/tooltip';
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from './components/ui/resizable';
+import { SidePanels } from './components/SidePanels';
 import { TopBar } from './components/TopBar';
 import { runShortcut } from './commands';
 import { BlockingJobOverlay, runningJobs } from './components/canvas/BlockingJob';
@@ -26,21 +26,6 @@ import { useUI } from './stores/ui';
 import { useSettings } from './stores/settings';
 import { requestPersistence } from './lib/db';
 import { useT } from './i18n';
-
-/** The brief panel, greyed and inert in the preview and compare views. */
-function BriefArea() {
-  const t = useT();
-  const active = useWorkspace((s) => isMakingView(s.view));
-  if (active) return <BriefPanel />;
-  return (
-    <div className="relative flex h-full flex-col">
-      <p className="mx-4 mt-4 rounded-lg border bg-background px-3 py-2 text-xs text-muted-foreground">{t('brief.otherView')}</p>
-      <div inert className="min-h-0 flex-1 opacity-50 select-none">
-        <BriefPanel />
-      </div>
-    </div>
-  );
-}
 
 function isTyping(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
@@ -128,22 +113,16 @@ export default function App() {
         {!ready ? (
           <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">{t('common.loading')}</div>
         ) : (
-          <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
-            <ResizablePanel defaultSize={340} minSize={290} maxSize={500} className="bg-sidebar">
-              <BriefArea />
-            </ResizablePanel>
-            <ResizableHandle />
-            <ResizablePanel minSize={420}>
+          <SidePanels
+            brief={<BriefPanel />}
+            center={
               <div className="flex h-full min-w-0 flex-col">
                 <CanvasArea />
                 <Filmstrip />
               </div>
-            </ResizablePanel>
-            <ResizableHandle />
-            <ResizablePanel defaultSize={340} minSize={290} maxSize={500} className="bg-sidebar">
-              <IteratePanel />
-            </ResizablePanel>
-          </ResizablePanelGroup>
+            }
+            history={<IteratePanel />}
+          />
         )}
       </div>
 

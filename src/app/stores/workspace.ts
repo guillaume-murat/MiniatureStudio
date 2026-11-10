@@ -20,6 +20,7 @@ import { useReframe } from './reframe';
 import { dimensions, highlightRegion, mergeWithMask, normaliseUpload, prepareReference } from '../lib/images';
 import { errorLog, explainError, type JobContext, type JobStep } from '../lib/errors';
 import { smoothRegion } from '../lib/smooth';
+import { isMakingView, type View as PanelView } from '../lib/panels';
 import { addStroke, EMPTY_SKETCH, isEmptySketch, isSketch, sketchBlob, undoStroke, type Sketch, type SketchStroke } from '../lib/sketch';
 import { randomSeed } from '../lib/channel';
 import { newGeneration, type VersionInput, historyOf, isOlderVersion, versionsAfter } from '../lib/versions';
@@ -57,12 +58,8 @@ const promptLang = () => useSettings.getState().lang;
 export const MAX_IMAGES = 14;
 export const MAX_PERSONAS = 5;
 
-export type ViewMode = 'image' | 'sketch' | 'feed' | 'channel' | 'compare';
-
-/** The views a thumbnail is made in: the brief panel, the history and generating work there only. */
-export function isMakingView(view: ViewMode): boolean {
-  return view === 'image' || view === 'sketch';
-}
+export type ViewMode = PanelView;
+export { isMakingView };
 
 export interface Job {
   id: string;
