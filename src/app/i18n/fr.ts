@@ -468,6 +468,19 @@ export const fr: Dict = {
     openHistory: 'Afficher l’historique',
     closeHistory: 'Masquer l’historique',
   },
+  toolModel: {
+    title: 'Modèle des outils',
+    hint: 'Pour les outils Zone, le lissage IA, la correction de visage, le recadrage, l’agrandissement HD et les aperçus de concepts.',
+    auto: 'Automatique',
+    autoHint: 'Nano Banana Pro (Nano Banana 2 pour le lissage) chez votre fournisseur ; chez OpenAI, le modèle choisi au-dessus.',
+    provider: 'Fournisseur des outils',
+    model: 'Modèle',
+    needKey: 'Ajoutez votre clé {provider} pour les outils : choisissez {provider} comme fournisseur ci-dessus, saisissez la clé, puis revenez au vôtre.',
+    noKey: 'Aucune clé {provider} enregistrée : choisissez {provider} comme fournisseur ci-dessus pour la saisir, puis revenez au vôtre.',
+  },
+  modelNote: {
+    sentTo: 'Envoyé à {note}',
+  },
   credit: {
     by: 'par',
     fork: 'fork Yoan Bernabeu',

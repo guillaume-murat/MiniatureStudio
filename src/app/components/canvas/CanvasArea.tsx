@@ -40,6 +40,7 @@ import { runningJobs } from './BlockingJob';
 import { FeedPreview } from './FeedPreview';
 import { CompareView } from './CompareView';
 import { SketchView } from './SketchView';
+import { ModelNote } from '../ModelNote';
 import { MOD } from '../TopBar';
 import { useBlobUrl } from '../../hooks/use-blob-url';
 import { fit, useElementSize } from '../../hooks/use-element-size';
@@ -239,6 +240,7 @@ function ImageActions({ gen }: { gen: Generation }) {
             <span>
               {t('canvas.exportFullHd')}
               {fullHdBlocked && <span className="block text-xs">{t('versions.olderNoUpscale')}</span>}
+              {!fullHdBlocked && !coversFullHd(gen) && <ModelNote call="upscale" />}
             </span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -271,7 +273,7 @@ function ImageActions({ gen }: { gen: Generation }) {
 }
 
 /** An area tool action: its tip says to paint first while nothing is painted (a disabled button gets no hover). */
-function AreaAction({ hint, ready, children }: { hint: string; ready: boolean; children: ReactNode }) {
+function AreaAction({ hint, ready, children }: { hint: ReactNode; ready: boolean; children: ReactNode }) {
   const t = useT();
   return (
     <Tooltip>
@@ -319,7 +321,10 @@ function FaceFixSelect({ disabled }: { disabled: boolean }) {
           </Select>
         </span>
       </TooltipTrigger>
-      <TooltipContent className="max-w-64">{hint}</TooltipContent>
+      <TooltipContent className="max-w-64">
+        {hint}
+        {hasMask && people.length > 0 && <ModelNote call="face" className="mt-1 text-background/70" />}
+      </TooltipContent>
     </Tooltip>
   );
 }
@@ -379,7 +384,7 @@ export function CanvasArea() {
             <Blend /> {t('smooth.button')}
           </Button>
         </AreaAction>
-        <AreaAction hint={t('heal.hint')} ready={ws.hasMask}>
+        <AreaAction hint={<>{t('heal.hint')}<ModelNote call="heal" className="mt-1 text-background/70" /></>} ready={ws.hasMask}>
           <Button variant="outline" size="xs" disabled={busy || !ws.hasMask} onClick={() => ws.heal()}>
             <Bandage /> {t('heal.button')}
           </Button>

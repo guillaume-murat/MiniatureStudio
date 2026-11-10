@@ -23,6 +23,7 @@ import { useUI } from '../../stores/ui';
 import { sceneLine, styleLine, titlePreviewLine } from '../../lib/prompt';
 import { findStyle } from '../../lib/styles';
 import { isEmptySketch } from '../../lib/sketch';
+import { ModelNote } from '../ModelNote';
 import { useT } from '../../i18n';
 
 /** The prompt the next generation would send, on hover of an eye beside Generate (same code path as `generate`). */
@@ -35,6 +36,7 @@ function NextPromptEye() {
   useWorkspace();
   return (
     <PromptEye title={t('prompt.next')} side="top" large>
+      <ModelNote call="generate" className="mb-1 font-sans not-italic" />
       {!scene.trim() && !sketchView && <p className="mb-1 font-sans not-italic">{t('prompt.emptyBrief')}</p>}
       <p className="whitespace-pre-wrap italic">{previewPrompt()}</p>
     </PromptEye>

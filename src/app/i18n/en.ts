@@ -466,6 +466,19 @@ export const en = {
     openHistory: 'Show the history',
     closeHistory: 'Hide the history',
   },
+  toolModel: {
+    title: 'Tools model',
+    hint: 'For the area tools, AI smoothing, face fix, reframing, HD upscale and concept previews.',
+    auto: 'Automatic',
+    autoHint: 'Nano Banana Pro (Nano Banana 2 for smoothing) at your provider; at OpenAI, the model chosen above.',
+    provider: 'Tools provider',
+    model: 'Model',
+    needKey: 'Add your {provider} key for the tools: choose {provider} as provider above, type the key, then switch back to yours.',
+    noKey: 'No {provider} key saved: choose {provider} as provider above to type it, then switch back to yours.',
+  },
+  modelNote: {
+    sentTo: 'Sent to {note}',
+  },
   credit: {
     by: 'by',
     fork: 'forked from Yoan Bernabeu',

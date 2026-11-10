@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CUSTOM_MODEL, editModel, firstAvailableModel, gptSize, isCustomModel, imagePrice, modelAvailable, outputSize, resolutionsFor, resolvedResolution } from '../models';
+import { CUSTOM_MODEL, editModel, toolParams, modelNote, textModelId, textModelNote, firstAvailableModel, gptSize, isCustomModel, imagePrice, modelAvailable, outputSize, resolutionsFor, resolvedResolution } from '../models';
 
 describe('image models', () => {
   it('serves GPT Image 2.5 Sunburst on Replicate, OpenRouter and OpenAI only', () => {
@@ -71,5 +71,24 @@ describe('image models', () => {
   it('keeps the area tools on the chosen model with OpenAI, which has no Nano Banana', () => {
     expect(editModel('gpt-image-2.5-sunburst', 'openai')).toBe('gpt-image-2.5-sunburst');
     expect(editModel('gpt-image-2.5-sunburst', 'replicate')).toBe('nano-banana-pro');
+  });
+
+  it('names the model and provider a prompt goes to', () => {
+    expect(modelNote({ model: 'nano-banana-2', provider: 'gemini' })).toBe('Nano Banana 2 · Google Gemini');
+    expect(modelNote({ model: 'gpt-image-2.5-sunburst', provider: 'openai', quality: 'low' })).toBe('GPT Image 2.5 Sunburst · OpenAI');
+    expect(modelNote({ model: 'custom', provider: 'openrouter', customModel: 'black-forest-labs/flux-2-pro' })).toBe('black-forest-labs/flux-2-pro · OpenRouter');
+    expect(textModelNote('vertex')).toBe('gemini-3.8-flash · Vertex AI');
+    expect(textModelNote('openai')).toBe('gpt-6-luna · OpenAI');
+    expect(textModelId('replicate')).toBe('google/gemini-3-flash');
+  });
+
+  it('sends the tools to the provider and model chosen for them', () => {
+    const base = { provider: 'openai', model: 'gpt-image-2.5-sunburst', aspectRatio: '9:16', resolution: '2K', format: 'jpg', safety: 'block_only_high', quality: 'high' } as const;
+    const customModels = { replicate: '', gemini: '', openrouter: 'black-forest-labs/flux-2-pro', mammouth: '', vertex: '', openai: '' };
+    expect(toolParams(base, { provider: 'gemini', model: 'nano-banana-pro' }, customModels)).toEqual({ provider: 'gemini', model: 'nano-banana-pro', aspectRatio: '9:16', resolution: '2K', format: 'png', safety: 'block_only_high' });
+    // GPT Image keeps the quality and stops at 2K; Lite is 1K only.
+    expect(toolParams({ ...base, resolution: '4K' }, { provider: 'replicate', model: 'gpt-image-2.5-sunburst' }, customModels)).toMatchObject({ resolution: '2K', quality: 'high', format: 'jpg' });
+    expect(toolParams(base, { provider: 'gemini', model: 'nano-banana-2-lite' }, customModels).resolution).toBe('1K');
+    expect(toolParams(base, { provider: 'openrouter', model: 'custom' }, customModels).customModel).toBe('black-forest-labs/flux-2-pro');
   });
 });

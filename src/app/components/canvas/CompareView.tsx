@@ -7,6 +7,7 @@ import { exportTestCompare } from '../../lib/exporting';
 import { useT } from '../../i18n';
 import type { Generation } from '../../lib/types';
 import { cn } from '../../lib/utils';
+import { ModelNote } from '../ModelNote';
 
 function CompareTile({ gen, rank, reason, onOpen }: { gen: Generation; rank?: number; reason?: string; onOpen: () => void }) {
   const url = useBlobUrl(gen.blob);
@@ -72,7 +73,10 @@ export function CompareView() {
           >
             <Download /> {t('filmstrip.exportTestCompare', { n: Math.min(picked.length, 3) })}
           </Button>
-          <p className="text-xs text-muted-foreground">{t('ranking.disclaimer')}</p>
+          <p className="text-xs text-muted-foreground">
+            {t('ranking.disclaimer')}
+            <ModelNote text />
+          </p>
         </div>
 
         {ranking?.result.winnerWhy && (

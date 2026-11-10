@@ -1,4 +1,4 @@
-import type { ImageQuality, ModelId, OutputRatio, Provider, Resolution } from './types';
+import type { GenerationParams, ImageQuality, ModelId, OutputRatio, Provider, Resolution } from './types';
 
 /**
  * The image models: who serves them, the sizes they reach and what they cost.
@@ -105,4 +105,69 @@ export function imagePrice(model: ModelId, resolution: Resolution | null, lang: 
   }
   const prices = NANO_BANANA_PRICES[model as keyof typeof NANO_BANANA_PRICES];
   return dollars((resolution && prices[resolution]) ?? prices['1K']!, lang);
+}
+
+// ─── What a prompt goes to, named under its eye ─────────────
+
+export const PROVIDER_NAMES: Record<Provider, string> = {
+  replicate: 'Replicate',
+  gemini: 'Google Gemini',
+  openrouter: 'OpenRouter',
+  mammouth: 'Mammouth',
+  vertex: 'Vertex AI',
+  openai: 'OpenAI',
+};
+
+const IMAGE_MODEL_NAMES: Record<Exclude<ModelId, 'custom'>, string> = {
+  'nano-banana-pro': 'Nano Banana Pro',
+  'nano-banana-2': 'Nano Banana 2',
+  'nano-banana-2-lite': 'Nano Banana 2 Lite',
+  'gpt-image-2.5-sunburst': 'GPT Image 2.5 Sunburst',
+};
+
+/** The text model of each provider: the concept assistant and the ranking (`providers.ts`). */
+const TEXT_MODEL_IDS: Record<Provider, string> = {
+  replicate: 'google/gemini-3-flash',
+  gemini: 'gemini-3.8-flash',
+  vertex: 'gemini-3.8-flash',
+  openrouter: 'google/gemini-3.8-flash',
+  mammouth: 'gemini-3.8-flash',
+  openai: 'gpt-6-luna',
+};
+
+export function textModelId(provider: Provider): string {
+  return TEXT_MODEL_IDS[provider];
+}
+
+/** « Nano Banana 2 · Google Gemini »: the image model and provider a call goes to. */
+export function modelNote(params: Pick<GenerationParams, 'model' | 'provider'> & Partial<Pick<GenerationParams, 'customModel' | 'quality'>>): string {
+  const name = params.model === 'custom' ? params.customModel || '?' : IMAGE_MODEL_NAMES[params.model];
+  return `${name} · ${PROVIDER_NAMES[params.provider]}`;
+}
+
+/** « gemini-3.8-flash · Vertex AI »: the text model and provider of the assistant and the ranking. */
+export function textModelNote(provider: Provider): string {
+  return `${TEXT_MODEL_IDS[provider]} · ${PROVIDER_NAMES[provider]}`;
+}
+
+// ─── The tools' own model ──────────────────────────────────
+
+/** The provider and model chosen for the image tools (area, heal, face fix, reframe, upscale, concept previews). */
+export interface ToolModelChoice {
+  provider: Provider;
+  model: ModelId;
+}
+
+/** The params of a tool call sent to the provider and model chosen for the tools. */
+export function toolParams(base: GenerationParams, choice: ToolModelChoice, customModels: Record<Provider, string>): GenerationParams {
+  const { quality, customModel: _customModel, ...rest } = base;
+  return {
+    ...rest,
+    provider: choice.provider,
+    model: choice.model,
+    resolution: resolvedResolution(choice.model, choice.provider, base.resolution) ?? base.resolution,
+    format: choice.provider === 'replicate' ? base.format : 'png',
+    ...(isGptImage(choice.model) ? { quality: quality ?? 'medium' } : {}),
+    ...(isCustomModel(choice.model) ? { customModel: customModels[choice.provider].trim() } : {}),
+  };
 }

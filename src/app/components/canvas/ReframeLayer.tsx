@@ -12,6 +12,7 @@ import { useWorkspace } from '../../stores/workspace';
 import { hasGaps, imageRect, isIdentity, isZone, MAX_REFRAME_SCALE, MIN_REFRAME_SCALE, NO_REFRAME, zoomReframeAt, type Point } from '../../lib/reframe';
 import { useT } from '../../i18n';
 import type { Generation } from '../../lib/types';
+import { ModelNote } from '../ModelNote';
 
 /** CSS polygon from points in fractions of the element. */
 function cssPolygon(points: Point[]): string {
@@ -187,7 +188,9 @@ export function ReframeToolbar() {
           <Sparkles className="size-3" /> {t('reframe.aiFill')}
         </span>
       )}
-      <div className="ml-auto flex flex-wrap justify-end gap-2">
+      <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+        {/* Only used when the AI has empty areas to fill; a crop or zoom in is built locally. */}
+        <ModelNote call="reframe" className="mr-1" />
         <Button variant="ghost" size="sm" onClick={() => setTool(null)}>
           <X /> {t('common.cancel')}
         </Button>

@@ -17,6 +17,7 @@ import { conceptStyles, findStyle } from '../../lib/styles';
 import { isAbort } from '../../lib/providers';
 import { useT } from '../../i18n';
 import { cn } from '../../lib/utils';
+import { ModelNote } from '../ModelNote';
 
 /** A concept's preview: `undefined` while it is being generated. */
 function ConceptImage({ blob, name, onOpen }: { blob?: Blob; name: string; onOpen: () => void }) {
@@ -226,12 +227,14 @@ export function AssistantDialog() {
             <span>
               {t('assistant.withImages')}
               <span className="block text-xs text-muted-foreground">{t('assistant.withImagesHint')}</span>
+              {withImages && <ModelNote call="concept" />}
             </span>
           </label>
           <Button type="submit" disabled={busy || !brief.videoTitle.trim()} className="w-full">
             {busy ? <Loader2 className="animate-spin" /> : <Sparkles />}
             {busy ? t('assistant.running') : t('assistant.run')}
           </Button>
+          <ModelNote text className="text-center" />
         </form>
 
         {busy && concepts.length === 0 && (

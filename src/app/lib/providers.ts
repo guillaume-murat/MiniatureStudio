@@ -1,6 +1,6 @@
 import type { GenerationParams, ModelId, Provider } from './types';
 import { dataUrlToBlob, fetchBlob } from './images';
-import { gptSize, isGptImage } from './models';
+import { gptSize, isGptImage, textModelId } from './models';
 
 /**
  * Provider layer. Replicate has no browser CORS support, so its calls go through
@@ -17,7 +17,7 @@ const REPLICATE_IMAGE_MODELS: Partial<Record<ModelId, string>> = {
   'nano-banana-2': 'google/nano-banana-2',
   'nano-banana-2-lite': 'google/nano-banana-2-lite',
 };
-const REPLICATE_TEXT_MODEL = 'google/gemini-3-flash';
+const REPLICATE_TEXT_MODEL = textModelId('replicate');
 
 /** Google only serves Nano Banana (no GPT Image). */
 type NanoBanana = Exclude<ModelId, 'gpt-image-2.5-sunburst' | 'custom'>;
@@ -26,7 +26,7 @@ const GEMINI_IMAGE_MODELS: Record<NanoBanana, string> = {
   'nano-banana-2': 'gemini-3.1-flash-image',
   'nano-banana-2-lite': 'gemini-3.1-flash-lite-image',
 };
-const GEMINI_TEXT_MODEL = 'gemini-3.8-flash';
+const GEMINI_TEXT_MODEL = textModelId('gemini');
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 /** Same-origin route of the local Vertex helper; it adds the gcloud token and the project. */
@@ -39,7 +39,7 @@ const OPENROUTER_IMAGE_MODELS: Partial<Record<ModelId, string>> = {
   'nano-banana-2': 'google/gemini-3.1-flash-image',
   'nano-banana-2-lite': 'google/gemini-3.1-flash-lite-image',
 };
-const OPENROUTER_TEXT_MODEL = 'google/gemini-3.8-flash';
+const OPENROUTER_TEXT_MODEL = textModelId('openrouter');
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 /** OpenRouter's image route, the one GPT Image is served on. */
 const OPENROUTER_IMAGES_URL = 'https://openrouter.ai/api/v1/images';
@@ -51,7 +51,7 @@ const MAMMOUTH_IMAGE_MODELS: Partial<Record<ModelId, string>> = {
   'nano-banana-2': 'gemini-3.1-flash-image-preview',
   'nano-banana-2-lite': 'gemini-3.1-flash-lite-image',
 };
-const MAMMOUTH_TEXT_MODEL = 'gemini-3.8-flash';
+const MAMMOUTH_TEXT_MODEL = textModelId('mammouth');
 const MAMMOUTH_URL = 'https://api.mammouth.ai/v1/chat/completions';
 
 /** OpenAI-compatible providers: endpoint and models. */
@@ -59,7 +59,7 @@ const MAMMOUTH_URL = 'https://api.mammouth.ai/v1/chat/completions';
 const OPENAI_BASE = 'https://api.openai.com/v1';
 const OPENAI_IMAGE_MODELS: Partial<Record<ModelId, string>> = { 'gpt-image-2.5-sunburst': 'gpt-image-2.5-sunburst' };
 /** Fast and cheap, for the concepts and the ranking (OpenAI price list, November 2026). */
-const OPENAI_TEXT_MODEL = 'gpt-6-luna';
+const OPENAI_TEXT_MODEL = textModelId('openai');
 
 type ChatProvider = Extract<Provider, 'openrouter' | 'mammouth' | 'openai'>;
 const CHAT_PROVIDERS: Record<ChatProvider, { url: string; image: Partial<Record<ModelId, string>>; text: string }> = {

@@ -21,7 +21,7 @@ import { dimensions, highlightRegion, mergeWithMask, normaliseUpload, prepareRef
 import { errorLog, explainError, type JobContext, type JobStep } from '../lib/errors';
 import { smoothRegion } from '../lib/smooth';
 import { isMakingView, type View as PanelView } from '../lib/panels';
-import { editModel, resolvedResolution } from '../lib/models';
+import { editModel, PROVIDER_NAMES, resolvedResolution, toolParams } from '../lib/models';
 import { addStroke, EMPTY_SKETCH, isEmptySketch, isSketch, sketchBlob, undoStroke, type Sketch, type SketchStroke } from '../lib/sketch';
 import { randomSeed } from '../lib/channel';
 import { newGeneration, type VersionInput, historyOf, isOlderVersion, versionsAfter } from '../lib/versions';
@@ -61,6 +61,9 @@ export const MAX_IMAGES = 14;
 export const MAX_PERSONAS = 5;
 
 export type ViewMode = PanelView;
+
+/** The kinds of image calls, each with its own model rule (`callParams`). */
+export type ImageCall = 'generate' | 'edit' | 'area' | 'heal' | 'face' | 'reframe' | 'upscale' | 'concept';
 export { isMakingView };
 
 export interface Job {
@@ -157,6 +160,8 @@ interface WorkspaceState {
   addConceptImage: (concept: Concept, preview: ConceptPreview) => Promise<Generation>;
   /** The prompt `generate` would send for the current brief, without sending anything. */
   previewPrompt: () => string;
+  /** The image params a kind of call is sent with: shown beside its prompt (model and provider). */
+  callParams: (call: ImageCall) => GenerationParams;
   /** The lines the selected people and the references add to that prompt, numbered as sent. */
   previewImageLines: () => { people: string; references: string };
   /** The advanced options in effect for the current brief. */
@@ -457,6 +462,12 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
   /** The settings' params on Nano Banana: GPT Image becomes Pro (area tools, reframing, upscaling). */
   function nanoBananaParams(patch: Partial<GenerationParams> = {}): GenerationParams {
     const settings = useSettings.getState().params();
+    // A provider and model chosen for the tools win over every automatic rule (including heal's and face fix's own).
+    const choice = useSettings.getState().toolModel;
+    if (choice) {
+      const { model: _model, ...rest } = patch;
+      return toolParams({ ...settings, ...rest }, choice, useSettings.getState().customModels);
+    }
     // OpenAI has no Nano Banana: the area tools, reframing and upscaling use the chosen model there,
     // whatever model a tool asks for (heal, face fix), within GPT Image's sizes.
     if (settings.provider === 'openai') {
@@ -468,6 +479,14 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     if (model === params.model) return params;
     const { quality: _quality, customModel: _customModel, ...rest } = params;
     return { ...rest, model, resolution: patch.resolution ?? useSettings.getState().resolution };
+  }
+
+  /** 2K is above 1920×1080 at every aspect ratio, and Lite does not reach it. */
+  function upscaleParams(aspectRatio: GenerationParams['aspectRatio']): GenerationParams {
+    return {
+      ...nanoBananaParams({ aspectRatio, resolution: '2K' }),
+      ...(useSettings.getState().model === 'nano-banana-2-lite' ? { model: 'nano-banana-2' as const } : {}),
+    };
   }
 
   function editParams(source: Generation): GenerationParams {
@@ -490,6 +509,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
   /** What a concept's preview is generated with. */
   function conceptParams(): GenerationParams {
     const params = useSettings.getState().params();
+    const choice = useSettings.getState().toolModel;
+    if (choice) return { ...toolParams(params, choice, useSettings.getState().customModels), resolution: '1K' };
     // OpenAI has no Nano Banana Lite: its cheapest image instead.
     if (params.provider === 'openai') return { ...params, model: 'gpt-image-2.5-sunburst', quality: 'low', resolution: '1K' };
     return { ...params, model: 'nano-banana-2-lite', resolution: '1K' };
@@ -565,6 +586,14 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     /** Shared by the jobs of one batch: the first result to arrive gets shown. */
     batch: { shown: boolean };
   }): Promise<Outcome<Generation>> {
+    // A tool sent to another provider than the chosen one: its own key.
+    const settings = useSettings.getState();
+    const apiKey = opts.params.provider === settings.provider ? opts.apiKey : settings.apiKeyFor(opts.params.provider);
+    if (!apiKey) {
+      const message = t('toolModel.needKey', { provider: PROVIDER_NAMES[opts.params.provider] });
+      toast.error(message);
+      return { error: message };
+    }
     // Before paying for an image that couldn't be saved.
     const parentId = opts.parent?.id;
     if (parentId && (isOlderVersion(get().generations, parentId) || get().jobs.some((j) => j.status === 'running' && j.parentId === parentId))) return { error: t('versions.olderLocked') };
@@ -592,7 +621,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         prompt: opts.fullPrompt,
         images,
         params: opts.params,
-        apiKey: opts.apiKey,
+        apiKey,
         signal: job.controller.signal,
         onProgress: (elapsed) => patchJob({ elapsed }),
       });
@@ -631,7 +660,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         promptLength: opts.fullPrompt.length,
         elapsedMs: Date.now() - job.startedAt,
         userAgent: navigator.userAgent,
-        secret: opts.apiKey,
+        secret: apiKey,
       });
       patchJob({ status: 'failed', error: title, report });
       return { error: title };
@@ -860,6 +889,26 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
 
     previewPrompt: () => generationRequest().fullPrompt,
 
+    callParams: (call) => {
+      const aspectRatio = get().generations.find((g) => g.id === get().selectedId)?.params.aspectRatio ?? useSettings.getState().aspectRatio;
+      switch (call) {
+        case 'generate':
+          return useSettings.getState().params();
+        case 'edit':
+          return { ...useSettings.getState().params(), aspectRatio };
+        case 'heal':
+          return nanoBananaParams({ aspectRatio, model: 'nano-banana-2' });
+        case 'face':
+          return nanoBananaParams({ aspectRatio, model: 'nano-banana-pro' });
+        case 'upscale':
+          return upscaleParams(aspectRatio);
+        case 'concept':
+          return conceptParams();
+        default:
+          return nanoBananaParams({ aspectRatio });
+      }
+    },
+
     promptOptions: () => resolveOptions(findStyle(get().brief.styleId, get().customStyles), get().brief.options),
 
     previewImageLines: () => {
@@ -882,7 +931,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       const settings = useSettings.getState();
       const { fullPrompt } = generationRequest(concept);
       const params = conceptParams();
-      const blob = await generateImage({ prompt: fullPrompt, images: [], params, apiKey: settings.apiKey(), signal });
+      const blob = await generateImage({ prompt: fullPrompt, images: [], params, apiKey: settings.apiKeyFor(params.provider), signal });
       return { blob, fullPrompt, params };
     },
 
@@ -943,11 +992,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         prompt: t('export.upscaled'),
         fullPrompt: buildUpscalePrompt(promptLang()),
         images: [source.blob],
-        // 2K is above 1920×1080 at every aspect ratio, and Lite does not reach it.
-        params: {
-          ...nanoBananaParams({ aspectRatio: source.params.aspectRatio, resolution: '2K' }),
-          ...(useSettings.getState().model === 'nano-banana-2-lite' ? { model: 'nano-banana-2' as const } : {}),
-        },
+        params: upscaleParams(source.params.aspectRatio),
         parent: source,
         apiKey,
         // The model needs the full detail of the image it is asked to sharpen.

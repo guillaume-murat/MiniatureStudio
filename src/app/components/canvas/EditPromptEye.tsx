@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { PromptEye } from '../brief/PromptEye';
 import { useBlobUrl } from '../../hooks/use-blob-url';
 import { useWorkspace, type EditPreview } from '../../stores/workspace';
-import { imagePrice } from '../../lib/models';
+import { imagePrice, modelNote } from '../../lib/models';
 import { useSettings } from '../../stores/settings';
 import { useT, type TKey } from '../../i18n';
 import type { ModelId } from '../../lib/types';
@@ -61,7 +61,7 @@ export function EditPromptEye({ instruction }: { instruction: string }) {
         <div className="space-y-2 font-sans">
           <p>{preview.region ? t('editPrompt.areaPainted') : t('editPrompt.areaWhole')}</p>
           <p>
-            {t('editPrompt.model', { name: preview.params.customModel || t(MODEL_NAMES[preview.params.model]) })} · {preview.params.resolution} · {imagePrice(preview.params.model, preview.params.resolution, lang, preview.params.quality)}
+            {t('modelNote.sentTo', { note: modelNote(preview.params) })} · {preview.params.resolution} · {imagePrice(preview.params.model, preview.params.resolution, lang, preview.params.quality)}
           </p>
           <div className="space-y-1">
             <p className="font-medium text-foreground">{t('editPrompt.images', { n: preview.images.length })}</p>
