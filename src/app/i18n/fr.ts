@@ -205,6 +205,7 @@ export const fr: Dict = {
       heal: 'Lissage IA',
       face: 'Visage corrigé',
       arrow: 'Flèche',
+      sketch: 'Croquis',
     },
   },
   iterate: {

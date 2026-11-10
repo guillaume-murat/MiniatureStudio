@@ -891,24 +891,25 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       if (imageCount > MAX_IMAGES) return fail(t('brief.tooManyRefs'));
       const params = settings.params();
       const blobs = attached.map((a) => a.blob);
-      if (withSketch) blobs.unshift(await sketchBlob(get().sketch, settings.aspectRatio));
+      const drawn = withSketch ? await sketchBlob(get().sketch, settings.aspectRatio) : null;
+      if (drawn) blobs.unshift(drawn);
       // The results show in the image view; the sketch stays as it is for another try.
       if (get().view === 'compare' || sketchView) set({ view: 'image' });
       const batch = { shown: false };
+      const prompt = brief.brief.trim() || t('sketch.versionPrompt');
+      const videoTitle = brief.videoTitle || undefined;
 
       return Promise.all(
-        Array.from({ length: settings.count }, () =>
-          runJob({
-            kind: 'generate',
-            prompt: brief.brief.trim() || t('sketch.versionPrompt'),
-            fullPrompt,
-            images: blobs,
-            params,
-            videoTitle: brief.videoTitle || undefined,
-            apiKey,
-            batch,
-          }),
-        ),
+        Array.from({ length: settings.count }, async () => {
+          // From a sketch, each thumbnail starts with it: the sketch is its original, the result the next version.
+          const original = drawn
+            ? await saveVersion({ kind: 'import', action: 'sketch', prompt, params, videoTitle, blob: new Blob([drawn], { type: drawn.type }), show: false })
+            : undefined;
+          const outcome = await runJob({ kind: 'generate', prompt, fullPrompt, images: blobs, params, videoTitle, parent: original, apiKey, batch });
+          // Failed or cancelled: no thumbnail left holding only the sketch.
+          if (outcome.error && original) await dropVersions([original], (remaining, selectedId) => (remaining.some((g) => g.id === selectedId) ? selectedId : (remaining[0]?.id ?? null)));
+          return outcome;
+        }),
       );
     },
 

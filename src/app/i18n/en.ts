@@ -203,6 +203,7 @@ export const en = {
       heal: 'AI smoothing',
       face: 'Face fixed',
       arrow: 'Arrow',
+      sketch: 'Sketch',
     },
   },
   iterate: {

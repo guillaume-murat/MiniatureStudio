@@ -10,6 +10,7 @@ import {
   History,
   ImageUp,
   Maximize2,
+  Pencil,
   Sparkles,
   Undo2,
   SquareDashedMousePointer,
@@ -40,6 +41,7 @@ const STEP_ICONS = {
   heal: Bandage,
   face: ScanFace,
   arrow: ArrowUpRight,
+  sketch: Pencil,
 } as const;
 
 /** A version's picture, for the lists of the history. */
