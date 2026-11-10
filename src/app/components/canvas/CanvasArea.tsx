@@ -107,7 +107,11 @@ function EmptyState({ running }: { running: number }) {
   );
 }
 
-function ImageView({ gen, tool, brushSize }: { gen: Generation; tool: MaskTool; brushSize: number }) {
+/**
+ * The image, centred above the edit bar (`reserve`, its room at the bottom, in px). The view
+ * itself runs to the bottom of the area: zoomed in, the image fills it under the bar too.
+ */
+function ImageView({ gen, tool, brushSize, reserve, cornerBottom }: { gen: Generation; tool: MaskTool; brushSize: number; reserve: number; cornerBottom: number }) {
   const { safeZones, tool: active, setTool } = useWorkspace();
   const older = useWorkspace(viewingOlder);
   const busy = useWorkspace((s) => runningJobs(s.jobs).length > 0);
@@ -120,7 +124,7 @@ function ImageView({ gen, tool, brushSize }: { gen: Generation; tool: MaskTool; 
   }, [active]);
   const url = useBlobUrl(gen.blob);
   const [ref, box] = useElementSize<HTMLDivElement>();
-  const size = fit(gen.width / gen.height, { width: box.width - 48, height: box.height - 48 });
+  const size = fit(gen.width / gen.height, { width: box.width - 48, height: box.height - 48 - reserve });
   const [zoom, setZoom] = useState<ViewZoom>(NO_ZOOM);
   const t = useT();
 
@@ -130,7 +134,8 @@ function ImageView({ gen, tool, brushSize }: { gen: Generation; tool: MaskTool; 
   usePinch(ref, {
     onZoom: (factor, clientX, clientY) => {
       const rect = ref.current!.getBoundingClientRect();
-      const d = { x: clientX - (rect.left + rect.width / 2), y: clientY - (rect.top + rect.height / 2) };
+      // From the image's centre, above the room kept for the edit bar.
+      const d = { x: clientX - (rect.left + rect.width / 2), y: clientY - (rect.top + (rect.height - reserve) / 2) };
       setZoom((v) => zoomAt(v, factor, d, size));
     },
     onPan: (dx, dy) => {
@@ -141,9 +146,10 @@ function ImageView({ gen, tool, brushSize }: { gen: Generation; tool: MaskTool; 
   });
 
   return (
-    <div ref={ref} className="relative flex size-full items-center justify-center overflow-hidden">
+    <div ref={ref} className="relative flex size-full items-center justify-center overflow-hidden" style={{ paddingBottom: reserve }}>
+      {/* Bottom left of the area, beside the edit bar; the image actions take the bottom right. */}
       {zoom.z !== 1 && (
-        <Button variant="secondary" size="xs" className="tabular absolute bottom-3 left-3 z-10" onClick={() => setZoom(NO_ZOOM)}>
+        <Button variant="secondary" size="xs" className="tabular absolute left-3 z-20" style={{ bottom: cornerBottom }} onClick={() => setZoom(NO_ZOOM)}>
           {Math.round(zoom.z * 100)} % · {t('canvas.resetZoom')}
         </Button>
       )}
@@ -333,6 +339,11 @@ export function CanvasArea() {
   const busy = runningJobs(ws.jobs).length > 0;
   const failed = ws.jobs.filter((j) => j.status === 'failed');
   const onImage = !!gen && ws.view === 'image';
+  // Room kept under the image for the edit bar: more for the area, text and arrow tools and an older version.
+  const barRoom = ws.tool === 'mask' ? 152 : isLayerTool(ws.tool) || viewingOlder(ws) ? 144 : 112;
+  // The zoom and the image actions sit in the bottom corners, beside the edit bar (up to 42rem wide),
+  // or just above it when the area is too narrow for both.
+  const cornerBottom = area.width >= 960 ? 12 : barRoom + 8;
   // Replaces the tools in the edit bar: preparing the area above the instruction, the one-click fixes under it.
   // No way back through the tools, and no Esc on a tablet: it has its own way out.
   const maskControls = ws.tool === 'mask' && {
@@ -382,7 +393,7 @@ export function CanvasArea() {
     <div className="relative flex min-h-0 flex-1 flex-col bg-canvas">
       <div ref={areaRef} className="relative flex min-h-0 flex-1 flex-col">
         {/* Body: it keeps clear of the edit bar, floating below it. */}
-        <div className={cn('relative min-h-0 flex-1 transition-[filter] duration-300', onImage && (ws.tool === 'mask' ? 'mb-38' : isLayerTool(ws.tool) || viewingOlder(ws) ? 'mb-36' : 'mb-28'), busy && 'pointer-events-none blur-md')}>
+        <div className={cn('relative min-h-0 flex-1 transition-[filter] duration-300', onImage && ws.tool === 'reframe' && 'mb-28', busy && 'pointer-events-none blur-md')}>
           {ws.view === 'sketch' ? (
             <SketchView />
           ) : ws.view === 'compare' ? (
@@ -394,7 +405,7 @@ export function CanvasArea() {
           ) : gen && ws.tool === 'reframe' ? (
             <ReframeView gen={gen} />
           ) : gen ? (
-            <ImageView gen={gen} tool={maskTool} brushSize={brushSize} />
+            <ImageView gen={gen} tool={maskTool} brushSize={brushSize} reserve={barRoom} cornerBottom={cornerBottom} />
           ) : (
             <div className="flex size-full items-center justify-center">
               <EmptyState running={running} />
@@ -421,7 +432,7 @@ export function CanvasArea() {
           )}
 
           {ws.tool === 'mask' && ws.view === 'image' && (
-            <p className="pointer-events-none absolute bottom-3 left-3 flex max-w-[calc(100%-1.5rem)] items-start gap-2 rounded-lg border bg-background/90 px-3 py-2 text-xs backdrop-blur">
+            <p style={{ bottom: barRoom + (cornerBottom > 12 ? 44 : 12) }} className="pointer-events-none absolute left-3 flex max-w-[calc(100%-1.5rem)] items-start gap-2 rounded-lg border bg-background/90 px-3 py-2 text-xs backdrop-blur">
               <Bandage className="mt-px size-3.5 shrink-0 text-muted-foreground" />
               {t('heal.context')}
             </p>
@@ -429,7 +440,7 @@ export function CanvasArea() {
 
           {/* Over the image rather than in a toolbar row: the image gets the height. */}
           {gen && ws.view === 'image' && ws.tool !== 'reframe' && (
-            <div className="absolute top-3 right-3 z-10 flex items-center gap-2 rounded-lg p-0.5">
+            <div className="absolute right-3 z-20 flex items-center gap-2 rounded-lg p-0.5" style={{ bottom: cornerBottom }}>
               <ImageActions gen={gen} />
             </div>
           )}
