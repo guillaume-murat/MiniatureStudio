@@ -1,5 +1,5 @@
 import { deleteDB, openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import { inMemory, putWithBlobRetry } from './blobStore';
+import { inMemory, toStored } from './blobStore';
 import type { CustomStyle, Generation, LibraryImage, Persona, Project } from './types';
 
 interface NanoDB extends DBSchema {
@@ -73,7 +73,7 @@ export async function listProjects(): Promise<Project[]> {
 }
 
 export async function putProject(project: Project): Promise<void> {
-  await (await getDB()).put('projects', project);
+  await (await getDB()).put('projects', await toStored(project));
 }
 
 export async function deleteProject(id: string): Promise<void> {
@@ -97,16 +97,16 @@ export async function listGenerations(projectId?: string): Promise<Generation[]>
 
 export async function putGeneration(generation: Generation): Promise<void> {
   const db = await getDB();
-  await putWithBlobRetry(generation, async (value) => {
-    const tx = db.transaction(['generations', 'projects'], 'readwrite');
-    // A refused put also rejects this: it is reported by the await below.
-    const done = tx.done.catch(() => {});
-    await tx.objectStore('generations').put(value);
-    const project = await tx.objectStore('projects').get(value.projectId);
-    if (project) await tx.objectStore('projects').put({ ...project, updatedAt: Date.now() });
-    await tx.done;
-    await done;
-  });
+  // Converted before the transaction: it would close while waiting for the bytes.
+  const value = await toStored(generation);
+  const tx = db.transaction(['generations', 'projects'], 'readwrite');
+  // A refused put also rejects this: it is reported by the await below.
+  const done = tx.done.catch(() => {});
+  await tx.objectStore('generations').put(value);
+  const project = await tx.objectStore('projects').get(value.projectId);
+  if (project) await tx.objectStore('projects').put({ ...project, updatedAt: Date.now() });
+  await tx.done;
+  await done;
 }
 
 /** All or none, in one transaction: a version never outlives the one it was made from. */
@@ -122,7 +122,7 @@ export async function listPersonas(): Promise<Persona[]> {
   return items.sort((a, b) => b.createdAt - a.createdAt);
 }
 export async function putPersona(persona: Persona): Promise<void> {
-  await (await getDB()).put('personas', persona);
+  await (await getDB()).put('personas', await toStored(persona));
 }
 export async function deletePersona(id: string): Promise<void> {
   await (await getDB()).delete('personas', id);
@@ -144,7 +144,7 @@ export async function listLibrary(): Promise<LibraryImage[]> {
   return items.sort((a, b) => b.createdAt - a.createdAt);
 }
 export async function putLibraryImage(image: LibraryImage): Promise<void> {
-  await (await getDB()).put('library', image);
+  await (await getDB()).put('library', await toStored(image));
 }
 export async function deleteLibraryImage(id: string): Promise<void> {
   await (await getDB()).delete('library', id);

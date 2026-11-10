@@ -4,6 +4,7 @@ import { extensionFor } from './images';
 import { thumbnailsToImport } from './versions';
 import { t } from '../i18n';
 import type { CustomStyle, Generation, LibraryImage, Persona, Project } from './types';
+import type { StoredImage } from './blobStore';
 
 /**
  * Full local backup as a zip: `backup.json` holds all records with each Blob
@@ -63,11 +64,13 @@ async function dehydrate(value: unknown, files: Zippable, prefix: string): Promi
   return value;
 }
 
+/** A record from the backup, ready to be written: its images as bytes. */
 function hydrate(value: unknown, files: Unzipped): unknown {
   if (value && typeof value === 'object' && '$blob' in value) {
     const ref = value as BlobRef;
     const data = files[ref.$blob];
-    return data ? new Blob([data as BlobPart], { type: ref.type }) : new Blob([], { type: ref.type });
+    // Written straight to IndexedDB: as bytes, never as a Blob (see blobStore.ts).
+    return { ntImage: data ? data.slice().buffer : new ArrayBuffer(0), type: ref.type } satisfies StoredImage;
   }
   if (Array.isArray(value)) return value.map((v) => hydrate(v, files));
   if (value && typeof value === 'object') {
