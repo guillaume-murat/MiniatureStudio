@@ -1,4 +1,4 @@
-import { IMAGE_QUALITIES, isGptImage, modelAvailable, resolvedResolution } from '../lib/models';
+import { IMAGE_QUALITIES, isCustomModel, isGptImage, modelAvailable, resolvedResolution } from '../lib/models';
 import { parseClosedPanels, type ClosedPanels } from '../lib/panels';
 import { create } from 'zustand';
 import { VERTEX_GCLOUD } from '../lib/providers';
@@ -23,6 +23,8 @@ interface SettingsState {
   count: 1 | 2 | 4;
   /** GPT Image's quality level. */
   quality: ImageQuality;
+  /** The model typed by hand, per provider (each names its models its own way). */
+  customModels: Record<Provider, string>;
   theme: Theme;
   lang: Lang;
   /** Where the edit bar was moved to on this device; null at its default place. */
@@ -79,8 +81,9 @@ function load() {
     provider: (PROVIDERS.includes(prefs.provider) ? prefs.provider : 'replicate') as Provider,
     keys: Object.fromEntries(PROVIDERS.map((p) => [p, safeGet(store, KEY_PREFIX + p) ?? ''])) as Record<Provider, string>,
     keyPersistence,
-    model: (['nano-banana-2', 'nano-banana-2-lite', 'gpt-image-2.5-sunburst'].includes(prefs.model) ? prefs.model : 'nano-banana-pro') as ModelId,
+    model: (['nano-banana-2', 'nano-banana-2-lite', 'gpt-image-2.5-sunburst', 'custom'].includes(prefs.model) ? prefs.model : 'nano-banana-pro') as ModelId,
     quality: (IMAGE_QUALITIES.includes(prefs.quality) ? prefs.quality : 'medium') as ImageQuality,
+    customModels: Object.fromEntries(PROVIDERS.map((p) => [p, typeof prefs.customModels?.[p] === 'string' ? prefs.customModels[p] : ''])) as Record<Provider, string>,
     aspectRatio: outputRatio(prefs.aspectRatio),
     resolution: (prefs.resolution ?? '1K') as Resolution,
     format: (prefs.format ?? 'png') as OutputFormat,
@@ -94,8 +97,8 @@ function load() {
 }
 
 function persistPrefs(s: SettingsState): void {
-  const { provider, keyPersistence, model, aspectRatio, resolution, format, safety, count, quality, theme, editBarOffset, closedPanels } = s;
-  safeSet(local, PREFS_KEY, JSON.stringify({ provider, keyPersistence, model, aspectRatio, resolution, format, safety, count, quality, theme, editBarOffset, closedPanels }));
+  const { provider, keyPersistence, model, aspectRatio, resolution, format, safety, count, quality, customModels, theme, editBarOffset, closedPanels } = s;
+  safeSet(local, PREFS_KEY, JSON.stringify({ provider, keyPersistence, model, aspectRatio, resolution, format, safety, count, quality, customModels, theme, editBarOffset, closedPanels }));
   safeSet(local, 'nano_lang', s.lang);
 }
 
@@ -121,7 +124,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persistKeys(get());
   },
   params: () => {
-    const { provider, model, aspectRatio, resolution, format, safety, quality } = get();
+    const { provider, model, aspectRatio, resolution, format, safety, quality, customModels } = get();
     // Lite only exists in 1K, GPT Image stops at 2K (and OpenRouter picks its size: the setting is then unused).
     return {
       provider,
@@ -131,6 +134,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
       format: provider === 'replicate' ? format : 'png',
       safety,
       ...(isGptImage(model) ? { quality } : {}),
+      ...(isCustomModel(model) ? { customModel: customModels[provider].trim() } : {}),
     };
   },
   // Vertex works without a key: the local helper authenticates with gcloud.

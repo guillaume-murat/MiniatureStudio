@@ -11,7 +11,7 @@ import { gptSize, isGptImage } from './models';
 
 const PROXY_URL = '/functions/replicate-proxy?url=';
 
-const REPLICATE_IMAGE_MODELS: Record<ModelId, string> = {
+const REPLICATE_IMAGE_MODELS: Partial<Record<ModelId, string>> = {
   'gpt-image-2.5-sunburst': 'openai/gpt-image-2.5-sunburst',
   'nano-banana-pro': 'google/nano-banana-pro',
   'nano-banana-2': 'google/nano-banana-2',
@@ -20,7 +20,7 @@ const REPLICATE_IMAGE_MODELS: Record<ModelId, string> = {
 const REPLICATE_TEXT_MODEL = 'google/gemini-3-flash';
 
 /** Google only serves Nano Banana (no GPT Image). */
-type NanoBanana = Exclude<ModelId, 'gpt-image-2.5-sunburst'>;
+type NanoBanana = Exclude<ModelId, 'gpt-image-2.5-sunburst' | 'custom'>;
 const GEMINI_IMAGE_MODELS: Record<NanoBanana, string> = {
   'nano-banana-pro': 'gemini-3-pro-image',
   'nano-banana-2': 'gemini-3.1-flash-image',
@@ -214,7 +214,7 @@ async function replicateImage(req: ImageRequest, signal: AbortSignal): Promise<B
   // Only Nano Banana Pro exposes a safety level.
   if (params.model === 'nano-banana-pro') input.safety_filter_level = params.safety;
 
-  const prediction = await replicateRun(REPLICATE_IMAGE_MODELS[params.model], input, req.apiKey, signal, req.onProgress);
+  const prediction = await replicateRun(imageModelId(params, REPLICATE_IMAGE_MODELS), input, req.apiKey, signal, req.onProgress);
   const url = Array.isArray(prediction.output) ? prediction.output[0] : prediction.output;
   if (!url) throw new ProviderError('No image in response', 500, prediction, 'replicate');
   return fetchBlob(url, signal);
@@ -232,7 +232,7 @@ async function replicateGptImage(req: ImageRequest, signal: AbortSignal): Promis
     moderation: 'low',
   };
   if (req.images.length) input.input_images = req.images;
-  const prediction = await replicateRun(REPLICATE_IMAGE_MODELS[params.model], input, req.apiKey, signal, req.onProgress);
+  const prediction = await replicateRun(imageModelId(params, REPLICATE_IMAGE_MODELS), input, req.apiKey, signal, req.onProgress);
   const url = Array.isArray(prediction.output) ? prediction.output[0] : prediction.output;
   if (!url) throw new ProviderError('No image in response', 500, prediction, 'replicate');
   return fetchBlob(url, signal);
@@ -305,7 +305,7 @@ async function geminiImage(req: ImageRequest, signal: AbortSignal): Promise<Blob
     const provider = req.params.provider as GoogleProvider;
     const data = await geminiCall(
       provider,
-      GEMINI_IMAGE_MODELS[req.params.model as NanoBanana] ?? throwUnavailable(req.params.model, req.params.provider),
+      imageModelId(req.params, GEMINI_IMAGE_MODELS),
       {
         contents: [{ role: 'user', parts }],
         generationConfig: {
@@ -393,6 +393,16 @@ function throwUnavailable(model: ModelId, provider: Provider): never {
   throw unavailable(model, provider);
 }
 
+/** The provider's id for the chosen model: from its table, or as typed by hand for a custom model. */
+function imageModelId(params: GenerationParams, table: Partial<Record<ModelId, string>>): string {
+  if (params.model === 'custom') {
+    const id = params.customModel?.trim();
+    if (!id) throw new ProviderError('No custom model id', 400, null, params.provider);
+    return id;
+  }
+  return table[params.model] ?? throwUnavailable(params.model, params.provider);
+}
+
 interface OpenRouterImagesResponse {
   data?: Array<{ b64_json?: string; url?: string; media_type?: string }>;
   error?: { message?: string; code?: number | string };
@@ -444,7 +454,7 @@ async function openRouterImage(req: ImageRequest, signal: AbortSignal): Promise<
     const data = await openRouterCall(
       provider,
       {
-        model: CHAT_PROVIDERS[provider].image[req.params.model] ?? throwUnavailable(req.params.model, provider),
+        model: imageModelId(req.params, CHAT_PROVIDERS[provider].image),
         messages: [{ role: 'user', content: openRouterContent(req.prompt, req.images) }],
         modalities: ['image', 'text'],
         image_config: { aspect_ratio: req.params.aspectRatio, image_size: req.params.resolution },

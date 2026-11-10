@@ -7,6 +7,12 @@ import type { ImageQuality, ModelId, OutputRatio, Provider, Resolution } from '.
  */
 export const GPT_IMAGE: ModelId = 'gpt-image-2.5-sunburst';
 export const IMAGE_QUALITIES: ImageQuality[] = ['low', 'medium', 'high'];
+/** A model typed by hand: sent like Nano Banana, its price unknown. */
+export const CUSTOM_MODEL: ModelId = 'custom';
+
+export function isCustomModel(model: ModelId): boolean {
+  return model === CUSTOM_MODEL;
+}
 
 export function isGptImage(model: ModelId): boolean {
   return model === GPT_IMAGE;
@@ -51,16 +57,16 @@ export function resolvedResolution(model: ModelId, provider: Provider, chosen: R
   return allowed.includes(chosen) ? chosen : allowed[allowed.length - 1];
 }
 
-/** The area tools, reframing and upscaling stay on Nano Banana: Pro stands in for GPT Image. */
+/** The area tools, reframing and upscaling stay on Nano Banana: Pro stands in for GPT Image and a model typed by hand. */
 export function editModel(model: ModelId): ModelId {
-  return isGptImage(model) ? 'nano-banana-pro' : model;
+  return isGptImage(model) || isCustomModel(model) ? 'nano-banana-pro' : model;
 }
 
 /**
  * Google's standard price per image, in dollars (Gemini API price list, checked in November 2026).
  * Indicative with the other providers. Lite only exists in 1K.
  */
-const NANO_BANANA_PRICES: Record<Exclude<ModelId, 'gpt-image-2.5-sunburst'>, Partial<Record<Resolution, number>>> = {
+const NANO_BANANA_PRICES: Record<Exclude<ModelId, 'gpt-image-2.5-sunburst' | 'custom'>, Partial<Record<Resolution, number>>> = {
   'nano-banana-pro': { '1K': 0.134, '2K': 0.134, '4K': 0.24 },
   'nano-banana-2': { '1K': 0.067, '2K': 0.101, '4K': 0.151 },
   'nano-banana-2-lite': { '1K': 0.034 },
@@ -80,6 +86,7 @@ function dollars(price: number, lang: 'en' | 'fr'): string {
 
 /** « 0,067 $ », "$0.067", « ≈ 0,028 $ » for an estimate; `resolution` null: the provider's own size. */
 export function imagePrice(model: ModelId, resolution: Resolution | null, lang: 'en' | 'fr', quality: ImageQuality = 'medium'): string {
+  if (isCustomModel(model)) return lang === 'fr' ? 'prix inconnu' : 'unknown price';
   if (isGptImage(model)) {
     const { width, height } = resolution ? outputSize(resolution, '16:9') : { width: 1536, height: 1024 };
     const price = Math.round(GPT_PRICES_1536x1024[quality] * ((width * height) / GPT_REFERENCE_AREA) * 1000) / 1000;

@@ -48,6 +48,7 @@ import type {
   ResolvedPromptOptions,
 } from '../lib/types';
 import { useSettings } from './settings';
+import { useUI } from './ui';
 import { t, translate } from '../i18n';
 import { isArrow, isVisible, type LayerBlock } from '../lib/textBlocks';
 import { renderText, textSteps, textSummary } from '../lib/textLayer';
@@ -518,6 +519,14 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     return [{ error: message }];
   }
 
+  /** A model typed by hand needs its id; the advanced options are brought into view otherwise. */
+  function hasCustomModelId(): boolean {
+    const params = useSettings.getState().params();
+    if (params.model !== 'custom' || params.customModel) return true;
+    useUI.getState().showKeySetup();
+    return false;
+  }
+
   function checkKey(): string | null {
     const key = useSettings.getState().apiKey();
     if (!key) {
@@ -885,6 +894,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       if (!brief.brief.trim() && !(sketchView && hasSketch())) return fail(t(sketchView ? 'sketch.needSketch' : 'brief.needPrompt'));
       const apiKey = checkKey();
       if (!apiKey) return [{ error: t('brief.needKey') }];
+      if (!hasCustomModelId()) return fail(t('brief.needCustomModel'));
 
       const settings = useSettings.getState();
       const { attached, fullPrompt, withSketch, imageCount } = generationRequest(undefined, fromAgent);
@@ -948,7 +958,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         return {
           region: true,
           prompt: buildRegionEditPrompt(promptLang(), text, people.map((p) => p.role)),
-          params,
+          // As `regionEdit` sends it: on Nano Banana.
+          params: nanoBananaParams({ aspectRatio: source.params.aspectRatio }),
           images: [{ blob: source.blob, role: 'current' }, { blob: await highlightRegion(source.blob, mask), role: 'marked' }, ...sentPeople(people)],
         };
       }
@@ -975,6 +986,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         return [await regionEdit(source, mask, instruction, prompt, apiKey, undefined, undefined, people.map((p) => p.blob))];
       }
 
+      if (!hasCustomModelId()) return [{ error: t('brief.needCustomModel') }];
       const people = editPeople();
       const outcome = await runJob({
         kind: 'edit',

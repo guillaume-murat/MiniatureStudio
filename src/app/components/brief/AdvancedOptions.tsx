@@ -3,15 +3,24 @@ import { Field, Section } from '../Section';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group';
 import { brandWeightLine, marginLine, priorityLine, qualityLine } from '../../lib/prompt';
-import { GPT_IMAGE, IMAGE_QUALITIES, imagePrice, isGptImage, modelAvailable, outputSize, resolutionsFor, resolvedResolution } from '../../lib/models';
+import { CUSTOM_MODEL, GPT_IMAGE, IMAGE_QUALITIES, isCustomModel, imagePrice, isGptImage, modelAvailable, outputSize, resolutionsFor, resolvedResolution } from '../../lib/models';
 import { ProviderFields } from './ProviderFields';
 import { useSettings } from '../../stores/settings';
 import { useWorkspace } from '../../stores/workspace';
 import { useT } from '../../i18n';
 import { useUI } from '../../stores/ui';
-import type { ImageQuality, ModelId, PromptOptions, Resolution, ResolvedPromptOptions } from '../../lib/types';
+import type { ImageQuality, ModelId, PromptOptions, Provider, Resolution, ResolvedPromptOptions } from '../../lib/types';
+import { Input } from '../ui/input';
 
 const LITE: ModelId = 'nano-banana-2-lite';
+/** What a model id looks like at each provider (Nano Banana Pro's, as an example). */
+const CUSTOM_PLACEHOLDERS: Record<Provider, string> = {
+  replicate: 'google/nano-banana-pro',
+  gemini: 'gemini-3-pro-image',
+  openrouter: 'google/gemini-3-pro-image',
+  mammouth: 'gemini-3-pro-image-preview',
+  vertex: 'gemini-3-pro-image',
+};
 const RESOLUTIONS: Resolution[] = ['1K', '2K', '4K'];
 const WEIGHTS: ResolvedPromptOptions['brandWeight'][] = ['subtle', 'accents', 'dominant'];
 
@@ -24,7 +33,7 @@ export function AdvancedOptions({ number }: { number: number }) {
   const { brief, setBrief, promptOptions } = useWorkspace();
   const keySetup = useUI((s) => s.keySetup);
   const options = promptOptions();
-  const { model, lang, provider, quality, aspectRatio, set: setSettings, ...settings } = useSettings();
+  const { model, lang, provider, quality, aspectRatio, customModels, set: setSettings, ...settings } = useSettings();
   // What the model reaches: Lite 1K only, GPT Image up to 2K, and no choice with OpenRouter's GPT Image.
   const allowed = resolutionsFor(model, provider);
   const resolution = resolvedResolution(model, provider, settings.resolution);
@@ -34,7 +43,9 @@ export function AdvancedOptions({ number }: { number: number }) {
     ['nano-banana-2', t('brief.model2'), t('brief.model2Hint')],
     [LITE, t('brief.modelLite'), t('brief.modelLiteHint')],
     [GPT_IMAGE, t('brief.modelGpt'), t('brief.modelGptHint')],
+    [CUSTOM_MODEL, t('brief.modelCustom'), t('brief.modelCustomHint')],
   ];
+  const custom = isCustomModel(model);
   const size = (r: Resolution) => {
     const { width, height } = outputSize(r, aspectRatio);
     return `${width}×${height}`;
@@ -51,7 +62,7 @@ export function AdvancedOptions({ number }: { number: number }) {
     <Section foldable startFolded openSignal={keySetup} title={`${number}. ${t('promptOptions.title')}`}>
       <ProviderFields />
 
-      <Field label={t('brief.model')} htmlFor="model" hint={gpt ? t('brief.gptPrices') : t('brief.modelPrices')}>
+      <Field label={t('brief.model')} htmlFor="model" hint={custom ? undefined : gpt ? t('brief.gptPrices') : t('brief.modelPrices')}>
         <Select value={model} onValueChange={(v) => setSettings({ model: v as ModelId })}>
           <SelectTrigger id="model" className="w-full">
             <SelectValue />
@@ -69,6 +80,20 @@ export function AdvancedOptions({ number }: { number: number }) {
           </SelectContent>
         </Select>
       </Field>
+
+      {custom && (
+        <Field label={t('brief.customModel')} htmlFor="customModel" hint={t('brief.customModelHelp')}>
+          <Input
+            id="customModel"
+            autoComplete="off"
+            spellCheck={false}
+            value={customModels[provider]}
+            onChange={(e) => setSettings({ customModels: { ...customModels, [provider]: e.target.value } })}
+            placeholder={CUSTOM_PLACEHOLDERS[provider]}
+            className="font-mono text-sm"
+          />
+        </Field>
+      )}
 
       {gpt && (
         <Field label={t('brief.quality')}>

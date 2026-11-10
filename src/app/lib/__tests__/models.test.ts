@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { editModel, gptSize, imagePrice, modelAvailable, outputSize, resolutionsFor, resolvedResolution } from '../models';
+import { CUSTOM_MODEL, editModel, gptSize, isCustomModel, imagePrice, modelAvailable, outputSize, resolutionsFor, resolvedResolution } from '../models';
 
 describe('image models', () => {
   it('serves GPT Image 2.5 Sunburst on Replicate and OpenRouter only', () => {
@@ -48,5 +48,15 @@ describe('image models', () => {
     expect(imagePrice('nano-banana-2', '2K', 'en')).toBe('$0.101');
     // Size left to OpenRouter: OpenAI's own landscape size, 1536×1024.
     expect(imagePrice('gpt-image-2.5-sunburst', null, 'en', 'low')).toBe('≈ $0.005');
+  });
+
+  it('takes a model typed by hand, sent as Nano Banana would be, on every provider', () => {
+    expect(isCustomModel(CUSTOM_MODEL)).toBe(true);
+    expect(['replicate', 'gemini', 'openrouter', 'mammouth', 'vertex'].every((p) => modelAvailable(CUSTOM_MODEL, p as never))).toBe(true);
+    expect(resolutionsFor(CUSTOM_MODEL, 'openrouter')).toEqual(['1K', '2K', '4K']);
+    // Its price is unknown; the area tools stay on Nano Banana Pro.
+    expect(imagePrice(CUSTOM_MODEL, '1K', 'fr')).toBe('prix inconnu');
+    expect(imagePrice(CUSTOM_MODEL, '1K', 'en')).toBe('unknown price');
+    expect(editModel(CUSTOM_MODEL)).toBe('nano-banana-pro');
   });
 });
