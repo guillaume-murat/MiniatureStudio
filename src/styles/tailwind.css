@@ -133,3 +133,18 @@
       3 21,
     crosshair;
 }
+
+/* The waiting card's logo: it sways and bobs, as if painting (BlockingJob.tsx). Still for reduced motion. */
+@keyframes logo-paint {
+  0%, 100% { transform: translateY(0) rotate(-7deg); }
+  25% { transform: translateY(-5px) rotate(0deg); }
+  50% { transform: translateY(0) rotate(7deg); }
+  75% { transform: translateY(-5px) rotate(0deg); }
+}
+.logo-paint {
+  animation: logo-paint 1.6s ease-in-out infinite;
+  transform-origin: 50% 85%;
+}
+@media (prefers-reduced-motion: reduce) {
+  .logo-paint { animation: none; }
+}
