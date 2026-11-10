@@ -500,11 +500,15 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     const { brief } = get();
     const style = findStyle(concept?.styleId ?? brief.styleId, get().customStyles);
     // A concept is previewed from its text alone: no photos or references to send.
-    const attached = concept ? [] : [...personaImages(), ...referenceImages()];
-    // From the Gribouillis view, the sketch comes first (its PNG is drawn by `generate`).
+    const people = concept ? [] : personaImages();
+    const attached = concept ? [] : [...people, ...referenceImages()];
+    // The faces come first: the people's photos, then (from the Gribouillis view) the sketch,
+    // whose PNG `generate` slips in at `sketchAt`, then the references.
     const sketchView = !concept && !fromAgent && get().view === 'sketch';
     const withSketch = sketchView && hasSketch();
-    const roles: ImageRole[] = [...(withSketch ? [{ kind: 'sketch' as const }] : []), ...attached.map((a) => a.role)];
+    const sketchAt = people.length;
+    const roles: ImageRole[] = attached.map((a) => a.role);
+    if (withSketch) roles.splice(sketchAt, 0, { kind: 'sketch' });
     const fullPrompt = buildGenerationPrompt({
       brief: concept?.brief ?? brief.brief,
       videoTitle: brief.videoTitle,
@@ -516,7 +520,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       colors: get().brand.colors,
       options: resolveOptions(style, brief.options),
     });
-    return { attached, fullPrompt, withSketch, imageCount: roles.length };
+    return { attached, fullPrompt, withSketch, sketchAt, imageCount: roles.length };
   }
 
   /** Something drawn on the sheet: from the Gribouillis view, it is sent as image 1. */
@@ -880,16 +884,16 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     promptOptions: () => resolveOptions(findStyle(get().brief.styleId, get().customStyles), get().brief.options),
 
     previewImageLines: () => {
-      // After the sketch, from the Gribouillis view: the numbers move up by one.
+      // In the order they are sent: the people's photos (faces first), the sketch, the references.
       const sketch: ImageRole[] = get().view === 'sketch' && hasSketch() ? [{ kind: 'sketch' }] : [];
       const people = personaImages().map((a) => a.role);
       const references = referenceImages().map((a) => a.role);
       const lang = promptLang();
-      const head = sketch.length ? [imagesHeader(lang), ...describeImages(lang, sketch)] : [];
+      const after = [...sketch, ...references];
       return {
-        people: (people.length ? [identityLine(lang, [...sketch, ...people]), '', ...(sketch.length ? head : [imagesHeader(lang)]), ...describeImages(lang, people, sketch.length)] : []).join('\n'),
-        references: (references.length && !people.length ? (sketch.length ? head : [imagesHeader(lang)]) : [])
-          .concat(describeImages(lang, references, sketch.length + people.length))
+        people: (people.length ? [identityLine(lang, people), '', imagesHeader(lang), ...describeImages(lang, people)] : []).join('\n'),
+        references: (after.length && !people.length ? [imagesHeader(lang)] : [])
+          .concat(describeImages(lang, after, people.length))
           .join('\n'),
       };
     },
@@ -924,12 +928,12 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       if (!hasCustomModelId()) return fail(t('brief.needCustomModel'));
 
       const settings = useSettings.getState();
-      const { attached, fullPrompt, withSketch, imageCount } = generationRequest(undefined, fromAgent);
+      const { attached, fullPrompt, withSketch, sketchAt, imageCount } = generationRequest(undefined, fromAgent);
       if (imageCount > MAX_IMAGES) return fail(t('brief.tooManyRefs'));
       const params = settings.params();
       const blobs = attached.map((a) => a.blob);
       const drawn = withSketch ? await sketchBlob(get().sketch, settings.aspectRatio) : null;
-      if (drawn) blobs.unshift(drawn);
+      if (drawn) blobs.splice(sketchAt, 0, drawn);
       // The results show in the image view; the sketch stays as it is for another try.
       if (get().view === 'compare' || sketchView) set({ view: 'image' });
       const batch = { shown: false };

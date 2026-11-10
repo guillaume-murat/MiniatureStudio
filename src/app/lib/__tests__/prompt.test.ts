@@ -163,12 +163,13 @@ describe('buildGenerationPrompt', () => {
 
 describe('a generation from a sketch', () => {
   const sketch = { kind: 'sketch' } as const;
-  const roles = [sketch, { kind: 'persona', name: 'Alex' }, { kind: 'reference' }] as const;
+  // The people's photos come first, faces before anything else; then the sketch, then the references.
+  const roles = [{ kind: 'persona', name: 'Alex' }, sketch, { kind: 'reference' }] as const;
 
-  it('sends the sketch as image 1, its composition rule and the rendering, without style, generated text or title zone', () => {
+  it('sends the sketch after the people, its composition rule and the rendering, without style, generated text or title zone', () => {
     for (const lang of ['fr', 'en'] as const) {
       let p = buildGenerationPrompt({ ...base, lang, roles: [...roles], videoTitle: 'Mars', style: 'Flat', colors: ['#ff0000'], options: { ...DEFAULT_PROMPT_OPTIONS, text: 'style', titleZone: 'top' } });
-      const shown = [formatLine(lang, '16:9'), titleLine(lang, 'Mars'), sketchLine(lang), sceneLine(lang, base.brief), identityLine(lang, [...roles]), sketchRenderLine(lang), imagesHeader(lang), ...describeImages(lang, [...roles]), colorsLine(lang, ['#ff0000']), qualityLine(lang), marginLine(lang), priorityLine(lang)];
+      const shown = [formatLine(lang, '16:9'), titleLine(lang, 'Mars'), sketchLine(lang, 2), sceneLine(lang, base.brief), identityLine(lang, [...roles]), sketchRenderLine(lang), imagesHeader(lang), ...describeImages(lang, [...roles]), colorsLine(lang, ['#ff0000']), qualityLine(lang), marginLine(lang), priorityLine(lang)];
       for (const block of shown) {
         expect(p).toContain(block);
         p = p.replace(block, '');
@@ -178,16 +179,18 @@ describe('a generation from a sketch', () => {
   });
 
   it('follows the composition, never the drawing, and asks for a realistic photo', () => {
-    expect(sketchLine('fr')).toContain('image 1');
+    expect(sketchLine('fr')).toContain('l’image 1 est un croquis');
+    expect(sketchLine('fr', 3)).toContain('l’image 3 est un croquis');
+    expect(sketchLine('en', 3)).toContain('image 3 is a rough');
     expect(sketchLine('fr')).toContain('N’imite jamais son trait');
     expect(sketchLine('en')).toContain('Never copy its lines');
     expect(sketchRenderLine('fr')).toContain('photo réaliste et percutante de miniature YouTube');
     expect(sketchRenderLine('en')).toContain('realistic, striking YouTube thumbnail photo');
   });
 
-  it('numbers the people and references after the sketch', () => {
-    expect(describeImages('fr', [...roles])).toEqual([expect.stringMatching(/^- Image 1 .*croquis/), expect.stringMatching(/^- Image 2 /), expect.stringMatching(/^- Image 3 /)]);
-    expect(identityLine('fr', [...roles])).toContain('Alex (image 2)');
+  it('numbers the people first, then the sketch, then the references', () => {
+    expect(describeImages('fr', [...roles])).toEqual([expect.stringMatching(/^- Image 1 .*Alex/), expect.stringMatching(/^- Image 2 .*croquis/), expect.stringMatching(/^- Image 3 /)]);
+    expect(identityLine('fr', [...roles])).toContain('Alex (image 1)');
   });
 
   it('from the Gribouillis view with a blank sheet, keeps the scene and the rendering but sends no sketch', () => {

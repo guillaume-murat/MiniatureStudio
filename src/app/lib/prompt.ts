@@ -77,7 +77,8 @@ interface PromptCopy {
   zone: (where: string) => string;
   imagesHeader: string;
   /** A generation from a sketch: what to take from it, and the look asked for instead of a style. */
-  sketch: string;
+  /** `n`: the sketch's number among the attached images (after the people's photos). */
+  sketch: (n: number) => string;
   sketchImage: string;
   sketchRender: string;
   quality: string;
@@ -160,8 +161,8 @@ const COPY: Record<Lang, PromptCopy> = {
     },
     zone: (where) => `Un court texte sera ajouté ensuite : garde une zone dégagée et épurée ${where} pour l’accueillir.`,
     imagesHeader: 'Images jointes, dans l’ordre :',
-    sketch:
-      'Composition : l’image 1 est un croquis rapide, noir sur blanc. Suis sa composition : la place, la taille et la pose de chaque élément, et le cadrage. N’imite jamais son trait : ni contours noirs, ni fond blanc, ni aspect de dessin. Le résultat est une miniature finie où rien du croquis ne se voit.',
+    sketch: (n) =>
+      `Composition : l’image ${n} est un croquis rapide, noir sur blanc. Suis sa composition : la place, la taille et la pose de chaque élément, et le cadrage. N’imite jamais son trait : ni contours noirs, ni fond blanc, ni aspect de dessin. Le résultat est une miniature finie où rien du croquis ne se voit.`,
     sketchImage: 'le croquis de composition, à suivre pour la place des éléments, jamais pour le trait.',
     sketchRender: 'Rendu : une photo réaliste et percutante de miniature YouTube.',
     quality: 'Fais-en une miniature efficace, comprise en une fraction de seconde sur youtube version mobile : des éléments qui ressortent, un fond simple, un fort contraste et des couleurs percutantes.',
@@ -244,8 +245,8 @@ const COPY: Record<Lang, PromptCopy> = {
     },
     zone: (where) => `A short text will be added afterwards: keep a clear, uncluttered area ${where} for it.`,
     imagesHeader: 'Attached images, in order:',
-    sketch:
-      'Composition: image 1 is a rough black-on-white sketch. Follow its composition: where each element sits, its size and pose, and the framing. Never copy its lines: no black outlines, no white background, nothing that looks drawn. The result is a finished thumbnail where nothing of the sketch shows.',
+    sketch: (n) =>
+      `Composition: image ${n} is a rough black-on-white sketch. Follow its composition: where each element sits, its size and pose, and the framing. Never copy its lines: no black outlines, no white background, nothing that looks drawn. The result is a finished thumbnail where nothing of the sketch shows.`,
     sketchImage: 'the composition sketch, to follow for where things sit, never for its lines.',
     sketchRender: 'Rendering: a realistic, striking YouTube thumbnail photo.',
     quality: 'Make it an effective thumbnail, understood in a split second on YouTube mobile: elements that stand out, a simple background, strong contrast and punchy colours.',
@@ -392,8 +393,8 @@ export function titleZoneLine(lang: Lang, zone: TitleZone = DEFAULT_PROMPT_OPTIO
 }
 
 /** Generating from the Gribouillis view: image 1 is the sketch, whose composition is followed. */
-export function sketchLine(lang: Lang): string {
-  return COPY[lang].sketch;
+export function sketchLine(lang: Lang, n = 1): string {
+  return COPY[lang].sketch(n);
 }
 
 /** Takes the place of the style, generated text and title zone, greyed in the Gribouillis view. */
@@ -427,7 +428,7 @@ export function buildGenerationPrompt(input: BriefInput): string {
   const sections: string[] = [];
 
   sections.push([formatLine(lang, aspectRatio), titleLine(lang, videoTitle)].filter(Boolean).join(' '));
-  if (hasSketch) sections.push(sketchLine(lang));
+  if (hasSketch) sections.push(sketchLine(lang, roles.findIndex((r) => r.kind === 'sketch') + 1));
   // From a sketch, the scene is optional: the drawing may say it all.
   if (!hasSketch || brief.trim()) sections.push(sceneLine(lang, brief));
   const identity = identityLine(lang, roles);
