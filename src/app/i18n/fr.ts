@@ -39,6 +39,7 @@ export const fr: Dict = {
     language: 'Langue',
   },
   brief: {
+    otherView: 'Le brief s’utilise dans les vues Image et Gribouillis.',
     title: 'Brief miniature',
     videoTitle: 'Titre de la vidéo',
     videoTitlePlaceholder: 'Ex. : J’ai testé tous les outils de code IA pendant 30 jours',
@@ -199,6 +200,7 @@ export const fr: Dict = {
     },
   },
   iterate: {
+    otherView: 'L’historique s’utilise dans la vue Image.',
     title: 'Historique',
     instruction: 'Prompter une retouche',
     suggestions: 'Suggestions',
@@ -443,6 +445,9 @@ export const fr: Dict = {
     done: 'Lissage',
   },
   sketch: {
+    clear: 'Tout effacer',
+    clearTitle: 'Effacer le croquis ?',
+    clearWarning: 'Tous les traits du croquis de ce projet sont supprimés. Impossible de revenir en arrière.',
     brush: 'Pinceau',
     eraser: 'Gomme',
     undo: 'Annuler le trait',

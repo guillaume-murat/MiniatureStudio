@@ -37,6 +37,7 @@ export const en = {
     language: 'Language',
   },
   brief: {
+    otherView: 'The brief works in the Image and Sketch views.',
     title: 'Thumbnail brief',
     videoTitle: 'Video title',
     videoTitlePlaceholder: 'e.g. I tried every AI coding tool for 30 days',
@@ -197,6 +198,7 @@ export const en = {
     },
   },
   iterate: {
+    otherView: 'The history works in the Image view.',
     title: 'History',
     instruction: 'Prompt an edit',
     suggestions: 'Suggestions',
@@ -441,6 +443,9 @@ export const en = {
     done: 'Smoothing',
   },
   sketch: {
+    clear: 'Clear all',
+    clearTitle: 'Clear the sketch?',
+    clearWarning: 'Every stroke of this project’s sketch is deleted. This can’t be undone.',
     brush: 'Brush',
     eraser: 'Eraser',
     undo: 'Undo stroke',

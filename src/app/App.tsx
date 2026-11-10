@@ -20,12 +20,27 @@ import { AgentDialog } from './components/dialogs/AgentDialog';
 import { NewProjectDialog } from './components/dialogs/NewProjectDialog';
 import { useAgent } from './agent/bridge';
 import { useApplyTheme } from './hooks/use-theme';
-import { isLayerTool, useWorkspace } from './stores/workspace';
+import { isLayerTool, isMakingView, useWorkspace } from './stores/workspace';
 import { useText } from './stores/text';
 import { useUI } from './stores/ui';
 import { useSettings } from './stores/settings';
 import { requestPersistence } from './lib/db';
 import { useT } from './i18n';
+
+/** The brief panel, greyed and inert in the preview and compare views. */
+function BriefArea() {
+  const t = useT();
+  const active = useWorkspace((s) => isMakingView(s.view));
+  if (active) return <BriefPanel />;
+  return (
+    <div className="relative flex h-full flex-col">
+      <p className="mx-4 mt-4 rounded-lg border bg-background px-3 py-2 text-xs text-muted-foreground">{t('brief.otherView')}</p>
+      <div inert className="min-h-0 flex-1 opacity-50 select-none">
+        <BriefPanel />
+      </div>
+    </div>
+  );
+}
 
 function isTyping(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
@@ -69,7 +84,8 @@ export default function App() {
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key === 'Enter') {
         e.preventDefault();
-        useWorkspace.getState().generate();
+        // The brief panel is off in the preview and compare views.
+        if (isMakingView(useWorkspace.getState().view)) useWorkspace.getState().generate();
       } else if (mod && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         const ui = useUI.getState();
@@ -114,7 +130,7 @@ export default function App() {
         ) : (
           <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
             <ResizablePanel defaultSize={340} minSize={290} maxSize={500} className="bg-sidebar">
-              <BriefPanel />
+              <BriefArea />
             </ResizablePanel>
             <ResizableHandle />
             <ResizablePanel minSize={420}>

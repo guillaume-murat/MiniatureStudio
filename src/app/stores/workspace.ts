@@ -59,6 +59,11 @@ export const MAX_PERSONAS = 5;
 
 export type ViewMode = 'image' | 'sketch' | 'feed' | 'channel' | 'compare';
 
+/** The views a thumbnail is made in: the brief panel, the history and generating work there only. */
+export function isMakingView(view: ViewMode): boolean {
+  return view === 'image' || view === 'sketch';
+}
+
 export interface Job {
   id: string;
   kind: GenerationKind;
@@ -194,6 +199,7 @@ interface WorkspaceState {
   setView: (view: ViewMode) => void;
   addSketchStroke: (stroke: SketchStroke) => void;
   undoSketchStroke: () => void;
+  clearSketch: () => void;
   setSafeZones: (on: boolean) => void;
   /**
    * Opens an image tool (null leaves it): the text tool loads the image's
@@ -1086,6 +1092,11 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
 
     undoSketchStroke: () => {
       set({ sketch: undoStroke(get().sketch) });
+      scheduleSave();
+    },
+
+    clearSketch: () => {
+      set({ sketch: EMPTY_SKETCH });
       scheduleSave();
     },
     setSafeZones: (on) => set({ safeZones: on }),

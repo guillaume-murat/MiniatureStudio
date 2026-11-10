@@ -22,7 +22,7 @@ import { Section } from '../Section';
 import { DuplicateDialog, RevertDialog } from './VersionDialogs';
 import { runningJobs } from '../canvas/BlockingJob';
 import { useBlobUrl } from '../../hooks/use-blob-url';
-import { selectedGeneration, useWorkspace } from '../../stores/workspace';
+import { isMakingView, selectedGeneration, useWorkspace } from '../../stores/workspace';
 import { historyOf, historyRows, versionStep, type HistoryRow, type VersionStep } from '../../lib/versions';
 import { useT } from '../../i18n';
 import type { Generation } from '../../lib/types';
@@ -191,9 +191,22 @@ function HistoryTab({ gen }: { gen: Generation }) {
 export function IteratePanel() {
   const t = useT();
   const gen = useWorkspace(selectedGeneration);
+  const view = useWorkspace((s) => s.view);
 
   if (!gen) {
     return <div className="flex h-full items-center justify-center p-8 text-center text-sm text-muted-foreground">{t('iterate.noImage')}</div>;
+  }
+
+  // The history acts on the image view: elsewhere it stays visible but greyed and inert.
+  if (view !== 'image') {
+    return (
+      <div className="relative flex h-full flex-col">
+        <p className="mx-4 mt-4 rounded-lg border bg-background px-3 py-2 text-xs text-muted-foreground">{t('iterate.otherView')}</p>
+        <div inert className="min-h-0 flex-1 opacity-50 select-none">
+          <HistoryTab gen={gen} />
+        </div>
+      </div>
+    );
   }
 
   return <HistoryTab gen={gen} />;

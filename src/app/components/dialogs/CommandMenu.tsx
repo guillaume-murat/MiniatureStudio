@@ -12,7 +12,7 @@ import {
 import { MOD } from '../TopBar';
 import { COMMANDS, isAvailable, type Command } from '../../commands';
 import { useUI } from '../../stores/ui';
-import { useWorkspace } from '../../stores/workspace';
+import { isMakingView, useWorkspace } from '../../stores/workspace';
 import { useSettings } from '../../stores/settings';
 import { useResolvedTheme } from '../../hooks/use-theme';
 import { useT } from '../../i18n';
@@ -42,11 +42,11 @@ export function CommandMenu() {
       <CommandList>
         <CommandEmpty>{t('commands.empty')}</CommandEmpty>
         <CommandGroup>
-          <CommandItem onSelect={run(ws.generate)}>
+          <CommandItem onSelect={run(ws.generate)} disabled={!isMakingView(ws.view)}>
             <Wand2 /> {t('commands.generate')}
             <CommandShortcut>{MOD} ↵</CommandShortcut>
           </CommandItem>
-          <CommandItem onSelect={run(() => openDialog('assistant'))} disabled={ws.view === 'sketch'}>
+          <CommandItem onSelect={run(() => openDialog('assistant'))} disabled={ws.view !== 'image'}>
             <Sparkles /> {t('commands.assistant')}
           </CommandItem>
           {COMMANDS.filter((c) => c.group === 'view').map(item)}
@@ -60,7 +60,7 @@ export function CommandMenu() {
           <CommandItem onSelect={run(() => openDialog('personas'))}>
             <Users /> {t('commands.personas')}
           </CommandItem>
-          <CommandItem onSelect={run(() => openDialog('styles'))} disabled={ws.view === 'sketch'}>
+          <CommandItem onSelect={run(() => openDialog('styles'))} disabled={ws.view !== 'image'}>
             <Palette /> {t('commands.styles')}
           </CommandItem>
           <CommandItem onSelect={run(() => openDialog('settings'))}>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Brush, Eraser, Undo2 } from 'lucide-react';
+import { Brush, Eraser, Trash2, Undo2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { Button } from '../ui/button';
 import { Kbd } from '../ui/kbd';
 import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group';
@@ -22,6 +23,8 @@ export function SketchView() {
   const sketch = useWorkspace((s) => s.sketch);
   const addSketchStroke = useWorkspace((s) => s.addSketchStroke);
   const undoSketchStroke = useWorkspace((s) => s.undoSketchStroke);
+  const clearSketch = useWorkspace((s) => s.clearSketch);
+  const [clearing, setClearing] = useState(false);
   const ratio = useSettings((s) => s.aspectRatio);
   const { width, height } = sketchSize(ratio);
   const [tool, setTool] = useState<SketchTool>('brush');
@@ -103,7 +106,26 @@ export function SketchView() {
             {t('sketch.undo')} <Kbd>{MOD}Z</Kbd>
           </TooltipContent>
         </Tooltip>
+        <Button variant="destructive" size="sm" disabled={!sketch.strokes.length} onClick={() => setClearing(true)}>
+          <Trash2 /> {t('sketch.clear')}
+        </Button>
       </div>
+
+      {/* No undo after it: the whole sketch goes. */}
+      <AlertDialog open={clearing} onOpenChange={setClearing}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('sketch.clearTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('sketch.clearWarning')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={clearSketch}>
+              {t('sketch.clear')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
