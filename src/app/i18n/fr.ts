@@ -335,6 +335,7 @@ export const fr: Dict = {
     needTitle: 'Saisissez d’abord le titre de la vidéo.',
   },
   settings: {
+    tools: 'Outils',
     title: 'Paramètres',
     provider: 'Fournisseur',
     replicate: 'Replicate',
@@ -460,8 +461,7 @@ export const fr: Dict = {
     closeHistory: 'Masquer l’historique',
   },
   credit: {
-    by: 'par Guillaume Murat',
-    byShort: 'par G. Murat',
+    by: 'par',
     fork: 'fork Yoan Bernabeu',
     forkShort: 'fork Y. Bernabeu',
     about: 'À propos',

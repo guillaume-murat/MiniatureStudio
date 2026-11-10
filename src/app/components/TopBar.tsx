@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { Bot, Check, ChevronsUpDown, Command, Folder, Monitor, Moon, Pencil, Plus, Settings, Sun, Trash2 } from 'lucide-react';
+import { Check, ChevronsUpDown, Folder, KeyRound, Pencil, Plus, Settings, Trash2 } from 'lucide-react';
 import { TOP_BUTTON, ViewSwitcher } from './canvas/ViewSwitcher';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Kbd } from './ui/kbd';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import {
   DropdownMenu,
@@ -25,7 +24,7 @@ import {
 } from './ui/alert-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { useWorkspace } from '../stores/workspace';
-import { useSettings, type Theme } from '../stores/settings';
+import { useSettings } from '../stores/settings';
 import { useUI } from '../stores/ui';
 import { useAgent } from '../agent/bridge';
 import { AgentStatusDot } from './dialogs/AgentDialog';
@@ -129,7 +128,6 @@ function ProjectSwitcher() {
   );
 }
 
-const THEME_ICON: Record<Theme, typeof Sun> = { light: Sun, dark: Moon, system: Monitor };
 
 /** Who made it: the author's site, and the project it is forked from. Short names in a narrow window. */
 function Credit() {
@@ -138,8 +136,11 @@ function Credit() {
   return (
     <span className="flex flex-col font-sans leading-tight font-normal whitespace-nowrap">
       <a href={AUTHOR_URL} target="_blank" rel="noreferrer" className={cn(link, 'text-xs text-[color-mix(in_oklab,var(--on-brand)_85%,var(--brand))]')}>
-        <span className="hidden min-[1440px]:inline">{t('credit.by')}</span>
-        <span className="min-[1440px]:hidden">{t('credit.byShort')}</span>
+        {/* The name is underlined: it is a link. */}
+        {t('credit.by')} <span className="underline underline-offset-2">
+          <span className="hidden min-[1440px]:inline">Guillaume Murat</span>
+          <span className="min-[1440px]:hidden">G. Murat</span>
+        </span>
       </a>
       <a href={ORIGIN_REPO_URL} target="_blank" rel="noreferrer" className={cn(link, 'text-[11px] text-[color-mix(in_oklab,var(--on-brand)_68%,var(--brand))]')}>
         <span className="hidden min-[1440px]:inline">{t('credit.fork')}</span>
@@ -151,14 +152,14 @@ function Credit() {
 
 export function TopBar() {
   const t = useT();
-  const { theme, lang, set } = useSettings();
   const hasKey = useSettings((s) => !!s.apiKey());
   const open = useUI((s) => s.open);
   const agentOn = useAgent((s) => s.enabled);
-  const ThemeIcon = THEME_ICON[theme];
 
   return (
     <header className="topbar relative flex h-13 shrink-0 items-center gap-1 border-b-2 border-(--brand-edge) bg-sidebar px-2">
+      {/* Left and right take equal room, so the tabs stay centred on the window. */}
+      <div className="flex min-w-0 flex-1 basis-0 items-center gap-1">
       <div className="flex items-center gap-2 rounded-md px-2 py-1 font-heading text-[15px] font-semibold">
         <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" width={28} height={28} className="size-7 shrink-0 rounded-md border-2 border-ink" draggable={false} />
         <span className="hidden whitespace-nowrap xl:inline">Miniature Studio</span>
@@ -166,70 +167,21 @@ export function TopBar() {
       </div>
       <span className="mx-1 h-5 w-px bg-border" />
       <ProjectSwitcher />
-      <ViewSwitcher className="view-tabs relative mx-auto shrink-0 self-end" />
+      </div>
+      <ViewSwitcher className="view-tabs relative shrink-0 self-end" />
 
-      <div className="flex items-center gap-1.5">
-        <Button variant="outline" size="sm" className={cn(TOP_BUTTON, "gap-2")} onClick={() => open('commands')} aria-label={t('topbar.commands')}>
-          <Command /> <span className="hidden xl:inline">{t('topbar.commands')}</span>
-          <Kbd className="hidden xl:inline-flex">{MOD} K</Kbd>
-        </Button>
-
+      {/* Commands, the agent, theme and language live in Settings: the bar keeps room for the tabs. */}
+      <div className="flex flex-1 basis-0 items-center justify-end gap-1.5">
+        {!hasKey && (
+          <Button size="sm" className="gap-2" onClick={() => useUI.getState().showKeySetup()}>
+            <KeyRound /> <span className="hidden min-[1440px]:inline">{t('topbar.keyMissing')}</span>
+          </Button>
+        )}
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon-sm" className={cn(TOP_BUTTON, "relative")} onClick={() => open('agent')} aria-label={t('agent.title')}>
-              <Bot />
-              {agentOn && <AgentStatusDot className="absolute top-1 right-1 size-1.5" />}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{t('agent.title')}</TooltipContent>
-        </Tooltip>
-
-        <DropdownMenu>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-sm" className={TOP_BUTTON} aria-label={t('topbar.theme')}>
-                  <ThemeIcon />
-                </Button>
-              </DropdownMenuTrigger>
-            </TooltipTrigger>
-            <TooltipContent>{t('topbar.theme')}</TooltipContent>
-          </Tooltip>
-          <DropdownMenuContent align="end">
-            {(['light', 'dark', 'system'] as const).map((value) => {
-              const Icon = THEME_ICON[value];
-              return (
-                <DropdownMenuItem key={value} onSelect={() => set({ theme: value })}>
-                  <Icon /> {t(`topbar.${value}`)}
-                  {theme === value && <Check className="ml-auto" />}
-                </DropdownMenuItem>
-              );
-            })}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <Button
-          variant="ghost"
-          size="sm"
-          className={cn(TOP_BUTTON, "w-10 font-mono text-xs uppercase")}
-          onClick={() => set({ lang: lang === 'fr' ? 'en' : 'fr' })}
-          aria-label={t('topbar.language')}
-        >
-          {lang}
-        </Button>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant={hasKey ? 'ghost' : 'default'}
-              size={hasKey ? 'icon-sm' : 'sm'}
-              // Without a key: straight to the provider and key fields (advanced options, left panel).
-              onClick={() => (hasKey ? open('settings') : useUI.getState().showKeySetup())}
-              aria-label={t('topbar.settings')}
-              className={cn(hasKey ? TOP_BUTTON : 'gap-2')}
-            >
+            <Button variant="ghost" size="icon-sm" onClick={() => open('settings')} aria-label={t('topbar.settings')} className={cn(TOP_BUTTON, 'relative')}>
               <Settings />
-              {!hasKey && <span className="hidden min-[1440px]:inline">{t('topbar.keyMissing')}</span>}
+              {agentOn && <AgentStatusDot className="absolute top-1 right-1 size-1.5" />}
             </Button>
           </TooltipTrigger>
           <TooltipContent>{t('topbar.settings')}</TooltipContent>

@@ -333,6 +333,7 @@ export const en = {
     needTitle: 'Enter the video title first.',
   },
   settings: {
+    tools: 'Tools',
     title: 'Settings',
     provider: 'Provider',
     replicate: 'Replicate',
@@ -458,8 +459,7 @@ export const en = {
     closeHistory: 'Hide the history',
   },
   credit: {
-    by: 'by Guillaume Murat',
-    byShort: 'by G. Murat',
+    by: 'by',
     fork: 'forked from Yoan Bernabeu',
     forkShort: 'fork of Y. Bernabeu',
     about: 'About',

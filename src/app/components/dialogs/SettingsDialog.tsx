@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Download, ExternalLink, Loader2, ShieldCheck, TriangleAlert, Upload } from 'lucide-react';
+import { Bot, Command, Download, ExternalLink, Loader2, ShieldCheck, TriangleAlert, Upload } from 'lucide-react';
+import { Kbd } from '../ui/kbd';
+import { MOD } from '../TopBar';
+import { AgentStatusDot } from './AgentDialog';
+import { useAgent } from '../../agent/bridge';
 import { APP_VERSION, AUTHOR_URL, ORIGIN_REPO_URL, SOURCE_URL } from '../../lib/about';
 import { toast } from 'sonner';
 import {
@@ -36,6 +40,8 @@ export function SettingsDialog() {
   const t = useT();
   const open = useUI((s) => s.dialog === 'settings');
   const close = useUI((s) => s.close);
+  const openDialog = useUI((s) => s.open);
+  const agentOn = useAgent((s) => s.enabled);
   const s = useSettings();
   const [usage, setUsage] = useState<{ usage: number; quota: number } | null>(null);
   const [busy, setBusy] = useState<'export' | 'import' | 'reset' | null>(null);
@@ -108,6 +114,18 @@ export function SettingsDialog() {
             </div>
           </Field>
 
+          <Field label={t('settings.tools')}>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => openDialog('commands')}>
+                <Command /> {t('topbar.commands')} <Kbd>{MOD} K</Kbd>
+              </Button>
+              <Button variant="outline" size="sm" className="relative gap-2" onClick={() => openDialog('agent')}>
+                <Bot /> {t('agent.title')}
+                {agentOn && <AgentStatusDot className="size-2" />}
+              </Button>
+            </div>
+          </Field>
+
           <Separator />
 
           <Field label={t('settings.data')} hint={usage ? t('settings.storage', { used: formatBytes(usage.usage), quota: formatBytes(usage.quota) }) : undefined}>
@@ -145,7 +163,7 @@ export function SettingsDialog() {
               {[
                 [t('credit.source'), SOURCE_URL],
                 [t('credit.origin'), ORIGIN_REPO_URL],
-                [t('credit.by'), AUTHOR_URL],
+                ['Guillaume Murat', AUTHOR_URL],
               ].map(([label, url]) => (
                 <li key={url}>
                   <a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-primary underline-offset-2 hover:underline">
