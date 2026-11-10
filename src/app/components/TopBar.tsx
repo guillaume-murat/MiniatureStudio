@@ -203,7 +203,8 @@ export function TopBar() {
             <Button
               variant={hasKey ? 'ghost' : 'default'}
               size={hasKey ? 'icon-sm' : 'sm'}
-              onClick={() => open('settings')}
+              // Without a key: straight to the provider and key fields (advanced options, left panel).
+              onClick={() => (hasKey ? open('settings') : useUI.getState().showKeySetup())}
               aria-label={t('topbar.settings')}
               className={cn(hasKey ? TOP_BUTTON : 'gap-2')}
             >

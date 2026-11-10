@@ -6,7 +6,8 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from './ui/resiz
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { useWorkspace } from '../stores/workspace';
 import { useSettings } from '../stores/settings';
-import { panelOpen, panelUsable, type SidePanel } from '../lib/panels';
+import { isMakingView, panelOpen, panelUsable, type SidePanel } from '../lib/panels';
+import { useUI } from '../stores/ui';
 import { useT, type TKey } from '../i18n';
 import { cn } from '../lib/utils';
 
@@ -60,6 +61,15 @@ export function SidePanels({ brief, center, history }: { brief: ReactNode; cente
     timer.current = setTimeout(() => setSliding(false), SLIDE_MS + 50);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open.brief, open.history]);
+
+  // Asked for the provider and key fields: the brief panel opens, in a view where it is used.
+  const keySetup = useUI((s) => s.keySetup);
+  useEffect(() => {
+    if (!keySetup) return;
+    if (!isMakingView(useWorkspace.getState().view)) useWorkspace.getState().setView('image');
+    if (useSettings.getState().closedPanels.brief) set({ closedPanels: { ...useSettings.getState().closedPanels, brief: false } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keySetup]);
 
   const toggle = (side: SidePanel) => set({ closedPanels: { ...closed, [side]: open[side] } });
 

@@ -43,14 +43,15 @@ export default function App() {
       requestPersistence();
       // After init: agent tools act on a loaded workspace.
       useAgent.getState().init();
-      if (!useSettings.getState().apiKey()) useUI.getState().open('settings');
+      if (!useSettings.getState().apiKey()) useUI.getState().showKeySetup();
     })();
 
     if (import.meta.env.PROD && 'serviceWorker' in navigator) {
       navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {});
     }
 
-    const onOpenSettings = () => useUI.getState().open('settings');
+    // A call without a key: the provider and key fields, in the advanced options.
+    const onOpenSettings = () => useUI.getState().showKeySetup();
     window.addEventListener('nt:open-settings', onOpenSettings);
     return () => window.removeEventListener('nt:open-settings', onOpenSettings);
   }, []);

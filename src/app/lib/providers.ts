@@ -1,5 +1,6 @@
 import type { GenerationParams, ModelId, Provider } from './types';
 import { dataUrlToBlob, fetchBlob } from './images';
+import { gptSize, isGptImage } from './models';
 
 /**
  * Provider layer. Replicate has no browser CORS support, so its calls go through
@@ -11,13 +12,16 @@ import { dataUrlToBlob, fetchBlob } from './images';
 const PROXY_URL = '/functions/replicate-proxy?url=';
 
 const REPLICATE_IMAGE_MODELS: Record<ModelId, string> = {
+  'gpt-image-2.5-sunburst': 'openai/gpt-image-2.5-sunburst',
   'nano-banana-pro': 'google/nano-banana-pro',
   'nano-banana-2': 'google/nano-banana-2',
   'nano-banana-2-lite': 'google/nano-banana-2-lite',
 };
 const REPLICATE_TEXT_MODEL = 'google/gemini-3-flash';
 
-const GEMINI_IMAGE_MODELS: Record<ModelId, string> = {
+/** Google only serves Nano Banana (no GPT Image). */
+type NanoBanana = Exclude<ModelId, 'gpt-image-2.5-sunburst'>;
+const GEMINI_IMAGE_MODELS: Record<NanoBanana, string> = {
   'nano-banana-pro': 'gemini-3-pro-image',
   'nano-banana-2': 'gemini-3.1-flash-image',
   'nano-banana-2-lite': 'gemini-3.1-flash-lite-image',
@@ -30,16 +34,19 @@ const VERTEX_BASE = '/vertex/models';
 /** Stands in for the key when Vertex should authenticate with gcloud (no express-mode key). */
 export const VERTEX_GCLOUD = 'gcloud';
 
-const OPENROUTER_IMAGE_MODELS: Record<ModelId, string> = {
+const OPENROUTER_IMAGE_MODELS: Partial<Record<ModelId, string>> = {
   'nano-banana-pro': 'google/gemini-3-pro-image',
   'nano-banana-2': 'google/gemini-3.1-flash-image',
   'nano-banana-2-lite': 'google/gemini-3.1-flash-lite-image',
 };
 const OPENROUTER_TEXT_MODEL = 'google/gemini-3.8-flash';
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+/** OpenRouter's image route, the one GPT Image is served on. */
+const OPENROUTER_IMAGES_URL = 'https://openrouter.ai/api/v1/images';
+const OPENROUTER_GPT_IMAGE = 'openai/gpt-image-2.5-sunburst';
 
 // Mammouth speaks the same OpenAI-style dialect as OpenRouter, images included.
-const MAMMOUTH_IMAGE_MODELS: Record<ModelId, string> = {
+const MAMMOUTH_IMAGE_MODELS: Partial<Record<ModelId, string>> = {
   'nano-banana-pro': 'gemini-3-pro-image-preview',
   'nano-banana-2': 'gemini-3.1-flash-image-preview',
   'nano-banana-2-lite': 'gemini-3.1-flash-lite-image',
@@ -49,7 +56,7 @@ const MAMMOUTH_URL = 'https://api.mammouth.ai/v1/chat/completions';
 
 /** OpenAI-compatible providers: endpoint and models. */
 type ChatProvider = Extract<Provider, 'openrouter' | 'mammouth'>;
-const CHAT_PROVIDERS: Record<ChatProvider, { url: string; image: Record<ModelId, string>; text: string }> = {
+const CHAT_PROVIDERS: Record<ChatProvider, { url: string; image: Partial<Record<ModelId, string>>; text: string }> = {
   openrouter: { url: OPENROUTER_URL, image: OPENROUTER_IMAGE_MODELS, text: OPENROUTER_TEXT_MODEL },
   mammouth: { url: MAMMOUTH_URL, image: MAMMOUTH_IMAGE_MODELS, text: MAMMOUTH_TEXT_MODEL },
 };
@@ -188,8 +195,14 @@ async function replicateRun(
   return prediction;
 }
 
+/** Not served by this provider (the settings switch back to Nano Banana Pro; this is the safety net). */
+function unavailable(model: ModelId, provider: Provider): ProviderError {
+  return new ProviderError(`${model} is not available with ${provider}`, 400, null, provider);
+}
+
 async function replicateImage(req: ImageRequest, signal: AbortSignal): Promise<Blob> {
   const { params } = req;
+  if (isGptImage(params.model)) return replicateGptImage(req, signal);
   const input: Record<string, unknown> = {
     prompt: req.prompt,
     image_input: req.images,
@@ -201,6 +214,24 @@ async function replicateImage(req: ImageRequest, signal: AbortSignal): Promise<B
   // Only Nano Banana Pro exposes a safety level.
   if (params.model === 'nano-banana-pro') input.safety_filter_level = params.safety;
 
+  const prediction = await replicateRun(REPLICATE_IMAGE_MODELS[params.model], input, req.apiKey, signal, req.onProgress);
+  const url = Array.isArray(prediction.output) ? prediction.output[0] : prediction.output;
+  if (!url) throw new ProviderError('No image in response', 500, prediction, 'replicate');
+  return fetchBlob(url, signal);
+}
+
+/** GPT Image 2.5 Sunburst on Replicate: the exact size and the quality level. */
+async function replicateGptImage(req: ImageRequest, signal: AbortSignal): Promise<Blob> {
+  const { params } = req;
+  const input: Record<string, unknown> = {
+    prompt: req.prompt,
+    aspect_ratio: gptSize(params.resolution, params.aspectRatio),
+    quality: params.quality ?? 'medium',
+    number_of_images: 1,
+    output_format: params.format === 'jpg' ? 'jpeg' : 'png',
+    moderation: 'low',
+  };
+  if (req.images.length) input.input_images = req.images;
   const prediction = await replicateRun(REPLICATE_IMAGE_MODELS[params.model], input, req.apiKey, signal, req.onProgress);
   const url = Array.isArray(prediction.output) ? prediction.output[0] : prediction.output;
   if (!url) throw new ProviderError('No image in response', 500, prediction, 'replicate');
@@ -274,7 +305,7 @@ async function geminiImage(req: ImageRequest, signal: AbortSignal): Promise<Blob
     const provider = req.params.provider as GoogleProvider;
     const data = await geminiCall(
       provider,
-      GEMINI_IMAGE_MODELS[req.params.model],
+      GEMINI_IMAGE_MODELS[req.params.model as NanoBanana] ?? throwUnavailable(req.params.model, req.params.provider),
       {
         contents: [{ role: 'user', parts }],
         generationConfig: {
@@ -358,15 +389,62 @@ async function openRouterCall(
   return data;
 }
 
-async function openRouterImage(req: ImageRequest, signal: AbortSignal): Promise<Blob> {
+function throwUnavailable(model: ModelId, provider: Provider): never {
+  throw unavailable(model, provider);
+}
+
+interface OpenRouterImagesResponse {
+  data?: Array<{ b64_json?: string; url?: string; media_type?: string }>;
+  error?: { message?: string; code?: number | string };
+}
+
+/**
+ * GPT Image on OpenRouter goes through its image route, not chat completions. It takes an
+ * aspect ratio and a quality, not a size: OpenAI picks the resolution.
+ */
+async function openRouterGptImage(req: ImageRequest, signal: AbortSignal): Promise<Blob> {
   const started = Date.now();
   const tick = req.onProgress ? setInterval(() => req.onProgress?.(Date.now() - started), 500) : undefined;
+  try {
+    const res = await fetch(OPENROUTER_IMAGES_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${req.apiKey}`, 'HTTP-Referer': location.origin, 'X-Title': 'Miniature Studio' },
+      body: JSON.stringify({
+        model: OPENROUTER_GPT_IMAGE,
+        prompt: req.prompt,
+        aspect_ratio: req.params.aspectRatio,
+        quality: req.params.quality ?? 'medium',
+        output_format: 'png',
+        n: 1,
+        ...(req.images.length ? { input_references: req.images.map((url) => ({ type: 'image_url', image_url: { url } })) } : {}),
+      }),
+      signal,
+    });
+    if (!res.ok) throw await readError(res, 'openrouter');
+    const data: OpenRouterImagesResponse = await res.json();
+    if (data.error) throw new ProviderError(data.error.message || 'openrouter error', typeof data.error.code === 'number' ? data.error.code : 500, data, 'openrouter');
+    const image = data.data?.[0];
+    if (image?.b64_json) return dataUrlToBlob(`data:${image.media_type || 'image/png'};base64,${image.b64_json}`);
+    if (image?.url) return image.url.startsWith('data:') ? dataUrlToBlob(image.url) : fetchBlob(image.url, signal);
+    throw new ProviderError('openrouter returned no image', 422, data, 'openrouter');
+  } finally {
+    clearInterval(tick);
+  }
+}
+
+async function openRouterImage(req: ImageRequest, signal: AbortSignal): Promise<Blob> {
   const provider = req.params.provider as ChatProvider;
+  if (isGptImage(req.params.model)) {
+    if (provider !== 'openrouter') throw unavailable(req.params.model, provider);
+    return openRouterGptImage(req, signal);
+  }
+  const started = Date.now();
+  const tick = req.onProgress ? setInterval(() => req.onProgress?.(Date.now() - started), 500) : undefined;
   try {
     const data = await openRouterCall(
       provider,
       {
-        model: CHAT_PROVIDERS[provider].image[req.params.model],
+        model: CHAT_PROVIDERS[provider].image[req.params.model] ?? throwUnavailable(req.params.model, provider),
         messages: [{ role: 'user', content: openRouterContent(req.prompt, req.images) }],
         modalities: ['image', 'text'],
         image_config: { aspect_ratio: req.params.aspectRatio, image_size: req.params.resolution },

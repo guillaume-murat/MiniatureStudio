@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { imagePrice } from '../pricing';
+import { imagePrice } from '../models';
 
 describe('imagePrice', () => {
   it('follows the model and the resolution, in the language’s format', () => {

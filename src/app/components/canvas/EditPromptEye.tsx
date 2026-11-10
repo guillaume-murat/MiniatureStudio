@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { PromptEye } from '../brief/PromptEye';
 import { useBlobUrl } from '../../hooks/use-blob-url';
 import { useWorkspace, type EditPreview } from '../../stores/workspace';
-import { imagePrice } from '../../lib/pricing';
+import { imagePrice } from '../../lib/models';
 import { useSettings } from '../../stores/settings';
 import { useT, type TKey } from '../../i18n';
 import type { ModelId } from '../../lib/types';
 
 const MODEL_NAMES: Record<ModelId, TKey> = {
+  'gpt-image-2.5-sunburst': 'brief.modelGpt',
   'nano-banana-pro': 'brief.modelPro',
   'nano-banana-2': 'brief.model2',
   'nano-banana-2-lite': 'brief.modelLite',
@@ -59,7 +60,7 @@ export function EditPromptEye({ instruction }: { instruction: string }) {
         <div className="space-y-2 font-sans">
           <p>{preview.region ? t('editPrompt.areaPainted') : t('editPrompt.areaWhole')}</p>
           <p>
-            {t('editPrompt.model', { name: t(MODEL_NAMES[preview.params.model]) })} · {preview.params.resolution} · {imagePrice(preview.params.model, preview.params.resolution, lang)}
+            {t('editPrompt.model', { name: t(MODEL_NAMES[preview.params.model]) })} · {preview.params.resolution} · {imagePrice(preview.params.model, preview.params.resolution, lang, preview.params.quality)}
           </p>
           <div className="space-y-1">
             <p className="font-medium text-foreground">{t('editPrompt.images', { n: preview.images.length })}</p>

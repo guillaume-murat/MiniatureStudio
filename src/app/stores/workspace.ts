@@ -21,6 +21,7 @@ import { dimensions, highlightRegion, mergeWithMask, normaliseUpload, prepareRef
 import { errorLog, explainError, type JobContext, type JobStep } from '../lib/errors';
 import { smoothRegion } from '../lib/smooth';
 import { isMakingView, type View as PanelView } from '../lib/panels';
+import { editModel } from '../lib/models';
 import { addStroke, EMPTY_SKETCH, isEmptySketch, isSketch, sketchBlob, undoStroke, type Sketch, type SketchStroke } from '../lib/sketch';
 import { randomSeed } from '../lib/channel';
 import { newGeneration, type VersionInput, historyOf, isOlderVersion, versionsAfter } from '../lib/versions';
@@ -262,11 +263,11 @@ const EMPTY_BRIEF: Brief = { videoTitle: '', brief: '', styleId: '' };
 
 /** A new project's output settings. */
 const DEFAULT_OUTPUT: ProjectOutput = { model: 'nano-banana-pro', aspectRatio: '16:9', resolution: '1K', format: 'png', safety: 'block_only_high', count: 1 };
-const OUTPUT_KEYS = ['model', 'aspectRatio', 'resolution', 'format', 'safety', 'count'] as const;
+const OUTPUT_KEYS = ['model', 'aspectRatio', 'resolution', 'format', 'safety', 'count', 'quality'] as const;
 
 function currentOutput(): ProjectOutput {
   const s = useSettings.getState();
-  return { model: s.model, aspectRatio: s.aspectRatio, resolution: s.resolution, format: s.format, safety: s.safety, count: s.count };
+  return { model: s.model, aspectRatio: s.aspectRatio, resolution: s.resolution, format: s.format, safety: s.safety, count: s.count, quality: s.quality };
 }
 
 // ─── Per-project brief panel ─────────────────────────────
@@ -438,7 +439,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       // Clean image first (what gets edited), marked copy second (where to edit):
       // sending only the marked copy lets the magenta tint bleed into the result.
       images: [source.blob, highlighted, ...people],
-      params: { ...useSettings.getState().params(), aspectRatio: source.params.aspectRatio, ...(model ? { model } : {}) },
+      // The area tools stay on Nano Banana (`editModel`): GPT Image is for generating and whole-image edits.
+      params: nanoBananaParams({ aspectRatio: source.params.aspectRatio, ...(model ? { model } : {}) }),
       parent: source,
       apiKey,
       finalize: (edited) => mergeWithMask(source.blob, edited, mask),
@@ -449,6 +451,15 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
   /** The area painted with the mask tool, if any: an edit then only changes it. */
   function paintedMask() {
     return get().tool === 'mask' && get().hasMask ? maskCanvas : null;
+  }
+
+  /** The settings' params on Nano Banana: GPT Image becomes Pro (area tools, reframing, upscaling). */
+  function nanoBananaParams(patch: Partial<GenerationParams> = {}): GenerationParams {
+    const params = { ...useSettings.getState().params(), ...patch };
+    const model = editModel(params.model);
+    if (model === params.model) return params;
+    const { quality: _quality, ...rest } = params;
+    return { ...rest, model, resolution: patch.resolution ?? useSettings.getState().resolution };
   }
 
   function editParams(source: Generation): GenerationParams {
@@ -673,7 +684,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       const generations = await db.listGenerations(id);
       const { personas } = get();
       get().setTool(null);
-      useSettings.getState().set(inputs.output);
+      useSettings.getState().set({ ...inputs.output, quality: inputs.output.quality ?? useSettings.getState().quality });
       set({
         projectId: id,
         generations,
@@ -913,9 +924,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         images: [source.blob],
         // 2K is above 1920×1080 at every aspect ratio, and Lite does not reach it.
         params: {
-          ...useSettings.getState().params(),
-          aspectRatio: source.params.aspectRatio,
-          resolution: '2K',
+          ...nanoBananaParams({ aspectRatio: source.params.aspectRatio, resolution: '2K' }),
           ...(useSettings.getState().model === 'nano-banana-2-lite' ? { model: 'nano-banana-2' as const } : {}),
         },
         parent: source,
@@ -1135,7 +1144,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
           prompt: t('reframe.done'),
           fullPrompt: buildOutpaintPrompt(promptLang()),
           images: [composed],
-          params: { ...useSettings.getState().params(), aspectRatio: source.params.aspectRatio },
+          params: nanoBananaParams({ aspectRatio: source.params.aspectRatio }),
           parent: source,
           apiKey,
           // Only the empty areas come from the model; the moved image stays pixel-exact.

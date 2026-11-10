@@ -1,9 +1,10 @@
+import { IMAGE_QUALITIES, isGptImage, modelAvailable, resolvedResolution } from '../lib/models';
 import { parseClosedPanels, type ClosedPanels } from '../lib/panels';
 import { create } from 'zustand';
 import { VERTEX_GCLOUD } from '../lib/providers';
 import { parseBarOffset, type BarOffset } from '../lib/editBar';
 import { outputRatio } from '../lib/prompt';
-import type { Lang, OutputRatio, GenerationParams, ModelId, OutputFormat, Provider, Resolution, SafetyLevel } from '../lib/types';
+import type { ImageQuality, Lang, OutputRatio, GenerationParams, ModelId, OutputFormat, Provider, Resolution, SafetyLevel } from '../lib/types';
 
 export type Theme = 'light' | 'dark' | 'system';
 export type { Lang };
@@ -20,6 +21,8 @@ interface SettingsState {
   format: OutputFormat;
   safety: SafetyLevel;
   count: 1 | 2 | 4;
+  /** GPT Image's quality level. */
+  quality: ImageQuality;
   theme: Theme;
   lang: Lang;
   /** Where the edit bar was moved to on this device; null at its default place. */
@@ -76,7 +79,8 @@ function load() {
     provider: (PROVIDERS.includes(prefs.provider) ? prefs.provider : 'replicate') as Provider,
     keys: Object.fromEntries(PROVIDERS.map((p) => [p, safeGet(store, KEY_PREFIX + p) ?? ''])) as Record<Provider, string>,
     keyPersistence,
-    model: (['nano-banana-2', 'nano-banana-2-lite'].includes(prefs.model) ? prefs.model : 'nano-banana-pro') as ModelId,
+    model: (['nano-banana-2', 'nano-banana-2-lite', 'gpt-image-2.5-sunburst'].includes(prefs.model) ? prefs.model : 'nano-banana-pro') as ModelId,
+    quality: (IMAGE_QUALITIES.includes(prefs.quality) ? prefs.quality : 'medium') as ImageQuality,
     aspectRatio: outputRatio(prefs.aspectRatio),
     resolution: (prefs.resolution ?? '1K') as Resolution,
     format: (prefs.format ?? 'png') as OutputFormat,
@@ -90,8 +94,8 @@ function load() {
 }
 
 function persistPrefs(s: SettingsState): void {
-  const { provider, keyPersistence, model, aspectRatio, resolution, format, safety, count, theme, editBarOffset, closedPanels } = s;
-  safeSet(local, PREFS_KEY, JSON.stringify({ provider, keyPersistence, model, aspectRatio, resolution, format, safety, count, theme, editBarOffset, closedPanels }));
+  const { provider, keyPersistence, model, aspectRatio, resolution, format, safety, count, quality, theme, editBarOffset, closedPanels } = s;
+  safeSet(local, PREFS_KEY, JSON.stringify({ provider, keyPersistence, model, aspectRatio, resolution, format, safety, count, quality, theme, editBarOffset, closedPanels }));
   safeSet(local, 'nano_lang', s.lang);
 }
 
@@ -107,6 +111,8 @@ export const useSettings = create<SettingsState>((set, get) => ({
   ...load(),
   set: (patch) => {
     set(patch);
+    // A provider that doesn't serve the chosen model (GPT Image off Replicate and OpenRouter): back to Nano Banana Pro.
+    if (!modelAvailable(get().model, get().provider)) set({ model: 'nano-banana-pro' });
     persistPrefs(get());
     if ('keyPersistence' in patch) persistKeys(get());
   },
@@ -115,9 +121,17 @@ export const useSettings = create<SettingsState>((set, get) => ({
     persistKeys(get());
   },
   params: () => {
-    const { provider, model, aspectRatio, resolution, format, safety } = get();
-    // Lite only exists in 1K.
-    return { provider, model, aspectRatio, resolution: model === 'nano-banana-2-lite' ? '1K' : resolution, format: provider === 'replicate' ? format : 'png', safety };
+    const { provider, model, aspectRatio, resolution, format, safety, quality } = get();
+    // Lite only exists in 1K, GPT Image stops at 2K (and OpenRouter picks its size: the setting is then unused).
+    return {
+      provider,
+      model,
+      aspectRatio,
+      resolution: resolvedResolution(model, provider, resolution) ?? resolution,
+      format: provider === 'replicate' ? format : 'png',
+      safety,
+      ...(isGptImage(model) ? { quality } : {}),
+    };
   },
   // Vertex works without a key: the local helper authenticates with gcloud.
   apiKey: () => get().keys[get().provider] || (get().provider === 'vertex' ? VERTEX_GCLOUD : ''),

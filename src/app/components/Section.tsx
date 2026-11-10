@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { PromptEye } from './brief/PromptEye';
 import { cn } from '../lib/utils';
@@ -11,6 +11,7 @@ export function Section({
   foldable,
   startFolded,
   prompt,
+  openSignal,
 }: {
   title: ReactNode;
   action?: ReactNode;
@@ -21,10 +22,18 @@ export function Section({
   startFolded?: boolean;
   /** The text this section adds to the prompt, behind an eye beside its title. */
   prompt?: string;
+  /** Each new value unfolds the section and brings it into view (asked from elsewhere). */
+  openSignal?: number;
 }) {
   const [open, setOpen] = useState(!startFolded);
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!openSignal) return;
+    setOpen(true);
+    requestAnimationFrame(() => ref.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+  }, [openSignal]);
   return (
-    <section className={cn('space-y-2.5', className)}>
+    <section ref={ref} className={cn('space-y-2.5', className)}>
       <div className="flex min-h-6 items-center justify-between gap-2">
         <h3 className="flex items-center gap-1 font-heading text-[15px] font-semibold text-foreground">
           {foldable ? (

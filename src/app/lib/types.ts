@@ -1,6 +1,8 @@
 import type { Sketch } from './sketch';
 export type Provider = 'replicate' | 'gemini' | 'openrouter' | 'mammouth' | 'vertex';
-export type ModelId = 'nano-banana-pro' | 'nano-banana-2' | 'nano-banana-2-lite';
+export type ModelId = 'nano-banana-pro' | 'nano-banana-2' | 'nano-banana-2-lite' | 'gpt-image-2.5-sunburst';
+/** GPT Image's quality level (it decides its price); Nano Banana has none. */
+export type ImageQuality = 'low' | 'medium' | 'high';
 /** The interface's language, which the prompts follow. */
 export type Lang = 'en' | 'fr';
 
@@ -17,6 +19,8 @@ export interface GenerationParams {
   resolution: Resolution;
   format: OutputFormat;
   safety: SafetyLevel;
+  /** GPT Image only. */
+  quality?: ImageQuality;
 }
 
 /** How an image came to exist: fresh generation, whole-image edit, masked edit, or imported. */
@@ -79,7 +83,7 @@ export interface ProjectInputs {
   sketch?: Sketch;
 }
 
-export type ProjectOutput = Pick<GenerationParams, 'model' | 'aspectRatio' | 'resolution' | 'format' | 'safety'> & { count: 1 | 2 | 4 };
+export type ProjectOutput = Pick<GenerationParams, 'model' | 'aspectRatio' | 'resolution' | 'format' | 'safety' | 'quality'> & { count: 1 | 2 | 4 };
 
 /** The channel page preview of a project: what its six videos show. */
 export interface ChannelPage {
