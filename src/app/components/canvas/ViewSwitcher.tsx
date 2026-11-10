@@ -1,4 +1,4 @@
-import { Grid2x2, ImageIcon, PanelsTopLeft, Tv } from 'lucide-react';
+import { Grid2x2, ImageIcon, PanelsTopLeft, Pencil, Tv } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group';
 import { selectedGeneration, useWorkspace, type ViewMode } from '../../stores/workspace';
 import { useT } from '../../i18n';
@@ -8,7 +8,7 @@ import { cn } from '../../lib/utils';
 export const TOP_BUTTON =
   'border-[1.5px] border-border bg-background text-foreground shadow-btn-sm hover:bg-accent hover:text-accent-foreground dark:bg-background dark:hover:bg-accent';
 
-/** Image / feed preview / channel preview / compare: in the top bar. */
+/** Image / sketch / feed preview / channel preview / compare: in the top bar. */
 export function ViewSwitcher({ className }: { className?: string }) {
   const t = useT();
   const view = useWorkspace((s) => s.view);
@@ -19,6 +19,9 @@ export function ViewSwitcher({ className }: { className?: string }) {
     <ToggleGroup type="single" size="sm" spacing={1.5} value={view} onValueChange={(v) => v && setView(v as ViewMode)} className={className}>
       <ToggleGroupItem value="image" className={cn(TOP_BUTTON, 'gap-1.5 px-2.5 text-xs data-[state=on]:border-ink data-[state=on]:bg-ink data-[state=on]:text-on-ink')} title={t('canvas.viewImage')} aria-label={t('canvas.viewImage')}>
         <ImageIcon /> <span>{t('canvas.viewImage')}</span>
+      </ToggleGroupItem>
+      <ToggleGroupItem value="sketch" className={cn(TOP_BUTTON, 'gap-1.5 px-2.5 text-xs data-[state=on]:border-ink data-[state=on]:bg-ink data-[state=on]:text-on-ink')} title={t('canvas.viewSketch')} aria-label={t('canvas.viewSketch')}>
+        <Pencil /> <span>{t('canvas.viewSketch')}</span>
       </ToggleGroupItem>
       <ToggleGroupItem value="feed" className={cn(TOP_BUTTON, 'gap-1.5 px-2.5 text-xs data-[state=on]:border-ink data-[state=on]:bg-ink data-[state=on]:text-on-ink')} title={t('canvas.viewFeed')} aria-label={t('canvas.viewFeed')} disabled={!gen}>
         <Tv /> <span>{t('canvas.viewFeed')}</span>

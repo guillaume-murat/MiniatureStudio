@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { brandWeightLine, buildEditPrompt, buildFaceFixPrompt, buildGenerationPrompt, buildHealPrompt, identityLine, buildOutpaintPrompt, buildRegionEditPrompt, buildUpscalePrompt, colorsLine, DEFAULT_PROMPT_OPTIONS, describeImages, formatLine, imagesHeader, marginLine, outputRatio, priorityLine, qualityLine, sceneLine, styleLine, textLine, titleLine, titlePreviewLine, titleZoneLine } from '../prompt';
+import { brandWeightLine, buildEditPrompt, buildFaceFixPrompt, buildGenerationPrompt, buildHealPrompt, identityLine, buildOutpaintPrompt, buildRegionEditPrompt, buildUpscalePrompt, colorsLine, DEFAULT_PROMPT_OPTIONS, describeImages, formatLine, imagesHeader, marginLine, outputRatio, priorityLine, qualityLine, sceneLine, sketchLine, sketchRenderLine, styleLine, textLine, titleLine, titlePreviewLine, titleZoneLine } from '../prompt';
 
 const base = { lang: 'fr' as const, brief: 'Une développeuse sur Mars', aspectRatio: '16:9' as const, roles: [] };
 
@@ -158,6 +158,51 @@ describe('buildGenerationPrompt', () => {
     const p = buildGenerationPrompt({ ...base, style: 'Pâte à modeler', colors: ['#ff0000', '#00ff00'] });
     expect(p).toContain('Direction artistique : Pâte à modeler');
     expect(p).toContain('Couleurs de marque : #ff0000, #00ff00');
+  });
+});
+
+describe('a generation from a sketch', () => {
+  const sketch = { kind: 'sketch' } as const;
+  const roles = [sketch, { kind: 'persona', name: 'Alex' }, { kind: 'reference' }] as const;
+
+  it('sends the sketch as image 1, its composition rule and the rendering, without style, generated text or title zone', () => {
+    for (const lang of ['fr', 'en'] as const) {
+      let p = buildGenerationPrompt({ ...base, lang, roles: [...roles], videoTitle: 'Mars', style: 'Flat', colors: ['#ff0000'], options: { ...DEFAULT_PROMPT_OPTIONS, text: 'style', titleZone: 'top' } });
+      const shown = [formatLine(lang, '16:9'), titleLine(lang, 'Mars'), sketchLine(lang), sceneLine(lang, base.brief), identityLine(lang, [...roles]), sketchRenderLine(lang), imagesHeader(lang), ...describeImages(lang, [...roles]), colorsLine(lang, ['#ff0000']), qualityLine(lang), marginLine(lang), priorityLine(lang)];
+      for (const block of shown) {
+        expect(p).toContain(block);
+        p = p.replace(block, '');
+      }
+      expect(p.trim()).toBe('');
+    }
+  });
+
+  it('follows the composition, never the drawing, and asks for a realistic photo', () => {
+    expect(sketchLine('fr')).toContain('image 1');
+    expect(sketchLine('fr')).toContain('N’imite jamais son trait');
+    expect(sketchLine('en')).toContain('Never copy its lines');
+    expect(sketchRenderLine('fr')).toContain('photo réaliste et percutante de miniature YouTube');
+    expect(sketchRenderLine('en')).toContain('realistic, striking YouTube thumbnail photo');
+  });
+
+  it('numbers the people and references after the sketch', () => {
+    expect(describeImages('fr', [...roles])).toEqual([expect.stringMatching(/^- Image 1 .*croquis/), expect.stringMatching(/^- Image 2 /), expect.stringMatching(/^- Image 3 /)]);
+    expect(identityLine('fr', [...roles])).toContain('Alex (image 2)');
+  });
+
+  it('from the Gribouillis view with a blank sheet, keeps the scene and the rendering but sends no sketch', () => {
+    let p = buildGenerationPrompt({ ...base, sketchView: true, style: 'Flat', options: { ...DEFAULT_PROMPT_OPTIONS, text: 'style', titleZone: 'top' } });
+    for (const block of [formatLine('fr', '16:9'), sceneLine('fr', base.brief), sketchRenderLine('fr'), qualityLine('fr'), marginLine('fr'), priorityLine('fr')]) {
+      expect(p).toContain(block);
+      p = p.replace(block, '');
+    }
+    expect(p.trim()).toBe('');
+  });
+
+  it('leaves the scene out when it is empty', () => {
+    const p = buildGenerationPrompt({ ...base, brief: '  ', roles: [sketch] });
+    expect(p).not.toContain('Scène :');
+    expect(p).toContain(sketchLine('fr'));
   });
 });
 

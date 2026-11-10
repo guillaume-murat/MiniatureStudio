@@ -67,6 +67,10 @@ _À éviter : barre de prompt, barre d'outils._
 
 **Référence** (reference) : une image jointe avec un rôle précis : composition, style, objet, décor ou usage libre.
 
+**Gribouillis** (sketch view) : la vue où le créateur dessine la composition de sa miniature au pinceau noir sur une feuille blanche, puis génère à partir de ce dessin.
+
+**Croquis** (sketch) : le dessin noir sur blanc de la vue Gribouillis, propre à chaque projet. Le modèle en suit la composition (placement, tailles, poses, cadrage), jamais le trait.
+
 **Fournisseur** (provider) : le service qui exécute les modèles avec la clé du créateur : Replicate, Google Gemini, OpenRouter, Mammouth ou Vertex AI.
 
 ## Tester

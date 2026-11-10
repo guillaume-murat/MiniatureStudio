@@ -22,6 +22,7 @@ import { useSettings } from '../../stores/settings';
 import { useUI } from '../../stores/ui';
 import { sceneLine, styleLine, titlePreviewLine } from '../../lib/prompt';
 import { findStyle } from '../../lib/styles';
+import { isEmptySketch } from '../../lib/sketch';
 import { useT } from '../../i18n';
 
 /** The prompt the next generation would send, on hover of an eye beside Generate (same code path as `generate`). */
@@ -29,11 +30,12 @@ function NextPromptEye() {
   const t = useT();
   const previewPrompt = useWorkspace((s) => s.previewPrompt);
   const scene = useWorkspace((s) => s.brief.brief);
+  const sketchView = useWorkspace((s) => s.view === 'sketch');
   // Read on each render: the store changes as the brief does.
   useWorkspace();
   return (
     <PromptEye title={t('prompt.next')} side="top" large>
-      {!scene.trim() && <p className="mb-1 font-sans not-italic">{t('prompt.emptyBrief')}</p>}
+      {!scene.trim() && !sketchView && <p className="mb-1 font-sans not-italic">{t('prompt.emptyBrief')}</p>}
       <p className="whitespace-pre-wrap italic">{previewPrompt()}</p>
     </PromptEye>
   );
@@ -81,6 +83,9 @@ export function BriefPanel() {
   const { brief, setBrief, generate, jobs, cancelAll, customStyles, personaIds } = useWorkspace();
   const open = useUI((s) => s.open);
   const running = jobs.filter((j) => j.status === 'running' && j.kind === 'generate').length;
+  // The Gribouillis view: the sketch sets the composition and the rendering, the scene is optional.
+  const sketchView = useWorkspace((s) => s.view === 'sketch');
+  const sketch = useWorkspace((s) => s.sketch);
 
   return (
     <div className="neutral-panel flex h-full flex-col">
@@ -93,7 +98,7 @@ export function BriefPanel() {
             action={
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="xs" className="text-primary" onClick={() => open('assistant')}>
+                  <Button variant="ghost" size="xs" className="text-primary" disabled={sketchView} onClick={() => open('assistant')}>
                     <Sparkles /> {t('brief.assistant')}
                   </Button>
                 </TooltipTrigger>
@@ -109,17 +114,17 @@ export function BriefPanel() {
                 placeholder={t('brief.videoTitlePlaceholder')}
               />
             </Field>
-            <Field label={t('brief.brief')} htmlFor="brief" required prompt={sceneLine(lang, brief.brief)}>
+            <Field label={t('brief.brief')} htmlFor="brief" required={!sketchView} prompt={sketchView && !brief.brief.trim() ? undefined : sceneLine(lang, brief.brief)}>
               <Textarea
                 id="brief"
-                required
+                required={!sketchView}
                 value={brief.brief}
                 onChange={(e) => setBrief({ brief: e.target.value })}
                 placeholder={t('brief.briefPlaceholder')}
                 className="min-h-28 resize-y"
               />
             </Field>
-            <Field label={t('brief.style')} prompt={styleLine(lang, findStyle(brief.styleId, customStyles)?.prompt[lang], personaIds.length)}>
+            <Field label={t('brief.style')} disabledReason={sketchView ? t('sketch.greyed') : undefined} prompt={styleLine(lang, findStyle(brief.styleId, customStyles)?.prompt[lang], personaIds.length)}>
               <StylePicker />
             </Field>
             <GeneratedTextField />
@@ -139,7 +144,7 @@ export function BriefPanel() {
         <Button
           size="lg"
           className="flex-1 gap-2"
-          disabled={!brief.brief.trim()}
+          disabled={!brief.brief.trim() && !(sketchView && !isEmptySketch(sketch))}
           onClick={() => {
             generate();
           }}

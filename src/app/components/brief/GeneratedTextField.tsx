@@ -10,12 +10,13 @@ import type { PromptOptions } from '../../lib/types';
 /** Whether the model may write text in the image. A style that adds text needs it: « Aucun » is then locked. */
 export function GeneratedTextField() {
   const t = useT();
+  const sketchView = useWorkspace((s) => s.view === 'sketch');
   const lang = useSettings((s) => s.lang);
   const { brief, setBrief, promptOptions, customStyles } = useWorkspace();
   const locked = findStyle(brief.styleId, customStyles)?.preset?.text === 'style';
   const text = promptOptions().text;
   return (
-    <Field label={t('promptOptions.text')} prompt={textLine(lang, text)} hint={locked ? t('promptOptions.textLocked') : t('promptOptions.presetHint')}>
+    <Field label={t('promptOptions.text')} disabledReason={sketchView ? t('sketch.greyed') : undefined} prompt={textLine(lang, text)} hint={locked ? t('promptOptions.textLocked') : t('promptOptions.presetHint')}>
       <ToggleGroup
         type="single"
         variant="outline"

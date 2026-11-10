@@ -52,6 +52,7 @@ export function Field({
   className,
   required,
   prompt,
+  disabledReason,
 }: {
   label: ReactNode;
   hint?: ReactNode;
@@ -61,18 +62,26 @@ export function Field({
   required?: boolean;
   /** The text this input adds to the prompt, behind an eye beside its title. */
   prompt?: string;
+  /** Greyed and not sent, keeping its value (the Gribouillis view), with why. */
+  disabledReason?: ReactNode;
 }) {
   return (
-    <div className={cn('space-y-1.5', className)}>
-      <div className="flex items-center gap-1">
+    <div className={cn('space-y-1.5', className)} aria-disabled={disabledReason ? true : undefined}>
+      <div className={cn('flex items-center gap-1', disabledReason && 'opacity-50')}>
         <label htmlFor={htmlFor} className="text-sm font-medium">
           {label}
           {required && <span aria-hidden className="ml-1 text-destructive">*</span>}
         </label>
-        {prompt !== undefined && <PromptEye text={prompt} />}
+        {prompt !== undefined && !disabledReason && <PromptEye text={prompt} />}
       </div>
-      {children}
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+      {disabledReason ? (
+        <fieldset disabled className="pointer-events-none space-y-1.5 opacity-50 select-none">
+          {children}
+        </fieldset>
+      ) : (
+        children
+      )}
+      {(disabledReason || hint) && <p className="text-xs text-muted-foreground">{disabledReason || hint}</p>}
     </div>
   );
 }

@@ -74,6 +74,10 @@ export default function App() {
         e.preventDefault();
         const ui = useUI.getState();
         ui.dialog === 'commands' ? ui.close() : ui.open('commands');
+      } else if (mod && !e.shiftKey && e.key.toLowerCase() === 'z' && useWorkspace.getState().view === 'sketch' && !isTyping(e.target) && !useUI.getState().dialog) {
+        // In the Gribouillis view: undo the last stroke of the sketch.
+        e.preventDefault();
+        useWorkspace.getState().undoSketchStroke();
       } else if (!mod && !isTyping(e.target) && !useUI.getState().dialog) {
         const ws = useWorkspace.getState();
         // Letters (any case) come from the command list, shared with the palette and the edit bar.

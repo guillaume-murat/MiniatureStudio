@@ -3,7 +3,7 @@
  * command palette and the edit bar's tools all come from this list, so a
  * letter, a label or a condition can't differ between them.
  */
-import { ArrowUpRight, Crop, Paintbrush, PanelsTopLeft, ScanLine, Tv, Type, type LucideIcon } from 'lucide-react';
+import { ArrowUpRight, Crop, Paintbrush, PanelsTopLeft, Pencil, ScanLine, Tv, Type, type LucideIcon } from 'lucide-react';
 import { useWorkspace, viewingOlder, type Tool } from './stores/workspace';
 import type { TKey } from './i18n';
 
@@ -26,10 +26,11 @@ export interface Command {
   run: (ws: Workspace) => void;
 }
 
-const toggleView = (ws: Workspace, view: 'feed' | 'channel') => ws.setView(ws.view === view ? 'image' : view);
+const toggleView = (ws: Workspace, view: 'sketch' | 'feed' | 'channel') => ws.setView(ws.view === view ? 'image' : view);
 const toggleTool = (ws: Workspace, tool: Tool) => ws.setTool(ws.tool === tool ? null : tool);
 
 export const COMMANDS: Command[] = [
+  { id: 'sketch', key: 'g', icon: Pencil, group: 'view', label: () => 'commands.sketch', needsImage: false, run: (ws) => toggleView(ws, 'sketch') },
   { id: 'feed', key: 'p', icon: Tv, group: 'view', label: () => 'commands.feed', needsImage: true, run: (ws) => toggleView(ws, 'feed') },
   { id: 'channel', key: 'c', icon: PanelsTopLeft, group: 'view', label: () => 'canvas.viewChannel', needsImage: false, run: (ws) => toggleView(ws, 'channel') },
   {

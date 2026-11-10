@@ -19,7 +19,9 @@ import type { Lang, OutputRatio, PromptOptions, ReferenceUse, ResolvedPromptOpti
 
 export type ImageRole =
   | { kind: 'persona'; name: string; description?: string; expression?: string }
-  | { kind: 'reference'; label?: string; use?: ReferenceUse };
+  | { kind: 'reference'; label?: string; use?: ReferenceUse }
+  /** The black-on-white sketch of the Gribouillis view: always image 1. */
+  | { kind: 'sketch' };
 
 interface BriefInput {
   lang: Lang;
@@ -29,6 +31,8 @@ interface BriefInput {
   /** Art-direction fragment from a style preset. */
   style?: string;
   roles: ImageRole[];
+  /** Generated from the Gribouillis view: the rendering replaces the style, generated text and title zone, even on a blank sheet. */
+  sketchView?: boolean;
   /** Brand colours. */
   colors?: string[];
   options?: ResolvedPromptOptions;
@@ -72,6 +76,10 @@ interface PromptCopy {
   zones: Record<Exclude<TitleZone, 'none'>, string>;
   zone: (where: string) => string;
   imagesHeader: string;
+  /** A generation from a sketch: what to take from it, and the look asked for instead of a style. */
+  sketch: string;
+  sketchImage: string;
+  sketchRender: string;
   quality: string;
   margin: string;
   priority: string;
@@ -152,6 +160,10 @@ const COPY: Record<Lang, PromptCopy> = {
     },
     zone: (where) => `Un court texte sera ajouté ensuite : garde une zone dégagée et épurée ${where} pour l’accueillir.`,
     imagesHeader: 'Images jointes, dans l’ordre :',
+    sketch:
+      'Composition : l’image 1 est un croquis rapide, noir sur blanc. Suis sa composition : la place, la taille et la pose de chaque élément, et le cadrage. N’imite jamais son trait : ni contours noirs, ni fond blanc, ni aspect de dessin. Le résultat est une miniature finie où rien du croquis ne se voit.',
+    sketchImage: 'le croquis de composition, à suivre pour la place des éléments, jamais pour le trait.',
+    sketchRender: 'Rendu : une photo réaliste et percutante de miniature YouTube.',
     quality: 'Fais-en une miniature efficace, comprise en une fraction de seconde sur youtube version mobile : des éléments qui ressortent, un fond simple, un fort contraste et des couleurs percutantes.',
     margin: 'Laisse un peu de marge autour des éléments importants : aucun ne doit toucher les bords du cadre ni être coupé par accident. Garde le coin bas droit libre, car la durée de la vidéo s’y affiche.',
     priority: 'En cas de conflit, la scène l’emporte sur la direction artistique, et la direction artistique sur les consignes générales.',
@@ -232,6 +244,10 @@ const COPY: Record<Lang, PromptCopy> = {
     },
     zone: (where) => `A short text will be added afterwards: keep a clear, uncluttered area ${where} for it.`,
     imagesHeader: 'Attached images, in order:',
+    sketch:
+      'Composition: image 1 is a rough black-on-white sketch. Follow its composition: where each element sits, its size and pose, and the framing. Never copy its lines: no black outlines, no white background, nothing that looks drawn. The result is a finished thumbnail where nothing of the sketch shows.',
+    sketchImage: 'the composition sketch, to follow for where things sit, never for its lines.',
+    sketchRender: 'Rendering: a realistic, striking YouTube thumbnail photo.',
     quality: 'Make it an effective thumbnail, understood in a split second on YouTube mobile: elements that stand out, a simple background, strong contrast and punchy colours.',
     margin: 'Leave some margin around the important elements: none should touch the edges of the frame or be cut off by accident. Keep the bottom-right corner clear, as the video’s duration appears there.',
     priority: 'In case of conflict, the scene takes priority over the art direction, and the art direction over the general instructions.',
@@ -307,6 +323,9 @@ export function describeImages(lang: Lang, roles: ImageRole[], offset = 0): stri
       case 'reference':
         lines.push(`- ${label} ${copy.references[role.use ?? 'free'](role.label ? ` (${role.label})` : '')}`);
         break;
+      case 'sketch':
+        lines.push(`- ${label} ${copy.sketchImage}`);
+        break;
     }
     i = j + 1;
   }
@@ -372,6 +391,16 @@ export function titleZoneLine(lang: Lang, zone: TitleZone = DEFAULT_PROMPT_OPTIO
   return zone === 'none' ? '' : COPY[lang].zone(COPY[lang].zones[zone]);
 }
 
+/** Generating from the Gribouillis view: image 1 is the sketch, whose composition is followed. */
+export function sketchLine(lang: Lang): string {
+  return COPY[lang].sketch;
+}
+
+/** Takes the place of the style, generated text and title zone, greyed in the Gribouillis view. */
+export function sketchRenderLine(lang: Lang): string {
+  return COPY[lang].sketchRender;
+}
+
 /** Comes first among the descriptions of the attached images. */
 export function imagesHeader(lang: Lang): string {
   return COPY[lang].imagesHeader;
@@ -392,17 +421,24 @@ export function priorityLine(lang: Lang): string {
 export function buildGenerationPrompt(input: BriefInput): string {
   const { lang, brief, videoTitle, aspectRatio, style, roles, colors = [], options = DEFAULT_PROMPT_OPTIONS } = input;
   const people = new Set(roles.flatMap((r) => (r.kind === 'persona' ? [r.name] : []))).size;
+
+  const hasSketch = roles.some((r) => r.kind === 'sketch');
+  const fromSketchView = input.sketchView || hasSketch;
   const sections: string[] = [];
 
   sections.push([formatLine(lang, aspectRatio), titleLine(lang, videoTitle)].filter(Boolean).join(' '));
-  sections.push(sceneLine(lang, brief));
+  if (hasSketch) sections.push(sketchLine(lang));
+  // From a sketch, the scene is optional: the drawing may say it all.
+  if (!hasSketch || brief.trim()) sections.push(sceneLine(lang, brief));
   const identity = identityLine(lang, roles);
   if (identity) sections.push(identity);
-  sections.push(styleLine(lang, style, people));
-  sections.push(textLine(lang, options.text));
-
-  const zone = titleZoneLine(lang, options.titleZone);
-  if (zone) sections.push(zone);
+  if (fromSketchView) sections.push(sketchRenderLine(lang));
+  else {
+    sections.push(styleLine(lang, style, people));
+    sections.push(textLine(lang, options.text));
+    const zone = titleZoneLine(lang, options.titleZone);
+    if (zone) sections.push(zone);
+  }
 
   const imageLines = describeImages(lang, roles);
   if (imageLines.length) sections.push([imagesHeader(lang), ...imageLines].join('\n'));

@@ -46,7 +46,7 @@ export function CommandMenu() {
             <Wand2 /> {t('commands.generate')}
             <CommandShortcut>{MOD} ↵</CommandShortcut>
           </CommandItem>
-          <CommandItem onSelect={run(() => openDialog('assistant'))}>
+          <CommandItem onSelect={run(() => openDialog('assistant'))} disabled={ws.view === 'sketch'}>
             <Sparkles /> {t('commands.assistant')}
           </CommandItem>
           {COMMANDS.filter((c) => c.group === 'view').map(item)}
@@ -60,7 +60,7 @@ export function CommandMenu() {
           <CommandItem onSelect={run(() => openDialog('personas'))}>
             <Users /> {t('commands.personas')}
           </CommandItem>
-          <CommandItem onSelect={run(() => openDialog('styles'))}>
+          <CommandItem onSelect={run(() => openDialog('styles'))} disabled={ws.view === 'sketch'}>
             <Palette /> {t('commands.styles')}
           </CommandItem>
           <CommandItem onSelect={run(() => openDialog('settings'))}>

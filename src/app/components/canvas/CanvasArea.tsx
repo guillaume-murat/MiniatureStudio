@@ -39,6 +39,7 @@ import { ReframeToolbar, ReframeView } from './ReframeLayer';
 import { runningJobs } from './BlockingJob';
 import { FeedPreview } from './FeedPreview';
 import { CompareView } from './CompareView';
+import { SketchView } from './SketchView';
 import { MOD } from '../TopBar';
 import { useBlobUrl } from '../../hooks/use-blob-url';
 import { fit, useElementSize } from '../../hooks/use-element-size';
@@ -382,7 +383,9 @@ export function CanvasArea() {
       <div ref={areaRef} className="relative flex min-h-0 flex-1 flex-col">
         {/* Body: it keeps clear of the edit bar, floating below it. */}
         <div className={cn('relative min-h-0 flex-1 transition-[filter] duration-300', onImage && (ws.tool === 'mask' ? 'mb-38' : isLayerTool(ws.tool) || viewingOlder(ws) ? 'mb-36' : 'mb-28'), busy && 'pointer-events-none blur-md')}>
-          {ws.view === 'compare' ? (
+          {ws.view === 'sketch' ? (
+            <SketchView />
+          ) : ws.view === 'compare' ? (
             <CompareView />
           ) : ws.view === 'feed' && gen ? (
             <FeedPreview generation={gen} />

@@ -1,3 +1,4 @@
+import type { Sketch } from './sketch';
 export type Provider = 'replicate' | 'gemini' | 'openrouter' | 'mammouth' | 'vertex';
 export type ModelId = 'nano-banana-pro' | 'nano-banana-2' | 'nano-banana-2-lite';
 /** The interface's language, which the prompts follow. */
@@ -74,6 +75,8 @@ export interface ProjectInputs {
   /** The people in this project's thumbnails, at most 5 (records in the `personas` store, a library shared by all projects). */
   people: string[];
   output: ProjectOutput;
+  /** The sketch of the Gribouillis view (absent: a blank sheet). */
+  sketch?: Sketch;
 }
 
 export type ProjectOutput = Pick<GenerationParams, 'model' | 'aspectRatio' | 'resolution' | 'format' | 'safety'> & { count: 1 | 2 | 4 };

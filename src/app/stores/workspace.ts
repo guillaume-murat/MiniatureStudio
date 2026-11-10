@@ -20,6 +20,7 @@ import { useReframe } from './reframe';
 import { dimensions, highlightRegion, mergeWithMask, normaliseUpload, prepareReference } from '../lib/images';
 import { errorLog, explainError, type JobContext, type JobStep } from '../lib/errors';
 import { smoothRegion } from '../lib/smooth';
+import { addStroke, EMPTY_SKETCH, isEmptySketch, isSketch, sketchBlob, undoStroke, type Sketch, type SketchStroke } from '../lib/sketch';
 import { randomSeed } from '../lib/channel';
 import { newGeneration, type VersionInput, historyOf, isOlderVersion, versionsAfter } from '../lib/versions';
 import { findStyle, optionsForNewStyle, resolveOptions } from '../lib/styles';
@@ -56,7 +57,7 @@ const promptLang = () => useSettings.getState().lang;
 export const MAX_IMAGES = 14;
 export const MAX_PERSONAS = 5;
 
-export type ViewMode = 'image' | 'feed' | 'channel' | 'compare';
+export type ViewMode = 'image' | 'sketch' | 'feed' | 'channel' | 'compare';
 
 export interface Job {
   id: string;
@@ -116,6 +117,8 @@ interface WorkspaceState {
   brand: BrandKit;
 
   view: ViewMode;
+  /** The open project's sketch, drawn in the Gribouillis view. */
+  sketch: Sketch;
   safeZones: boolean;
   /** The image tool in use, one at a time (see `setTool`). */
   tool: Tool | null;
@@ -142,7 +145,8 @@ interface WorkspaceState {
   clearRefs: () => void;
   togglePersona: (id: string) => void;
   // generation
-  generate: () => Promise<Outcome<Generation>[]>;
+  /** `fromAgent`: an MCP call, never from the sketch, whatever view the user has open. */
+  generate: (opts?: { fromAgent?: boolean }) => Promise<Outcome<Generation>[]>;
   /** A cheap image of a concept with the current brief's settings, not saved until `addConceptImage`. */
   previewConcept: (concept: Concept, signal?: AbortSignal) => Promise<ConceptPreview>;
   /** That image as a new thumbnail of the open project. */
@@ -188,6 +192,8 @@ interface WorkspaceState {
   saveToLibrary: (blob: Blob) => Promise<void>;
   // ui
   setView: (view: ViewMode) => void;
+  addSketchStroke: (stroke: SketchStroke) => void;
+  undoSketchStroke: () => void;
   setSafeZones: (on: boolean) => void;
   /**
    * Opens an image tool (null leaves it): the text tool loads the image's
@@ -285,7 +291,7 @@ async function flushSave() {
   const ws = useWorkspace.getState();
   const project = ws.projects.find((p) => p.id === ws.projectId);
   if (!project || loadedProjectId !== project.id) return;
-  const inputs: ProjectInputs = { brief: ws.brief, refs: ws.refs, brand: ws.brand, people: ws.personaIds, output: currentOutput() };
+  const inputs: ProjectInputs = { brief: ws.brief, refs: ws.refs, brand: ws.brand, people: ws.personaIds, output: currentOutput(), sketch: ws.sketch };
   const updated = { ...project, inputs };
   useWorkspace.setState({ projects: useWorkspace.getState().projects.map((p) => (p.id === updated.id ? updated : p)) });
   await db.putProject(updated);
@@ -465,22 +471,32 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
   }
 
   /** Images and full prompt for the current brief, shared by `generate` and `previewPrompt`. */
-  function generationRequest(concept?: Concept) {
+  function generationRequest(concept?: Concept, fromAgent = false) {
     const { brief } = get();
     const style = findStyle(concept?.styleId ?? brief.styleId, get().customStyles);
     // A concept is previewed from its text alone: no photos or references to send.
     const attached = concept ? [] : [...personaImages(), ...referenceImages()];
+    // From the Gribouillis view, the sketch comes first (its PNG is drawn by `generate`).
+    const sketchView = !concept && !fromAgent && get().view === 'sketch';
+    const withSketch = sketchView && hasSketch();
+    const roles: ImageRole[] = [...(withSketch ? [{ kind: 'sketch' as const }] : []), ...attached.map((a) => a.role)];
     const fullPrompt = buildGenerationPrompt({
       brief: concept?.brief ?? brief.brief,
       videoTitle: brief.videoTitle,
       aspectRatio: useSettings.getState().aspectRatio,
       lang: promptLang(),
       style: style?.prompt[promptLang()],
-      roles: attached.map((a) => a.role),
+      roles,
+      sketchView,
       colors: get().brand.colors,
       options: resolveOptions(style, brief.options),
     });
-    return { attached, fullPrompt };
+    return { attached, fullPrompt, withSketch, imageCount: roles.length };
+  }
+
+  /** Something drawn on the sheet: from the Gribouillis view, it is sent as image 1. */
+  function hasSketch(): boolean {
+    return !isEmptySketch(get().sketch);
   }
 
   function fail(message: string): Outcome<Generation>[] {
@@ -605,6 +621,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     library: [],
     brand: EMPTY_BRAND,
     view: 'image',
+    sketch: EMPTY_SKETCH,
     safeZones: false,
     tool: null,
     hasMask: false,
@@ -665,6 +682,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         brand: inputs.brand,
         // The library is shared; the people in this project's thumbnails are its own.
         personaIds: inputs.people.filter((pid) => personas.some((p) => p.id === pid)).slice(0, MAX_PERSONAS),
+        sketch: isSketch(inputs.sketch) ? inputs.sketch : EMPTY_SKETCH,
       });
       loadedProjectId = id;
       try {
@@ -812,11 +830,17 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     promptOptions: () => resolveOptions(findStyle(get().brief.styleId, get().customStyles), get().brief.options),
 
     previewImageLines: () => {
+      // After the sketch, from the Gribouillis view: the numbers move up by one.
+      const sketch: ImageRole[] = get().view === 'sketch' && hasSketch() ? [{ kind: 'sketch' }] : [];
       const people = personaImages().map((a) => a.role);
       const references = referenceImages().map((a) => a.role);
+      const lang = promptLang();
+      const head = sketch.length ? [imagesHeader(lang), ...describeImages(lang, sketch)] : [];
       return {
-        people: (people.length ? [identityLine(promptLang(), people), '', imagesHeader(promptLang()), ...describeImages(promptLang(), people)] : []).join('\n'),
-        references: (references.length && !people.length ? [imagesHeader(promptLang())] : []).concat(describeImages(promptLang(), references, people.length)).join('\n'),
+        people: (people.length ? [identityLine(lang, [...sketch, ...people]), '', ...(sketch.length ? head : [imagesHeader(lang)]), ...describeImages(lang, people, sketch.length)] : []).join('\n'),
+        references: (references.length && !people.length ? (sketch.length ? head : [imagesHeader(lang)]) : [])
+          .concat(describeImages(lang, references, sketch.length + people.length))
+          .join('\n'),
       };
     },
 
@@ -840,26 +864,31 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         blob: new Blob([blob], { type: blob.type }),
       }),
 
-    generate: async () => {
+    generate: async ({ fromAgent = false } = {}) => {
       const { brief } = get();
-      if (!brief.brief.trim()) return fail(t('brief.needPrompt'));
+      const sketchView = !fromAgent && get().view === 'sketch';
+      // From the Gribouillis view, the sketch may say it all; never a call with nothing to go on.
+      if (!brief.brief.trim() && !(sketchView && hasSketch())) return fail(t(sketchView ? 'sketch.needSketch' : 'brief.needPrompt'));
       const apiKey = checkKey();
       if (!apiKey) return [{ error: t('brief.needKey') }];
 
       const settings = useSettings.getState();
-      const { attached, fullPrompt } = generationRequest();
-      if (attached.length > MAX_IMAGES) return fail(t('brief.tooManyRefs'));
+      const { attached, fullPrompt, withSketch, imageCount } = generationRequest(undefined, fromAgent);
+      if (imageCount > MAX_IMAGES) return fail(t('brief.tooManyRefs'));
       const params = settings.params();
-      if (get().view === 'compare') set({ view: 'image' });
+      const blobs = attached.map((a) => a.blob);
+      if (withSketch) blobs.unshift(await sketchBlob(get().sketch, settings.aspectRatio));
+      // The results show in the image view; the sketch stays as it is for another try.
+      if (get().view === 'compare' || sketchView) set({ view: 'image' });
       const batch = { shown: false };
 
       return Promise.all(
         Array.from({ length: settings.count }, () =>
           runJob({
             kind: 'generate',
-            prompt: brief.brief,
+            prompt: brief.brief.trim() || t('sketch.versionPrompt'),
             fullPrompt,
-            images: attached.map((a) => a.blob),
+            images: blobs,
             params,
             videoTitle: brief.videoTitle || undefined,
             apiKey,
@@ -1045,7 +1074,19 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     // The painted area lives on the image view's canvas.
     setView: (view) => {
       if (view !== 'image' && get().tool === 'mask') get().setTool(null);
+      // Image tools work on the image view only.
+      if (view === 'sketch' && get().tool) get().setTool(null);
       set({ view });
+    },
+
+    addSketchStroke: (stroke) => {
+      set({ sketch: addStroke(get().sketch, stroke) });
+      scheduleSave();
+    },
+
+    undoSketchStroke: () => {
+      set({ sketch: undoStroke(get().sketch) });
+      scheduleSave();
     },
     setSafeZones: (on) => set({ safeZones: on }),
     setTool: (tool) => {

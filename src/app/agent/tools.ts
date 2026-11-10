@@ -257,7 +257,7 @@ export const handlers: Record<string, Handler> = {
     requireKey();
     applyBrief(args);
     if (count) useSettings.getState().set({ count });
-    return withPreviews(await ws().generate(), bool(args, 'previews') ?? true);
+    return withPreviews(await ws().generate({ fromAgent: true }), bool(args, 'previews') ?? true);
   },
 
   edit_thumbnail: async (args) => {
