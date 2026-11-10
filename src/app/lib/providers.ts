@@ -55,10 +55,17 @@ const MAMMOUTH_TEXT_MODEL = 'gemini-3.8-flash';
 const MAMMOUTH_URL = 'https://api.mammouth.ai/v1/chat/completions';
 
 /** OpenAI-compatible providers: endpoint and models. */
-type ChatProvider = Extract<Provider, 'openrouter' | 'mammouth'>;
+// OpenAI: images through its Images API (`openaiImage`), text through the same chat completions as OpenRouter.
+const OPENAI_BASE = 'https://api.openai.com/v1';
+const OPENAI_IMAGE_MODELS: Partial<Record<ModelId, string>> = { 'gpt-image-2.5-sunburst': 'gpt-image-2.5-sunburst' };
+/** Fast and cheap, for the concepts and the ranking (OpenAI price list, November 2026). */
+const OPENAI_TEXT_MODEL = 'gpt-6-luna';
+
+type ChatProvider = Extract<Provider, 'openrouter' | 'mammouth' | 'openai'>;
 const CHAT_PROVIDERS: Record<ChatProvider, { url: string; image: Partial<Record<ModelId, string>>; text: string }> = {
   openrouter: { url: OPENROUTER_URL, image: OPENROUTER_IMAGE_MODELS, text: OPENROUTER_TEXT_MODEL },
   mammouth: { url: MAMMOUTH_URL, image: MAMMOUTH_IMAGE_MODELS, text: MAMMOUTH_TEXT_MODEL },
+  openai: { url: `${OPENAI_BASE}/chat/completions`, image: {}, text: OPENAI_TEXT_MODEL },
 };
 
 /** Hard ceiling for one generation. Nano Banana Pro at 4K can take a couple of minutes. */
@@ -483,13 +490,68 @@ async function openRouterText(req: TextRequest, signal: AbortSignal): Promise<st
         ...(req.system ? [{ role: 'system', content: req.system }] : []),
         { role: 'user', content: openRouterContent(req.prompt, req.images) },
       ],
-      temperature: 0.7,
+      // OpenAI's recent models only take their default temperature.
+      ...(provider === 'openai' ? {} : { temperature: 0.7 }),
       ...(req.json ? { response_format: { type: 'json_object' } } : {}),
     },
     req.apiKey,
     signal,
   );
   return data.choices?.[0]?.message?.content ?? '';
+}
+
+// ─── OpenAI ──────────────────────────────────────────────
+
+interface OpenAIImagesResponse {
+  data?: Array<{ b64_json?: string; url?: string }>;
+  output_format?: string;
+}
+
+/**
+ * GPT Image on OpenAI's Images API: `generations` from the prompt alone, `edits` when images are
+ * attached (references, people, the image being edited), sent as files. Exact size and quality.
+ */
+async function openaiImage(req: ImageRequest, signal: AbortSignal): Promise<Blob> {
+  const { params } = req;
+  const model = imageModelId(params, OPENAI_IMAGE_MODELS);
+  const fields: Record<string, string> = {
+    model,
+    prompt: req.prompt,
+    size: gptSize(params.resolution, params.aspectRatio),
+    n: '1',
+    output_format: 'png',
+    ...(params.quality ? { quality: params.quality } : {}),
+  };
+  const headers = { Authorization: `Bearer ${req.apiKey}` };
+  const started = Date.now();
+  const tick = req.onProgress ? setInterval(() => req.onProgress?.(Date.now() - started), 500) : undefined;
+  try {
+    let res: Response;
+    if (req.images.length) {
+      const form = new FormData();
+      for (const [name, value] of Object.entries(fields)) form.append(name, value);
+      for (const [i, url] of req.images.entries()) {
+        const blob = await dataUrlToBlob(url);
+        form.append('image[]', blob, `image-${i + 1}.${blob.type.split('/')[1] || 'png'}`);
+      }
+      res = await fetch(`${OPENAI_BASE}/images/edits`, { method: 'POST', headers, body: form, signal });
+    } else {
+      res = await fetch(`${OPENAI_BASE}/images/generations`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...fields, n: 1 }),
+        signal,
+      });
+    }
+    if (!res.ok) throw await readError(res, 'openai');
+    const data: OpenAIImagesResponse = await res.json();
+    const image = data.data?.[0];
+    if (image?.b64_json) return dataUrlToBlob(`data:image/${data.output_format || 'png'};base64,${image.b64_json}`);
+    if (image?.url) return fetchBlob(image.url, signal);
+    throw new ProviderError('openai returned no image', 422, data, 'openai');
+  } finally {
+    clearInterval(tick);
+  }
 }
 
 // ─── Public API ──────────────────────────────────────────
@@ -503,6 +565,8 @@ export async function generateImage(req: ImageRequest): Promise<Blob> {
     case 'openrouter':
     case 'mammouth':
       return openRouterImage(req, signal);
+    case 'openai':
+      return openaiImage(req, signal);
     default:
       return replicateImage(req, signal);
   }
@@ -516,6 +580,7 @@ export async function generateText(req: TextRequest): Promise<string> {
       return geminiText(req, signal);
     case 'openrouter':
     case 'mammouth':
+    case 'openai':
       return openRouterText(req, signal);
     default:
       return replicateText(req, signal);

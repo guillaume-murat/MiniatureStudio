@@ -32,7 +32,7 @@ export default defineConfig({
         "img-src 'self' data: blob: https://replicate.delivery https://*.replicate.delivery https://i.ytimg.com https://img.youtube.com",
         // Gemini, OpenRouter and Mammouth are called directly; Replicate goes through our function; images are downloaded from Replicate's CDN.
         // ws://127.0.0.1: the local MCP server (mcp/) that lets an AI agent drive the studio.
-        "connect-src 'self' data: blob: https://generativelanguage.googleapis.com https://openrouter.ai https://api.mammouth.ai https://replicate.delivery https://*.replicate.delivery https://www.youtube.com https://i.ytimg.com https://img.youtube.com https://fonts.googleapis.com ws://127.0.0.1:*",
+        "connect-src 'self' data: blob: https://generativelanguage.googleapis.com https://openrouter.ai https://api.mammouth.ai https://api.openai.com https://replicate.delivery https://*.replicate.delivery https://www.youtube.com https://i.ytimg.com https://img.youtube.com https://fonts.googleapis.com ws://127.0.0.1:*",
         // Brand kit: the chosen Google Font is loaded for the preview and the specimen.
         "font-src 'self' https://fonts.gstatic.com",
         "worker-src 'self'",

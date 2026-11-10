@@ -1,4 +1,4 @@
-import { IMAGE_QUALITIES, isCustomModel, isGptImage, modelAvailable, resolvedResolution } from '../lib/models';
+import { firstAvailableModel, IMAGE_QUALITIES, isCustomModel, isGptImage, modelAvailable, resolvedResolution } from '../lib/models';
 import { parseClosedPanels, type ClosedPanels } from '../lib/panels';
 import { create } from 'zustand';
 import { VERTEX_GCLOUD } from '../lib/providers';
@@ -38,7 +38,7 @@ interface SettingsState {
   apiKey: () => string;
 }
 
-const PROVIDERS: Provider[] = ['replicate', 'gemini', 'openrouter', 'mammouth', 'vertex'];
+const PROVIDERS: Provider[] = ['replicate', 'gemini', 'openrouter', 'mammouth', 'vertex', 'openai'];
 const PREFS_KEY = 'nt_prefs';
 const KEY_PREFIX = 'nt_key_';
 
@@ -115,7 +115,7 @@ export const useSettings = create<SettingsState>((set, get) => ({
   set: (patch) => {
     set(patch);
     // A provider that doesn't serve the chosen model (GPT Image off Replicate and OpenRouter): back to Nano Banana Pro.
-    if (!modelAvailable(get().model, get().provider)) set({ model: 'nano-banana-pro' });
+    if (!modelAvailable(get().model, get().provider)) set({ model: firstAvailableModel(get().provider) });
     persistPrefs(get());
     if ('keyPersistence' in patch) persistKeys(get());
   },

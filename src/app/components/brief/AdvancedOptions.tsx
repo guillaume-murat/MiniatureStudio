@@ -20,6 +20,7 @@ const CUSTOM_PLACEHOLDERS: Record<Provider, string> = {
   openrouter: 'google/gemini-3-pro-image',
   mammouth: 'gemini-3-pro-image-preview',
   vertex: 'gemini-3-pro-image',
+  openai: 'gpt-image-2',
 };
 const RESOLUTIONS: Resolution[] = ['1K', '2K', '4K'];
 const WEIGHTS: ResolvedPromptOptions['brandWeight'][] = ['subtle', 'accents', 'dominant'];
@@ -73,7 +74,7 @@ export function AdvancedOptions({ number }: { number: number }) {
               return (
                 <SelectItem key={id} value={id} disabled={!available}>
                   {name} · {imagePrice(id, resolvedResolution(id, provider, settings.resolution), lang, quality)}{' '}
-                  <span className="text-muted-foreground">· {available ? hint : t('brief.modelGptUnavailable')}</span>
+                  <span className="text-muted-foreground">· {available ? hint : t(isGptImage(id) ? 'brief.modelGptUnavailable' : 'brief.modelNanoUnavailable')}</span>
                 </SelectItem>
               );
             })}

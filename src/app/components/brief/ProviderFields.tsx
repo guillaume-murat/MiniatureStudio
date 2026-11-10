@@ -14,6 +14,7 @@ const KEY_LINKS: Record<Provider, string> = {
   openrouter: 'https://openrouter.ai/settings/keys',
   mammouth: 'https://mammouth.ai/app/account/settings/api',
   vertex: 'https://console.cloud.google.com/vertex-ai',
+  openai: 'https://platform.openai.com/api-keys',
 };
 
 const KEY_PLACEHOLDERS: Record<Provider, string> = {
@@ -22,6 +23,7 @@ const KEY_PLACEHOLDERS: Record<Provider, string> = {
   openrouter: 'sk-or-…',
   mammouth: 'sk-…',
   vertex: '',
+  openai: 'sk-…',
 };
 
 type VertexStatus = { ok: true; project: string; location: string } | { ok: false; error?: string } | null;
@@ -68,6 +70,9 @@ export function ProviderFields() {
           </ToggleGroupItem>
           <ToggleGroupItem value="vertex" className="h-auto min-h-9 min-w-0 flex-1 basis-[30%] leading-tight whitespace-normal">
             {t('settings.vertex')}
+          </ToggleGroupItem>
+          <ToggleGroupItem value="openai" className="h-auto min-h-9 min-w-0 flex-1 basis-[30%] leading-tight whitespace-normal">
+            {t('settings.openai')}
           </ToggleGroupItem>
         </ToggleGroup>
         <p className="text-xs text-muted-foreground">{t(`settings.${s.provider}Hint`)}</p>

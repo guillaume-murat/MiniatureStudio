@@ -21,7 +21,7 @@ import { dimensions, highlightRegion, mergeWithMask, normaliseUpload, prepareRef
 import { errorLog, explainError, type JobContext, type JobStep } from '../lib/errors';
 import { smoothRegion } from '../lib/smooth';
 import { isMakingView, type View as PanelView } from '../lib/panels';
-import { editModel } from '../lib/models';
+import { editModel, resolvedResolution } from '../lib/models';
 import { addStroke, EMPTY_SKETCH, isEmptySketch, isSketch, sketchBlob, undoStroke, type Sketch, type SketchStroke } from '../lib/sketch';
 import { randomSeed } from '../lib/channel';
 import { newGeneration, type VersionInput, historyOf, isOlderVersion, versionsAfter } from '../lib/versions';
@@ -456,10 +456,17 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
 
   /** The settings' params on Nano Banana: GPT Image becomes Pro (area tools, reframing, upscaling). */
   function nanoBananaParams(patch: Partial<GenerationParams> = {}): GenerationParams {
-    const params = { ...useSettings.getState().params(), ...patch };
-    const model = editModel(params.model);
+    const settings = useSettings.getState().params();
+    // OpenAI has no Nano Banana: the area tools, reframing and upscaling use the chosen model there,
+    // whatever model a tool asks for (heal, face fix), within GPT Image's sizes.
+    if (settings.provider === 'openai') {
+      const { model: _model, ...rest } = patch;
+      return { ...settings, ...rest, resolution: resolvedResolution(settings.model, 'openai', rest.resolution ?? settings.resolution) ?? settings.resolution };
+    }
+    const params = { ...settings, ...patch };
+    const model = editModel(params.model, params.provider);
     if (model === params.model) return params;
-    const { quality: _quality, ...rest } = params;
+    const { quality: _quality, customModel: _customModel, ...rest } = params;
     return { ...rest, model, resolution: patch.resolution ?? useSettings.getState().resolution };
   }
 
@@ -482,7 +489,10 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
 
   /** What a concept's preview is generated with. */
   function conceptParams(): GenerationParams {
-    return { ...useSettings.getState().params(), model: 'nano-banana-2-lite', resolution: '1K' };
+    const params = useSettings.getState().params();
+    // OpenAI has no Nano Banana Lite: its cheapest image instead.
+    if (params.provider === 'openai') return { ...params, model: 'gpt-image-2.5-sunburst', quality: 'low', resolution: '1K' };
+    return { ...params, model: 'nano-banana-2-lite', resolution: '1K' };
   }
 
   /** Images and full prompt for the current brief, shared by `generate` and `previewPrompt`. */

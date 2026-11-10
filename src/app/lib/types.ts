@@ -1,5 +1,5 @@
 import type { Sketch } from './sketch';
-export type Provider = 'replicate' | 'gemini' | 'openrouter' | 'mammouth' | 'vertex';
+export type Provider = 'replicate' | 'gemini' | 'openrouter' | 'mammouth' | 'vertex' | 'openai';
 /** `custom`: a model id typed by hand in the advanced options (`GenerationParams.customModel`). */
 export type ModelId = 'nano-banana-pro' | 'nano-banana-2' | 'nano-banana-2-lite' | 'gpt-image-2.5-sunburst' | 'custom';
 /** GPT Image's quality level (it decides its price); Nano Banana has none. */

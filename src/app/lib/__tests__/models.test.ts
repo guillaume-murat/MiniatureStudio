@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { CUSTOM_MODEL, editModel, gptSize, isCustomModel, imagePrice, modelAvailable, outputSize, resolutionsFor, resolvedResolution } from '../models';
+import { CUSTOM_MODEL, editModel, firstAvailableModel, gptSize, isCustomModel, imagePrice, modelAvailable, outputSize, resolutionsFor, resolvedResolution } from '../models';
 
 describe('image models', () => {
-  it('serves GPT Image 2.5 Sunburst on Replicate and OpenRouter only', () => {
-    expect(['replicate', 'gemini', 'openrouter', 'mammouth', 'vertex'].filter((p) => modelAvailable('gpt-image-2.5-sunburst', p as never))).toEqual(['replicate', 'openrouter']);
+  it('serves GPT Image 2.5 Sunburst on Replicate, OpenRouter and OpenAI only', () => {
+    expect(['replicate', 'gemini', 'openrouter', 'mammouth', 'vertex', 'openai'].filter((p) => modelAvailable('gpt-image-2.5-sunburst', p as never))).toEqual(['replicate', 'openrouter', 'openai']);
     expect(modelAvailable('nano-banana-pro', 'vertex')).toBe(true);
   });
 
@@ -58,5 +58,18 @@ describe('image models', () => {
     expect(imagePrice(CUSTOM_MODEL, '1K', 'fr')).toBe('prix inconnu');
     expect(imagePrice(CUSTOM_MODEL, '1K', 'en')).toBe('unknown price');
     expect(editModel(CUSTOM_MODEL)).toBe('nano-banana-pro');
+  });
+
+  it('offers only GPT Image and a model typed by hand with OpenAI', () => {
+    expect(['nano-banana-pro', 'nano-banana-2', 'nano-banana-2-lite', 'gpt-image-2.5-sunburst', 'custom'].filter((m) => modelAvailable(m as never, 'openai'))).toEqual(['gpt-image-2.5-sunburst', 'custom']);
+    expect(firstAvailableModel('openai')).toBe('gpt-image-2.5-sunburst');
+    expect(firstAvailableModel('gemini')).toBe('nano-banana-pro');
+    expect(resolutionsFor('gpt-image-2.5-sunburst', 'openai')).toEqual(['1K', '2K']);
+    expect(resolutionsFor('custom', 'openai')).toEqual(['1K', '2K']);
+  });
+
+  it('keeps the area tools on the chosen model with OpenAI, which has no Nano Banana', () => {
+    expect(editModel('gpt-image-2.5-sunburst', 'openai')).toBe('gpt-image-2.5-sunburst');
+    expect(editModel('gpt-image-2.5-sunburst', 'replicate')).toBe('nano-banana-pro');
   });
 });

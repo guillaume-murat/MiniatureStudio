@@ -19,7 +19,14 @@ export function isGptImage(model: ModelId): boolean {
 }
 
 export function modelAvailable(model: ModelId, provider: Provider): boolean {
+  // OpenAI serves its own models only: GPT Image, or one of its ids typed by hand.
+  if (provider === 'openai') return isGptImage(model) || isCustomModel(model);
   return !isGptImage(model) || provider === 'replicate' || provider === 'openrouter';
+}
+
+/** What a provider falls back to when it doesn't serve the chosen model. */
+export function firstAvailableModel(provider: Provider): ModelId {
+  return provider === 'openai' ? GPT_IMAGE : 'nano-banana-pro';
 }
 
 /** Nano Banana's sizes at 16:9 (Gemini API documentation); 9:16 swaps them. */
@@ -46,7 +53,7 @@ export function gptSize(resolution: Resolution, ratio: OutputRatio): string {
  */
 export function resolutionsFor(model: ModelId, provider: Provider): Resolution[] {
   if (model === 'nano-banana-2-lite') return ['1K'];
-  if (isGptImage(model)) return provider === 'openrouter' ? [] : ['1K', '2K'];
+  if (isGptImage(model) || (isCustomModel(model) && provider === 'openai')) return provider === 'openrouter' ? [] : ['1K', '2K'];
   return ['1K', '2K', '4K'];
 }
 
@@ -57,8 +64,12 @@ export function resolvedResolution(model: ModelId, provider: Provider, chosen: R
   return allowed.includes(chosen) ? chosen : allowed[allowed.length - 1];
 }
 
-/** The area tools, reframing and upscaling stay on Nano Banana: Pro stands in for GPT Image and a model typed by hand. */
-export function editModel(model: ModelId): ModelId {
+/**
+ * The area tools, reframing and upscaling stay on Nano Banana: Pro stands in for GPT Image and a model
+ * typed by hand. OpenAI has no Nano Banana: there they use the chosen model.
+ */
+export function editModel(model: ModelId, provider?: Provider): ModelId {
+  if (provider === 'openai') return model;
   return isGptImage(model) || isCustomModel(model) ? 'nano-banana-pro' : model;
 }
 

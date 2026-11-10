@@ -2,7 +2,7 @@
 
 ![Miniature Studio](docs/screenshot.jpg)
 
-Miniature Studio is a studio on your computer to **create, edit and test YouTube thumbnails** with Google's Nano Banana models or OpenAI's GPT Image 2.5 Sunburst. Bring your own API key (Google Gemini, OpenRouter, Mammouth, Replicate) or use Vertex AI through `gcloud`. Your images stay on your computer.
+Miniature Studio is a studio on your computer to **create, edit and test YouTube thumbnails** with Google's Nano Banana models or OpenAI's GPT Image 2.5 Sunburst. Bring your own API key (Google Gemini, OpenAI, OpenRouter, Mammouth, Replicate) or use Vertex AI through `gcloud`. Your images stay on your computer.
 
 - **Create** thumbnails from a video title and an idea, or from a quick sketch, with styles, people, reference images and brand colours.
 - **Edit** them with a sentence, a painted area, text, arrows or a new framing.
