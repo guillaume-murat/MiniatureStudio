@@ -135,12 +135,10 @@ function Credit() {
   const link = 'w-fit underline-offset-2 hover:underline focus-visible:underline';
   return (
     <span className="flex flex-col font-sans leading-tight font-normal whitespace-nowrap">
-      <a href={AUTHOR_URL} target="_blank" rel="noreferrer" className={cn(link, 'text-xs text-[color-mix(in_oklab,var(--on-brand)_85%,var(--brand))]')}>
-        {/* The name is underlined: it is a link. */}
-        {t('credit.by')} <span className="underline underline-offset-2">
-          <span className="hidden min-[1440px]:inline">Guillaume Murat</span>
-          <span className="min-[1440px]:hidden">G. Murat</span>
-        </span>
+      <a href={AUTHOR_URL} target="_blank" rel="noreferrer" className={cn(link, 'underline text-xs text-[color-mix(in_oklab,var(--on-brand)_85%,var(--brand))]')}>
+        {/* The whole line is underlined: it is a link. */}
+        {t('credit.by')} <span className="hidden min-[1440px]:inline">Guillaume Murat</span>
+        <span className="min-[1440px]:hidden">G. Murat</span>
       </a>
       <a href={ORIGIN_REPO_URL} target="_blank" rel="noreferrer" className={cn(link, 'text-[11px] text-[color-mix(in_oklab,var(--on-brand)_68%,var(--brand))]')}>
         <span className="hidden min-[1440px]:inline">{t('credit.fork')}</span>
