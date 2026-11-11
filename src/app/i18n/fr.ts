@@ -3,9 +3,15 @@ import type { Dict } from './en';
 export const fr: Dict = {
   newProject: {
     title: 'Nouveau projet',
-    description: 'Il part vide : brief, références, chaîne, couleurs, personnes et sortie sont propres à chaque projet.',
+    description: 'Brief, références, chaîne, couleurs, personnes et sortie sont propres à chaque projet.',
     name: 'Nom du projet',
     create: 'Créer le projet',
+    url: 'Vidéo ou chaîne YouTube (facultatif)',
+    urlPlaceholder: 'https://www.youtube.com/watch?v=… ou @chaine',
+    urlHint: 'Récupère le logo, le nom et la bannière de la chaîne, et pour une vidéo son titre et sa miniature.',
+    fetching: 'Récupération de la chaîne…',
+    error: 'Impossible de lire cette URL : collez une vidéo ou une chaîne YouTube. Le projet peut aussi être créé sans.',
+    thumbnailNote: 'La miniature actuelle de cette vidéo sera ajoutée aux images de référence, dans le panneau de gauche.',
   },
   common: {
     cancel: 'Annuler',

@@ -1,9 +1,15 @@
 export const en = {
   newProject: {
     title: 'New project',
-    description: 'It starts empty: brief, references, channel, colours, people and output belong to each project.',
+    description: 'Brief, references, channel, colours, people and output belong to each project.',
     name: 'Project name',
     create: 'Create project',
+    url: 'YouTube video or channel (optional)',
+    urlPlaceholder: 'https://www.youtube.com/watch?v=… or @channel',
+    urlHint: 'Brings the channel’s logo, name and banner, and for a video its title and thumbnail.',
+    fetching: 'Fetching the channel…',
+    error: 'This URL can’t be read: paste a YouTube video or channel. The project can also be created without it.',
+    thumbnailNote: 'This video’s current thumbnail will be added to the reference images, in the left panel.',
   },
   common: {
     cancel: 'Cancel',

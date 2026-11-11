@@ -1,4 +1,5 @@
 import { dataUrlToBlob } from './images';
+import type { ProjectStart } from './projectStart';
 
 const ID_PATTERNS = [
   /(?:youtube\.com\/watch\?.*v=)([\w-]{11})/,
@@ -67,4 +68,20 @@ export async function fetchChannel(url: string): Promise<{ name: string; logo?: 
   } catch {
     return null;
   }
+}
+
+/**
+ * What a YouTube URL brings to a new project: the channel behind it and, for a video, its title and
+ * current thumbnail. Null when nothing could be read.
+ */
+export async function fetchProjectStart(url: string): Promise<ProjectStart | null> {
+  const videoId = extractVideoId(url);
+  const [channel, title, thumbnail] = await Promise.all([
+    fetchChannel(url),
+    videoId ? fetchVideoTitle(videoId) : null,
+    videoId ? fetchThumbnail(videoId) : null,
+  ]);
+  const video = title || thumbnail ? { ...(title ? { title } : {}), ...(thumbnail ? { thumbnail } : {}) } : undefined;
+  if (!channel && !video) return null;
+  return { ...(channel ? { channel } : {}), ...(video ? { video } : {}) };
 }

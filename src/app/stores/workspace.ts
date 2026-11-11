@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { toast } from 'sonner';
+import { startInputs, type ProjectStart } from '../lib/projectStart';
 import * as db from '../lib/db';
 import { generateImage, isAbort } from '../lib/providers';
 import {
@@ -137,7 +138,8 @@ interface WorkspaceState {
 
   init: () => Promise<void>;
   // projects
-  newProject: (name?: string) => Promise<void>;
+  /** A new, empty project, or one started from a YouTube URL (its channel, video title and thumbnail). */
+  newProject: (name?: string, start?: ProjectStart | null) => Promise<void>;
   openProject: (id: string) => Promise<void>;
   renameProject: (name: string) => Promise<void>;
   /** The open project's channel page preview (slots, theme, statistics). */
@@ -684,15 +686,22 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       set({ ready: true });
     },
 
-    newProject: async (name) => {
+    newProject: async (name, start = null) => {
       const now = Date.now();
-      // A new project starts with an empty brief panel.
+      // A new project starts with an empty brief panel, but for what a pasted YouTube URL brought.
+      const from = startInputs(start);
       const project: Project = {
         id: db.uid('p_'),
         name: name ?? t('topbar.untitled'),
         createdAt: now,
         updatedAt: now,
-        inputs: { brief: EMPTY_BRIEF, refs: [], brand: { ...EMPTY_BRAND, updatedAt: now }, people: [], output: DEFAULT_OUTPUT },
+        inputs: {
+          brief: { ...EMPTY_BRIEF, videoTitle: from.videoTitle },
+          refs: from.refs.map((r) => ({ id: db.uid('r_'), ...r })),
+          brand: { ...EMPTY_BRAND, ...from.brand, updatedAt: now },
+          people: [],
+          output: DEFAULT_OUTPUT,
+        },
       };
       await db.putProject(project);
       set({ projects: [project, ...get().projects] });
