@@ -34,7 +34,7 @@ function PhotoTile({ photo, index, canTick, onTick, onRemove }: { photo: Persona
   return (
     <div className={cn('group relative aspect-[3/4] overflow-hidden rounded-lg border', !photo.used && 'border-dashed')}>
       {url && <img src={url} alt="" className={cn('size-full object-cover transition-opacity', !photo.used && 'opacity-50')} />}
-      <label className="absolute top-1 left-1 flex size-6 items-center justify-center rounded-md bg-background/90" title={label}>
+      <label className="absolute top-1 left-1 flex size-6 items-center justify-center rounded-md bg-background/90" title={`${label} ${t('persona.firstMatters')}`}>
         <Checkbox checked={photo.used} disabled={!canTick} onCheckedChange={(v) => onTick(v === true)} aria-label={`${label} (${index + 1})`} />
       </label>
       <Button

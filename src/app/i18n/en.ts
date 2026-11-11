@@ -271,6 +271,7 @@ export const en = {
     use: 'Send this photo to the model',
     useFull: '4 photos are already ticked: untick one to send this one.',
     addPhotos: 'Add photos',
+    firstMatters: 'The first ticked photo matters most.',
     ticked: '{used} of {max} photos ticked.',
     needName: 'Give this person a name.',
     needPhoto: 'Tick at least one photo to send to the model.',

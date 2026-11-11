@@ -273,6 +273,7 @@ export const fr: Dict = {
     use: 'Envoyer cette photo au modèle',
     useFull: '4 photos sont déjà cochées : décochez-en une pour envoyer celle-ci.',
     addPhotos: 'Ajouter des photos',
+    firstMatters: 'La première photo cochée est la plus importante.',
     ticked: '{used} sur {max} photos cochées.',
     needName: 'Donnez un nom à cette personne.',
     needPhoto: 'Cochez au moins une photo à envoyer au modèle.',
