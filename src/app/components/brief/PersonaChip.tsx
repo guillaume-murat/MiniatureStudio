@@ -4,8 +4,8 @@ import type { Persona } from '../../lib/types';
 import { cn } from '../../lib/utils';
 
 export function PersonaChip({ persona, active, onToggle }: { persona: Persona; active: boolean; onToggle: () => void }) {
-  const front = persona.photos.find((p) => p.slot === 'front') ?? persona.photos[0];
-  const url = useBlobUrl(front?.blob);
+  const cover = persona.photos[0];
+  const url = useBlobUrl(cover?.blob);
   return (
     <button
       type="button"

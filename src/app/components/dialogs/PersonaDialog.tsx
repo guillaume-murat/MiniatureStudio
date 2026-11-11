@@ -1,83 +1,83 @@
 import { useState } from 'react';
-import { ArrowLeft, ImagePlus, Pencil, Plus, Trash2, UserRound } from 'lucide-react';
+import { ArrowLeft, ImagePlus, Pencil, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Field } from '../Section';
-import { Thumb } from '../Thumb';
+import { Checkbox } from '../ui/checkbox';
 import { useBlobUrl } from '../../hooks/use-blob-url';
 import { useUI } from '../../stores/ui';
 import { useWorkspace } from '../../stores/workspace';
 import { deletePersona, putPersona, uid } from '../../lib/db';
 import { normaliseUpload } from '../../lib/images';
 import { useT } from '../../i18n';
-import type { Persona, PersonaPhoto, PersonaPhotoSlot } from '../../lib/types';
+import type { Persona, PersonaPhoto } from '../../lib/types';
+import { canUse, MAX_PERSONA_PHOTOS, MAX_USED_PHOTOS, normalisePhotos, usedPhotos } from '../../lib/personaPhotos';
 import { cn } from '../../lib/utils';
 
-const ANGLES: Array<Exclude<PersonaPhotoSlot, 'expression'>> = ['front', 'left', 'right'];
-
-function pickFile(onFile: (file: File) => void) {
+/** Picks one or more image files. */
+function pickFiles(onFiles: (files: File[]) => void) {
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
-  input.onchange = () => input.files?.[0] && onFile(input.files[0]);
+  input.multiple = true;
+  input.onchange = () => input.files?.length && onFiles([...input.files]);
   input.click();
 }
 
-function PhotoSlot({ label, blob, required, onSet, onClear }: { label: string; blob?: Blob; required?: boolean; onSet: (b: Blob) => void; onClear: () => void }) {
-  const url = useBlobUrl(blob);
-  const [over, setOver] = useState(false);
-  const accept = async (file?: File) => file?.type.startsWith('image/') && onSet(await normaliseUpload(file, 1536));
+/** One photo: its tick (sent to the model or not) and its remove button. */
+function PhotoTile({ photo, index, canTick, onTick, onRemove }: { photo: PersonaPhoto; index: number; canTick: boolean; onTick: (used: boolean) => void; onRemove: () => void }) {
+  const t = useT();
+  const url = useBlobUrl(photo.blob);
+  const label = canTick ? t('persona.use') : t('persona.useFull');
   return (
-    <div className="space-y-1">
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => pickFile(accept)}
-        onKeyDown={(e) => e.key === 'Enter' && pickFile(accept)}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setOver(true);
-        }}
-        onDragLeave={() => setOver(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setOver(false);
-          accept(e.dataTransfer.files[0]);
-        }}
-        className={cn(
-          'group relative flex aspect-[3/4] cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed bg-muted/40 transition-colors hover:border-primary/50',
-          over && 'border-primary bg-accent',
-          blob && 'border-solid',
-        )}
+    <div className={cn('group relative aspect-[3/4] overflow-hidden rounded-lg border', !photo.used && 'border-dashed')}>
+      {url && <img src={url} alt="" className={cn('size-full object-cover transition-opacity', !photo.used && 'opacity-50')} />}
+      <label className="absolute top-1 left-1 flex size-6 items-center justify-center rounded-md bg-background/90" title={label}>
+        <Checkbox checked={photo.used} disabled={!canTick} onCheckedChange={(v) => onTick(v === true)} aria-label={`${label} (${index + 1})`} />
+      </label>
+      <Button
+        type="button"
+        onClick={onRemove}
+        variant="outline"
+        size="icon-2xs"
+        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:opacity-100"
+        aria-label={t('common.remove')}
       >
-        {url ? (
-          <>
-            <img src={url} alt={label} className="size-full object-cover" />
-            <Button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onClear();
-              }}
-              variant="outline"
-              size="icon-2xs"
-              className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:opacity-100"
-              aria-label="Remove"
-            >
-              <Trash2 className="size-3" />
-            </Button>
-          </>
-        ) : (
-          <UserRound className="size-8 text-muted-foreground/60" />
-        )}
-      </div>
-      <p className="text-center text-xs text-muted-foreground">
-        {label}
-        {required && ' *'}
-      </p>
+        <Trash2 className="size-3" />
+      </Button>
     </div>
+  );
+}
+
+/** Adds photos, by click or by dropping files, up to 10. */
+function AddPhotos({ room, onAdd }: { room: number; onAdd: (files: File[]) => void }) {
+  const t = useT();
+  const [over, setOver] = useState(false);
+  const add = (files: File[]) => onAdd(files.filter((f) => f.type.startsWith('image/')).slice(0, room));
+  return (
+    <button
+      type="button"
+      onClick={() => pickFiles(add)}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setOver(true);
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setOver(false);
+        add([...e.dataTransfer.files]);
+      }}
+      className={cn(
+        'flex aspect-[3/4] flex-col items-center justify-center gap-1 rounded-lg border border-dashed bg-muted/40 p-1 text-center text-xs text-muted-foreground transition-colors hover:border-primary/50',
+        over && 'border-primary bg-accent',
+      )}
+    >
+      <ImagePlus className="size-6 text-muted-foreground/70" />
+      {t('persona.addPhotos')}
+    </button>
   );
 }
 
@@ -88,14 +88,16 @@ function Editor({ initial, onDone }: { initial?: Persona; onDone: () => void }) 
   const [description, setDescription] = useState(initial?.description ?? '');
   const [photos, setPhotos] = useState<PersonaPhoto[]>(initial?.photos ?? []);
 
-  const angle = (slot: PersonaPhotoSlot) => photos.find((p) => p.slot === slot);
-  const setAngle = (slot: PersonaPhotoSlot, blob: Blob) =>
-    setPhotos((ps) => [...ps.filter((p) => p.slot !== slot), { id: uid('ph_'), slot, blob }]);
-  const expressions = photos.filter((p) => p.slot === 'expression');
+  const ticked = usedPhotos(photos).length;
+  async function addFiles(files: File[]) {
+    const blobs = await Promise.all(files.map((file) => normaliseUpload(file, 1536)));
+    // A new photo is ticked while there is room for it.
+    setPhotos((ps) => normalisePhotos([...ps, ...blobs.map((blob) => ({ id: uid('ph_'), blob, used: true }))]));
+  }
 
   async function save() {
     if (!name.trim()) return void toast.error(t('persona.needName'));
-    if (!angle('front')) return void toast.error(t('persona.needFront'));
+    if (!ticked) return void toast.error(t('persona.needPhoto'));
     const id = initial?.id ?? uid('pe_');
     await putPersona({
       id,
@@ -119,52 +121,27 @@ function Editor({ initial, onDone }: { initial?: Persona; onDone: () => void }) 
         </Field>
       </div>
 
-      <Field label={t('persona.angles')} hint={t('persona.anglesHint')}>
-        <div className="grid grid-cols-3 gap-3">
-          {ANGLES.map((slot) => (
-            <PhotoSlot
-              key={slot}
-              label={t(`persona.${slot}`)}
-              required={slot === 'front'}
-              blob={angle(slot)?.blob}
-              onSet={(b) => setAngle(slot, b)}
-              onClear={() => setPhotos((ps) => ps.filter((p) => p.slot !== slot))}
+      <Field label={t('persona.photosTitle')} hint={t('persona.photosHint')}>
+        <div className="grid grid-cols-5 gap-2">
+          {photos.map((photo, i) => (
+            <PhotoTile
+              key={photo.id}
+              photo={photo}
+              index={i}
+              canTick={canUse(photos, photo.id)}
+              onTick={(used) => setPhotos((ps) => ps.map((x) => (x.id === photo.id ? { ...x, used } : x)))}
+              onRemove={() => setPhotos((ps) => ps.filter((x) => x.id !== photo.id))}
             />
           ))}
+          {photos.length < MAX_PERSONA_PHOTOS && <AddPhotos room={MAX_PERSONA_PHOTOS - photos.length} onAdd={addFiles} />}
         </div>
-      </Field>
-
-      <Field label={t('persona.expressions')} hint={t('persona.expressionsHint')}>
-        <div className="space-y-2">
-          {expressions.map((p) => (
-            <div key={p.id} className="flex items-center gap-2">
-              <Thumb blob={p.blob} className="size-12 shrink-0" />
-              <Input
-                value={p.expression ?? ''}
-                onChange={(e) => setPhotos((ps) => ps.map((x) => (x.id === p.id ? { ...x, expression: e.target.value } : x)))}
-                placeholder={t('persona.expressionLabel')}
-                className="h-8"
-              />
-              <Button variant="ghost" size="icon-sm" onClick={() => setPhotos((ps) => ps.filter((x) => x.id !== p.id))} aria-label={t('common.remove')}>
-                <Trash2 />
-              </Button>
-            </div>
-          ))}
-          {photos.length < 8 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                pickFile(async (file) => {
-                  const blob = await normaliseUpload(file, 1536);
-                  setPhotos((ps) => [...ps, { id: uid('ph_'), slot: 'expression', expression: '', blob }]);
-                })
-              }
-            >
-              <ImagePlus /> {t('persona.addExpression')}
-            </Button>
-          )}
-        </div>
+        {photos.length > 0 && (
+          // Visible, not only in a tooltip: on touch the disabled ticks need it.
+          <p className="text-xs text-muted-foreground" role="status">
+            {t('persona.ticked', { used: ticked, max: MAX_USED_PHOTOS })}
+            {ticked >= MAX_USED_PHOTOS && photos.length > ticked && ` ${t('persona.useFull')}`}
+          </p>
+        )}
       </Field>
 
       <DialogFooter>
@@ -180,15 +157,15 @@ function Editor({ initial, onDone }: { initial?: Persona; onDone: () => void }) 
 function PersonaCard({ persona, onEdit }: { persona: Persona; onEdit: () => void }) {
   const t = useT();
   const reload = useWorkspace((s) => s.reloadPersonas);
-  const front = persona.photos.find((p) => p.slot === 'front') ?? persona.photos[0];
-  const url = useBlobUrl(front?.blob);
+  const cover = persona.photos[0];
+  const url = useBlobUrl(cover?.blob);
   const [confirming, setConfirming] = useState(false);
   return (
     <div className="flex items-center gap-3 rounded-lg border p-2">
       {url ? <img src={url} alt="" className="size-12 rounded-md object-cover" /> : <div className="size-12 rounded-md bg-muted" />}
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{persona.name}</p>
-        <p className="truncate text-xs text-muted-foreground">{persona.description || t('persona.photos', { n: persona.photos.length })}</p>
+        <p className="truncate text-xs text-muted-foreground">{persona.description || t('persona.photos', { used: usedPhotos(persona.photos).length, n: persona.photos.length })}</p>
       </div>
       {confirming ? (
         <>

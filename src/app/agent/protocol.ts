@@ -170,7 +170,7 @@ export const STUDIO_TOOLS: ToolDef[] = [
   {
     name: 'set_people',
     description:
-      'Choose which people of the shared library (personas, see get_state) appear in this project’s thumbnails. Their photos are sent with an identity lock. Max 5, saved with the project.',
+      'Choose which people of the shared library (personas, see get_state) appear in this project’s thumbnails. Their ticked photos (at most 4 each, chosen in the studio) are sent with an identity lock. Max 5, saved with the project.',
     inputSchema: obj({ ids: { type: 'array', items: { type: 'string' }, description: 'Persona ids; [] for none.' } }, ['ids']),
   },
   {

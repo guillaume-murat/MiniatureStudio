@@ -18,7 +18,7 @@ import type { Lang, OutputRatio, PromptOptions, ReferenceUse, ResolvedPromptOpti
  */
 
 export type ImageRole =
-  | { kind: 'persona'; name: string; description?: string; expression?: string }
+  | { kind: 'persona'; name: string; description?: string }
   | { kind: 'reference'; label?: string; use?: ReferenceUse }
   /** The black-on-white sketch of the Gribouillis view: always image 1. */
   | { kind: 'sketch' };
@@ -58,7 +58,7 @@ interface PromptCopy {
   imageLabel: (label: string) => string;
   /** What each kind of reference asks of the model. Text in an image is never to be copied. */
   references: Record<ReferenceUse, (label: string) => string>;
-  person: (name: string, description: string, expressions: string[]) => string;
+  person: (name: string, description: string) => string;
   identity: (people: string[]) => string;
   faceFix: (who: string) => string;
   title: (title: string) => string;
@@ -119,10 +119,9 @@ const COPY: Record<Lang, PromptCopy> = {
       object: (label) => `objet${label} à reproduire fidèlement dans la miniature.`,
       background: (label) => `décor${label} à utiliser en arrière-plan de la scène.`,
     },
-    person: (name, description, expressions) =>
+    person: (name, description) =>
       `photos ${ofName(name)}${description ? ` (${description})` : ''}. ` +
-      `Garde les traits du visage ${ofName(name)} exactement identiques à ces photos (forme du visage, yeux, nez, bouche, teint, cheveux), même si son expression change.` +
-      (expressions.length ? ` Elles montrent aussi ses expressions typiques : ${expressions.join(', ')}.` : ''),
+      `Garde les traits du visage ${ofName(name)} exactement identiques à ces photos (forme du visage, yeux, nez, bouche, teint, cheveux), même si son expression change.`,
     identity: (people) =>
       (people.length === 1 ? `La personne mise en avant est ${people[0]}. Cette personne doit` : `Les personnes mises en avant sont ${joinFr(people)}. Chacune doit`) +
       ' rester la même personne, immédiatement reconnaissable, avec les traits du visage de ses photos. Seule l’expression change quand la scène ou la direction artistique le demande : la forme du visage, les yeux, le nez, la bouche, le teint et les cheveux restent les siens.',
@@ -203,10 +202,9 @@ const COPY: Record<Lang, PromptCopy> = {
       object: (label) => `object${label} to reproduce faithfully in the thumbnail.`,
       background: (label) => `setting${label} to use as the background of the scene.`,
     },
-    person: (name, description, expressions) =>
+    person: (name, description) =>
       `photos of ${name}${description ? ` (${description})` : ''}. ` +
-      `Keep ${name}’s facial features exactly the same as in these photos (face shape, eyes, nose, mouth, skin tone, hair), even if the expression changes.` +
-      (expressions.length ? ` They also show typical expressions: ${expressions.join(', ')}.` : ''),
+      `Keep ${name}’s facial features exactly the same as in these photos (face shape, eyes, nose, mouth, skin tone, hair), even if the expression changes.`,
     identity: (people) =>
       (people.length === 1 ? `The featured person is ${people[0]}. This person must` : `The featured people are ${joinEn(people)}. Each must`) +
       ' remain the same person, instantly recognisable, with the facial features of their photos. Only the expression changes when the scene or the art direction asks for it: the face shape, eyes, nose, mouth, skin tone and hair stay their own.',
@@ -316,11 +314,9 @@ export function describeImages(lang: Lang, roles: ImageRole[], offset = 0): stri
     }
     const label = copy.imageLabel(imageLabel(offset + i + 1, offset + j + 1));
     switch (role.kind) {
-      case 'persona': {
-        const expressions = roles.slice(i, j + 1).flatMap((r) => (r.kind === 'persona' && r.expression ? [r.expression] : []));
-        lines.push(`- ${label} ${copy.person(role.name, role.description ?? '', expressions)}`);
+      case 'persona':
+        lines.push(`- ${label} ${copy.person(role.name, role.description ?? '')}`);
         break;
-      }
       case 'reference':
         lines.push(`- ${label} ${copy.references[role.use ?? 'free'](role.label ? ` (${role.label})` : '')}`);
         break;

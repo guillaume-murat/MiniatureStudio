@@ -63,7 +63,7 @@ _À éviter : barre de prompt, barre d'outils._
 
 **Style** : une direction artistique réutilisable, préréglée ou créée par le créateur. Un style créé par le créateur reste dans la langue où il l'a écrit.
 
-**Personne** (persona) : quelqu'un dont les photos servent à garder le visage fidèle. Les personnes forment une bibliothèque commune à tous les projets, et chaque projet en choisit au plus cinq.
+**Personne** (persona) : quelqu'un dont les photos servent à garder le visage fidèle. Elle garde jusqu'à dix photos, dont celles qui sont cochées, quatre au plus, sont envoyées au modèle. Les personnes forment une bibliothèque commune à tous les projets, et chaque projet en choisit au plus cinq.
 
 **Référence** (reference) : une image jointe avec un rôle précis : composition, style, objet, décor ou usage libre.
 

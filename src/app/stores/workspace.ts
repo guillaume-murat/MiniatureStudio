@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { toast } from 'sonner';
 import { startInputs, type ProjectStart } from '../lib/projectStart';
+import { usedPhotos } from '../lib/personaPhotos';
 import * as db from '../lib/db';
 import { generateImage, isAbort } from '../lib/providers';
 import {
@@ -346,19 +347,17 @@ export interface EditPreview {
 }
 
 export const useWorkspace = create<WorkspaceState>((set, get) => {
-  /** Personas selected for this brief → their photos, in a stable order. */
+  /** Personas selected for this brief → their ticked photos, in a stable order. */
   function personaImages(ids = get().personaIds): Array<{ blob: Blob; role: ImageRole }> {
     const { personas } = get();
     return ids.flatMap((id) => {
       const p = personas.find((x) => x.id === id);
       if (!p) return [];
-      const order = { front: 0, left: 1, right: 2, expression: 3 };
-      return [...p.photos]
-        .sort((a, b) => order[a.slot] - order[b.slot])
-        .map((ph) => ({
-          blob: ph.blob,
-          role: { kind: 'persona', name: p.name, description: p.description, expression: ph.expression } as ImageRole,
-        }));
+      // Only the ticked photos, in the person's order.
+      return usedPhotos(p.photos).map((ph) => ({
+        blob: ph.blob,
+        role: { kind: 'persona', name: p.name, description: p.description } as ImageRole,
+      }));
     });
   }
 

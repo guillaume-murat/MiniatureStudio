@@ -213,12 +213,12 @@ describe('describeImages', () => {
   it('groups consecutive photos of the same person', () => {
     const lines = describeImages('fr', [
       { kind: 'persona', name: 'Alex' },
-      { kind: 'persona', name: 'Alex', expression: 'surpris' },
+      { kind: 'persona', name: 'Alex' },
       { kind: 'persona', name: 'Sam' },
       { kind: 'reference', label: 'logo' },
     ]);
     expect(lines[0]).toMatch(/^- Images 1–2 : photos d’Alex\./);
-    expect(lines[0]).toContain('surpris');
+    expect(lines[0]).not.toContain('expressions typiques');
     expect(lines[1]).toMatch(/^- Image 3 : photos de Sam\./);
     expect(lines[2]).toMatch(/^- Image 4 : image de référence \(logo\)/);
   });
@@ -285,11 +285,11 @@ describe('the prompts follow the interface language', () => {
   const en = { ...base, lang: 'en' as const, brief: 'A developer on Mars' };
 
   it('writes the whole generation prompt in that language', () => {
-    const roles = [{ kind: 'persona', name: 'Alex', expression: 'surprised' }, { kind: 'reference', use: 'style', label: 'logo' }] as const;
+    const roles = [{ kind: 'persona', name: 'Alex' }, { kind: 'reference', use: 'style', label: 'logo' }] as const;
     const options = { text: 'style', titleZone: 'bottom-right', brandWeight: 'dominant' } as const;
     const p = buildGenerationPrompt({ ...en, roles: [...roles], videoTitle: 'Mars', style: 'Flat', colors: ['#ff0000'], options });
     expect(p).toMatch(/^Generate a YouTube video thumbnail in 16:9 format\. The thumbnail will appear next to the video title: Mars\./);
-    for (const part of ['Scene: A developer on Mars', 'Art direction: Flat', 'Attached images, in order:', '- Image 1: photos of Alex.', 'typical expressions: surprised', '- Image 2: style reference (logo):', 'Brand colours: #ff0000.', 'the corner where the duration appears']) {
+    for (const part of ['Scene: A developer on Mars', 'Art direction: Flat', 'Attached images, in order:', '- Image 1: photos of Alex.', '- Image 2: style reference (logo):', 'Brand colours: #ff0000.', 'the corner where the duration appears']) {
       expect(p).toContain(part);
     }
     // None of the French words the prompts are made of.

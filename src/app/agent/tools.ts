@@ -135,6 +135,7 @@ export const handlers: Record<string, Handler> = {
         name: p.name,
         description: p.description,
         photos: p.photos.length,
+        sentPhotos: p.photos.filter((ph) => ph.used).length,
         selected: s.personaIds.includes(p.id),
       })),
       channel: s.brand.channelName || undefined,

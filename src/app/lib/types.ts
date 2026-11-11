@@ -97,14 +97,11 @@ export interface ChannelPage {
   seed: number;
 }
 
-export type PersonaPhotoSlot = 'front' | 'left' | 'right' | 'expression';
-
+/** One of a person's photos (at most 10); the ticked ones (at most 4) are sent to the model. */
 export interface PersonaPhoto {
   id: string;
-  slot: PersonaPhotoSlot;
-  /** Free label for expression photos, e.g. "surprised", "laughing". */
-  expression?: string;
   blob: Blob;
+  used: boolean;
 }
 
 /** A style the user wrote, shared by every project. */

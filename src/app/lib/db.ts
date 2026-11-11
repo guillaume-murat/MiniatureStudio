@@ -1,6 +1,7 @@
 import { deleteDB, openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { inMemory, toStored } from './blobStore';
 import type { CustomStyle, Generation, LibraryImage, Persona, Project } from './types';
+import { normalisePhotos, type StoredPersonaPhoto } from './personaPhotos';
 
 interface NanoDB extends DBSchema {
   generations: {
@@ -119,7 +120,8 @@ export async function deleteGenerations(ids: string[]): Promise<void> {
 
 export async function listPersonas(): Promise<Persona[]> {
   const items = await inMemory(await (await getDB()).getAll('personas'));
-  return items.sort((a, b) => b.createdAt - a.createdAt);
+  // Photos saved as angles and expressions, or before the ticks, are read as plain photos.
+  return items.map((p) => ({ ...p, photos: normalisePhotos(p.photos as StoredPersonaPhoto[]) })).sort((a, b) => b.createdAt - a.createdAt);
 }
 export async function putPersona(persona: Persona): Promise<void> {
   await (await getDB()).put('personas', await toStored(persona));
