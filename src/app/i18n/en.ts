@@ -426,7 +426,7 @@ export const en = {
     rate: 'Rate limit reached. Wait a moment and retry.',
     safety: 'The request was blocked by the safety filter. Rephrase the brief or lower the filter level.',
     tooLarge: 'Request too large. Remove some reference images.',
-    timeout: 'The generation took too long and was stopped.',
+    timeout: 'The model did not answer within 60 seconds: the call was stopped. Try again, or choose a lower resolution or a faster model.',
     network: 'Network error. Check your connection.',
     local: 'Something went wrong in the studio, not at the provider.',
     generic: 'The provider returned an error.',

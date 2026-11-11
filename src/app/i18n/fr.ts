@@ -428,7 +428,7 @@ export const fr: Dict = {
     rate: 'Limite de requêtes atteinte. Patientez un peu puis réessayez.',
     safety: 'La requête a été bloquée par le filtre de sécurité. Reformulez le brief ou baissez le niveau du filtre.',
     tooLarge: 'Requête trop volumineuse. Retirez quelques images de référence.',
-    timeout: 'La génération a pris trop de temps et a été interrompue.',
+    timeout: 'Le modèle n’a pas répondu en 60 secondes : l’appel a été interrompu. Réessayez, ou choisissez une résolution plus basse ou un modèle plus rapide.',
     network: 'Erreur réseau. Vérifiez votre connexion.',
     local: 'Une erreur est survenue dans le studio, pas chez le fournisseur.',
     generic: 'Le fournisseur a renvoyé une erreur.',

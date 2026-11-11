@@ -68,8 +68,11 @@ const CHAT_PROVIDERS: Record<ChatProvider, { url: string; image: Partial<Record<
   openai: { url: `${OPENAI_BASE}/chat/completions`, image: {}, text: OPENAI_TEXT_MODEL },
 };
 
-/** Hard ceiling for one generation. Nano Banana Pro at 4K can take a couple of minutes. */
-const GENERATION_TIMEOUT_MS = 5 * 60_000;
+/**
+ * Hard ceiling for one call to a model, image or text: past it the call is stopped (and
+ * cancelled at Replicate) and reported as too long. A call usually takes about 30 s.
+ */
+export const CALL_TIMEOUT_MS = 60_000;
 
 export class ProviderError extends Error {
   constructor(
@@ -557,7 +560,7 @@ async function openaiImage(req: ImageRequest, signal: AbortSignal): Promise<Blob
 // ─── Public API ──────────────────────────────────────────
 
 export async function generateImage(req: ImageRequest): Promise<Blob> {
-  const signal = withTimeout(req.signal, GENERATION_TIMEOUT_MS);
+  const signal = withTimeout(req.signal, CALL_TIMEOUT_MS);
   switch (req.params.provider) {
     case 'gemini':
     case 'vertex':
@@ -573,7 +576,7 @@ export async function generateImage(req: ImageRequest): Promise<Blob> {
 }
 
 export async function generateText(req: TextRequest): Promise<string> {
-  const signal = withTimeout(req.signal, 90_000);
+  const signal = withTimeout(req.signal, CALL_TIMEOUT_MS);
   switch (req.provider) {
     case 'gemini':
     case 'vertex':
