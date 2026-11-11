@@ -102,6 +102,8 @@ export interface PersonaPhoto {
   id: string;
   blob: Blob;
   used: boolean;
+  /** Among the ticked photos, 1 to 4 in the order they were ticked: the first matters most. */
+  rank?: number;
 }
 
 /** A style the user wrote, shared by every project. */

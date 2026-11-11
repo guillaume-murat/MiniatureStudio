@@ -267,7 +267,7 @@ export const en = {
     about: 'Description',
     aboutPlaceholder: 'e.g. host of the channel, short brown hair, glasses',
     photosTitle: 'Face photos',
-    photosHint: 'Up to 10 photos. Tick the ones sent to the model, 4 at most: one from the front and profiles give the best likeness. The first one is the thumbnail.',
+    photosHint: 'Up to 10 photos. Tick the ones sent to the model, 4 at most: one from the front and profiles give the best likeness. They are numbered in the order you tick them: number 1 matters most and is the thumbnail.',
     use: 'Send this photo to the model',
     useFull: '4 photos are already ticked: untick one to send this one.',
     addPhotos: 'Add photos',

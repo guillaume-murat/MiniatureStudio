@@ -13,7 +13,7 @@ import { deletePersona, putPersona, uid } from '../../lib/db';
 import { normaliseUpload } from '../../lib/images';
 import { useT } from '../../i18n';
 import type { Persona, PersonaPhoto } from '../../lib/types';
-import { canUse, MAX_PERSONA_PHOTOS, MAX_USED_PHOTOS, normalisePhotos, usedPhotos } from '../../lib/personaPhotos';
+import { canUse, coverPhoto, MAX_PERSONA_PHOTOS, MAX_USED_PHOTOS, normalisePhotos, tick, usedPhotos } from '../../lib/personaPhotos';
 import { cn } from '../../lib/utils';
 
 /** Picks one or more image files. */
@@ -32,21 +32,27 @@ function PhotoTile({ photo, index, canTick, onTick, onRemove }: { photo: Persona
   const url = useBlobUrl(photo.blob);
   const label = canTick ? t('persona.use') : t('persona.useFull');
   return (
-    <div className={cn('group relative aspect-[3/4] overflow-hidden rounded-lg border', !photo.used && 'border-dashed')}>
-      {url && <img src={url} alt="" className={cn('size-full object-cover transition-opacity', !photo.used && 'opacity-50')} />}
-      <label className="absolute top-1 left-1 flex size-6 items-center justify-center rounded-md bg-background/90" title={`${label} ${t('persona.firstMatters')}`}>
-        <Checkbox checked={photo.used} disabled={!canTick} onCheckedChange={(v) => onTick(v === true)} aria-label={`${label} (${index + 1})`} />
-      </label>
-      <Button
-        type="button"
-        onClick={onRemove}
-        variant="outline"
-        size="icon-2xs"
-        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:opacity-100"
-        aria-label={t('common.remove')}
-      >
-        <Trash2 className="size-3" />
-      </Button>
+    <div className="space-y-1">
+      <div className={cn('group relative aspect-[3/4] overflow-hidden rounded-lg border', !photo.used && 'border-dashed')}>
+        {url && <img src={url} alt="" className={cn('size-full object-cover transition-opacity', !photo.used && 'opacity-50')} />}
+        <label className="absolute top-1 left-1 flex size-6 items-center justify-center rounded-md bg-background/90" title={`${label} ${t('persona.firstMatters')}`}>
+          <Checkbox checked={photo.used} disabled={!canTick} onCheckedChange={(v) => onTick(v === true)} aria-label={`${label} (${index + 1})`} />
+        </label>
+        <Button
+          type="button"
+          onClick={onRemove}
+          variant="outline"
+          size="icon-2xs"
+          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:opacity-100"
+          aria-label={t('common.remove')}
+        >
+          <Trash2 className="size-3" />
+        </Button>
+      </div>
+      {/* Its place among the ticked photos: 1 matters most. */}
+      <p className="h-4 text-center text-xs font-semibold tabular-nums" aria-hidden={!photo.rank}>
+        {photo.rank ?? ''}
+      </p>
     </div>
   );
 }
@@ -129,7 +135,7 @@ function Editor({ initial, onDone }: { initial?: Persona; onDone: () => void }) 
               photo={photo}
               index={i}
               canTick={canUse(photos, photo.id)}
-              onTick={(used) => setPhotos((ps) => ps.map((x) => (x.id === photo.id ? { ...x, used } : x)))}
+              onTick={(used) => setPhotos((ps) => tick(ps, photo.id, used))}
               onRemove={() => setPhotos((ps) => ps.filter((x) => x.id !== photo.id))}
             />
           ))}
@@ -157,7 +163,7 @@ function Editor({ initial, onDone }: { initial?: Persona; onDone: () => void }) 
 function PersonaCard({ persona, onEdit }: { persona: Persona; onEdit: () => void }) {
   const t = useT();
   const reload = useWorkspace((s) => s.reloadPersonas);
-  const cover = persona.photos[0];
+  const cover = coverPhoto(persona.photos);
   const url = useBlobUrl(cover?.blob);
   const [confirming, setConfirming] = useState(false);
   return (

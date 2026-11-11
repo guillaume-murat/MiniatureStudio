@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canUse, MAX_PERSONA_PHOTOS, MAX_USED_PHOTOS, normalisePhotos, usedPhotos } from '../personaPhotos';
+import { canUse, MAX_PERSONA_PHOTOS, MAX_USED_PHOTOS, normalisePhotos, tick, usedPhotos } from '../personaPhotos';
 
 const blob = (s: string) => new Blob([s]);
 
@@ -47,5 +47,46 @@ describe('a person’s photos', () => {
     expect(canUse(photos, 'p4')).toBe(false);
     expect(canUse(photos, 'p0')).toBe(true);
     expect(canUse(normalisePhotos([{ id: 'x', blob: blob('x'), used: false }]), 'x')).toBe(true);
+  });
+});
+
+describe('the order of the ticks', () => {
+  const four = () => normalisePhotos(['a', 'b', 'c', 'd'].map((id) => ({ id, blob: blob(id), used: false })));
+
+  it('numbers the ticked photos 1 to 4 in the order they were ticked, and sends them in that order', () => {
+    let photos = four();
+    for (const id of ['c', 'a', 'd']) photos = tick(photos, id, true);
+    expect(photos.map((p) => [p.id, p.rank ?? null])).toEqual([
+      ['a', 2],
+      ['b', null],
+      ['c', 1],
+      ['d', 3],
+    ]);
+    expect(usedPhotos(photos).map((p) => p.id)).toEqual(['c', 'a', 'd']);
+  });
+
+  it('closes the gap when a photo is unticked', () => {
+    let photos = four();
+    for (const id of ['c', 'a', 'd']) photos = tick(photos, id, true);
+    photos = tick(photos, 'c', false);
+    expect(usedPhotos(photos).map((p) => [p.id, p.rank])).toEqual([
+      ['a', 1],
+      ['d', 2],
+    ]);
+    const c = photos.find((p) => p.id === 'c');
+    expect(c?.used).toBe(false);
+    expect(c?.rank).toBeUndefined();
+  });
+
+  it('numbers photos ticked before the numbers existed in their grid order', () => {
+    const photos = normalisePhotos([
+      { id: 'x', blob: blob('x'), used: true },
+      { id: 'y', blob: blob('y'), used: false },
+      { id: 'z', blob: blob('z'), used: true },
+    ]);
+    expect(usedPhotos(photos).map((p) => [p.id, p.rank])).toEqual([
+      ['x', 1],
+      ['z', 2],
+    ]);
   });
 });

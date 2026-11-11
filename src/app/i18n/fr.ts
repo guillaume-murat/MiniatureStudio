@@ -269,7 +269,7 @@ export const fr: Dict = {
     about: 'Description',
     aboutPlaceholder: 'Ex. : animateur de la chaîne, cheveux bruns courts, lunettes',
     photosTitle: 'Photos du visage',
-    photosHint: 'Jusqu’à 10 photos. Cochez celles envoyées au modèle, 4 au plus : une de face et des profils donnent la meilleure ressemblance. La première sert de vignette.',
+    photosHint: 'Jusqu’à 10 photos. Cochez celles envoyées au modèle, 4 au plus : une de face et des profils donnent la meilleure ressemblance. Elles sont numérotées dans l’ordre où vous les cochez : la n° 1 compte le plus et sert de vignette.',
     use: 'Envoyer cette photo au modèle',
     useFull: '4 photos sont déjà cochées : décochez-en une pour envoyer celle-ci.',
     addPhotos: 'Ajouter des photos',

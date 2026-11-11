@@ -1,10 +1,11 @@
 import { Check } from 'lucide-react';
+import { coverPhoto } from '../../lib/personaPhotos';
 import { useBlobUrl } from '../../hooks/use-blob-url';
 import type { Persona } from '../../lib/types';
 import { cn } from '../../lib/utils';
 
 export function PersonaChip({ persona, active, onToggle }: { persona: Persona; active: boolean; onToggle: () => void }) {
-  const cover = persona.photos[0];
+  const cover = coverPhoto(persona.photos);
   const url = useBlobUrl(cover?.blob);
   return (
     <button
