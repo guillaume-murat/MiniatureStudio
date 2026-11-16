@@ -3,8 +3,9 @@ import { DEFAULT_PROMPT_OPTIONS } from './prompt';
 import type { CustomStyle, Lang, PromptOptions, ResolvedPromptOptions } from './types';
 
 /**
- * Thumbnail style presets. Each injects an art-direction fragment into the prompt.
- * The user's own styles (`CustomStyle`, shared by every project) work the same way.
+ * Thumbnail style presets: art-direction texts inserted into the scene (`insertStyle`), where the
+ * creator adapts them; nothing of a style reaches the prompt otherwise. The user's own styles
+ * (`CustomStyle`, shared by every project) work the same way.
  *
  * Based on current creator practice (1of10, vidIQ 2026 breakout study, Google's
  * Nano Banana guides). Composition rules are conventions, not proven CTR laws:
@@ -344,9 +345,6 @@ export const STYLES: StylePreset[] = [
   },
 ];
 
-/** The emoji of « Libre », no style at all. */
-export const NO_STYLE_EMOJI = '✨';
-
 /** Quick choices when writing a style. */
 export const STYLE_EMOJIS = ['🎨', '🔥', '⚡', '🌈', '🌙', '🖤', '📸', '🎥', '🧠', '🚀', '👑', '💎', '🌿', '🍿', '📚', '🛠️'];
 
@@ -373,21 +371,25 @@ export function findStyle(id: string | undefined, custom: CustomStyle[] = []): S
   return id ? allStyles(custom).find((s) => s.id === id) : undefined;
 }
 
-/** The advanced options in effect: the user's choices over the style's preset. */
-export function resolveOptions(style: StylePreset | undefined, options: PromptOptions = {}): ResolvedPromptOptions {
+/** The advanced options in effect: the user's choices over the defaults. */
+export function resolveOptions(options: PromptOptions = {}): ResolvedPromptOptions {
   return {
-    // A style that adds text cannot go without it, whatever was chosen before.
-    text: style?.preset?.text ?? options.text ?? DEFAULT_PROMPT_OPTIONS.text,
+    text: options.text ?? DEFAULT_PROMPT_OPTIONS.text,
     titleZone: options.titleZone ?? DEFAULT_PROMPT_OPTIONS.titleZone,
     brandWeight: options.brandWeight ?? DEFAULT_PROMPT_OPTIONS.brandWeight,
   };
 }
 
-/** Choosing another style brings back its preset; what does not depend on the style stays. */
-export function optionsForNewStyle(options: PromptOptions | undefined): PromptOptions | undefined {
-  if (!options) return undefined;
-  const { titleZone, brandWeight } = options;
-  return { titleZone, brandWeight };
+/**
+ * The scene once a style's text is inserted into it: the text alone in an empty scene, else after
+ * what is there, after a blank line. `last`, the text inserted just before, is replaced while it is
+ * still there untouched, so trying several styles does not pile them up.
+ */
+export function insertStyle(scene: string, text: string, last?: string): string {
+  const style = text.trim();
+  if (!scene.trim()) return style;
+  if (last?.trim() && scene.includes(last.trim())) return scene.replace(last.trim(), () => style);
+  return `${scene.trimEnd()}\n\n${style}`;
 }
 
 /** What an emoji field keeps of its text: the last character typed, whole (an emoji can be several code points). */

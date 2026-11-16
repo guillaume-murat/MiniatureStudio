@@ -98,16 +98,21 @@ function requireKey(): string {
   return key;
 }
 
-const BRIEF_KEYS = ['videoTitle', 'brief', 'styleId'] as const;
+const BRIEF_KEYS = ['videoTitle', 'brief'] as const;
 
+/** Writes the brief; a `styleId` inserts that style's text into the scene, as choosing it in the studio does. */
 function applyBrief(args: Args): void {
   const patch: Partial<Brief> = {};
   for (const key of BRIEF_KEYS) {
     const value = str(args, key);
-    if (value !== undefined) (patch as Record<string, string>)[key] = value;
+    if (value !== undefined) patch[key] = value;
   }
-  if (patch.styleId && !findStyle(patch.styleId, ws().customStyles)) throw new ToolError(`Unknown styleId "${patch.styleId}" (see list_styles).`);
+  const styleId = str(args, 'styleId');
+  if (styleId && !findStyle(styleId, ws().customStyles)) throw new ToolError(`Unknown styleId "${styleId}" (see list_styles).`);
   if (Object.keys(patch).length) ws().setBrief(patch);
+  // A brief given here is new: a style inserted before into the old one is no longer in it.
+  if (patch.brief !== undefined) useWorkspace.setState({ lastStyleText: undefined });
+  if (styleId) ws().insertStyle(styleId);
 }
 
 // ─── Tools ───────────────────────────────────────────────
@@ -248,12 +253,12 @@ export const handlers: Record<string, Handler> = {
         styles: conceptStyles(lang, ws().customStyles),
       },
     );
-    return ok({ concepts, hint: 'Apply one with generate({ brief, styleId }).' });
+    return ok({ concepts, hint: 'Apply one with generate({ brief, styleId }): the style’s text is added to the brief.' });
   },
 
   generate: async (args) => {
     // Validate before touching the brief: a failed call must not wipe what the user typed.
-    if (!(str(args, 'brief') ?? ws().brief.brief).trim()) throw new ToolError('The brief is empty: pass "brief".');
+    if (!(str(args, 'brief') ?? ws().brief.brief).trim() && !str(args, 'styleId')) throw new ToolError('The brief is empty: pass "brief" (or a "styleId", whose text fills it).');
     const count = oneOf(args, 'count', [1, 2, 4] as const);
     requireKey();
     applyBrief(args);

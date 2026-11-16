@@ -92,8 +92,8 @@ const id = str('Thumbnail (generation) id, e.g. "g_…". Defaults to the image s
 
 const BRIEF_FIELDS: Record<string, JSONSchema> = {
   videoTitle: str('Title of the YouTube video (context for the model, not drawn on the image).'),
-  brief: str('The thumbnail idea: who, what, emotion, composition, setting. Any language.'),
-  styleId: str('Style preset id from list_styles, or "" for none.'),
+  brief: str('The thumbnail idea, art direction included: who, what, emotion, composition, setting, look. Any language. It is all the model is told about the image.'),
+  styleId: str('Style id from list_styles: inserts its art-direction text into the brief (after the brief given here), replacing a style inserted just before if untouched. The project keeps no style of its own.'),
 };
 
 /** Tools executed by the studio. The MCP server adds its own (open_studio) and rewrites
@@ -107,7 +107,7 @@ export const STUDIO_TOOLS: ToolDef[] = [
   },
   {
     name: 'list_styles',
-    description: 'The styles available for styleId (the user’s own, then the presets), with what each is good for.',
+    description: 'The styles (the user’s own, then the presets): art-direction texts that styleId inserts into the brief, with what each is good for.',
     inputSchema: obj(),
   },
   {

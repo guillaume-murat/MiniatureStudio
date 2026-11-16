@@ -28,10 +28,8 @@ interface BriefInput {
   brief: string;
   videoTitle?: string;
   aspectRatio: OutputRatio;
-  /** Art-direction fragment from a style preset. */
-  style?: string;
   roles: ImageRole[];
-  /** Generated from the Gribouillis view: the rendering replaces the style, generated text and title zone, even on a blank sheet. */
+  /** Generated from the Gribouillis view: the rendering replaces the generated text and title zone, even on a blank sheet. */
   sketchView?: boolean;
   /** Brand colours. */
   colors?: string[];
@@ -64,11 +62,6 @@ interface PromptCopy {
   title: (title: string) => string;
   titlePlaceholder: string;
   scene: (brief: string) => string;
-  styleNone: string;
-  styleHeading: string;
-  noPersonPhoto: string;
-  onePersonOfTwo: string;
-  severalPeople: string;
   brandWeights: Record<ResolvedPromptOptions['brandWeight'], string>;
   colors: (list: string) => string;
   generate: (format: string) => string;
@@ -124,27 +117,22 @@ const COPY: Record<Lang, PromptCopy> = {
       `Garde les traits du visage ${ofName(name)} exactement identiques à ces photos (forme du visage, yeux, nez, bouche, teint, cheveux), même si son expression change.`,
     identity: (people) =>
       (people.length === 1 ? `La personne mise en avant est ${people[0]}. Cette personne doit` : `Les personnes mises en avant sont ${joinFr(people)}. Chacune doit`) +
-      ' rester la même personne, immédiatement reconnaissable, avec les traits du visage de ses photos. Seule l’expression change quand la scène ou la direction artistique le demande : la forme du visage, les yeux, le nez, la bouche, le teint et les cheveux restent les siens.',
+      ' rester la même personne, immédiatement reconnaissable, avec les traits du visage de ses photos. Seule l’expression change quand la scène le demande : la forme du visage, les yeux, le nez, la bouche, le teint et les cheveux restent les siens.',
     faceFix: (who) =>
       `remplace le visage par celui ${who}, avec exactement les mêmes traits (forme du visage, yeux, nez, bouche, teint, cheveux). Garde l’expression, l’orientation de la tête, la lumière, les couleurs et le grain de l’image 1, pour que le visage s’intègre sans raccord.`,
     title: (title) => `La miniature s’affichera à côté du titre de la vidéo : ${title}. Ce titre est un contexte, à ne pas écrire dans l’image : la miniature doit ajouter de la curiosité au titre plutôt que le répéter.`,
     titlePlaceholder: '[titre de la vidéo]',
     scene: (brief) => `Scène : ${brief}`,
-    styleNone: 'Direction artistique : baser la direction artistique de l’image sur les informations fournies dans la scène.',
-    styleHeading: 'Direction artistique :',
-    noPersonPhoto: 'Aucune photo de personne n’est jointe : si cette direction parle d’une personne, utilise le sujet de la scène.',
-    onePersonOfTwo: 'Une seule personne est fournie en photo : l’autre reste libre, sauf si la scène dit le contraire.',
-    severalPeople: 'Plusieurs personnes sont fournies en photo : « la personne mise en avant » les désigne toutes.',
     brandWeights: {
       subtle: 'Utilise-les discrètement, en petites touches.',
-      accents: 'Utilise-les comme couleurs d’accent, sans remplacer les couleurs demandées par la direction artistique.',
-      dominant: 'Fais-en les couleurs dominantes de l’image, même si la direction artistique en demande d’autres.',
+      accents: 'Utilise-les comme couleurs d’accent, sans remplacer les couleurs demandées par la scène.',
+      dominant: 'Fais-en les couleurs dominantes de l’image, même si la scène en demande d’autres.',
     },
     colors: (list) => `Couleurs de marque : ${list}.`,
     generate: (format) => `Génère ${format}.`,
     text: {
-      style: 'Texte : uniquement les éléments courts demandés par la direction artistique (badge, chiffre, écran), sans autre lettre, légende ni filigrane.',
-      none: 'Texte : aucune lettre, aucun chiffre, légende ni filigrane dans l’image, même si la direction artistique en mentionne.',
+      style: 'Texte : uniquement les éléments courts demandés par la scène (badge, chiffre, écran), sans autre lettre, légende ni filigrane.',
+      none: 'Texte : aucune lettre, aucun chiffre, légende ni filigrane dans l’image, même si la scène en mentionne.',
     },
     zones: {
       'top-left': 'en haut à gauche',
@@ -166,7 +154,7 @@ const COPY: Record<Lang, PromptCopy> = {
     sketchRender: 'Rendu : une photo réaliste et percutante de miniature YouTube.',
     quality: 'Fais-en une miniature efficace, comprise en une fraction de seconde sur youtube version mobile : des éléments qui ressortent, un fond simple, un fort contraste et des couleurs percutantes.',
     margin: 'Laisse un peu de marge autour des éléments importants : aucun ne doit toucher les bords du cadre ni être coupé par accident. Garde le coin bas droit libre, car la durée de la vidéo s’y affiche.',
-    priority: 'En cas de conflit, la scène l’emporte sur la direction artistique, et la direction artistique sur les consignes générales.',
+    priority: 'En cas de conflit, la scène l’emporte sur les consignes générales.',
     edit: (instruction) => `À partir de l’image 1 (la miniature actuelle), ${instruction}`,
     editApply:
       'Applique cette instruction entièrement et visiblement, même si elle change la position, la taille ou le cadrage d’un élément, ou la composition. ' +
@@ -207,27 +195,22 @@ const COPY: Record<Lang, PromptCopy> = {
       `Keep ${name}’s facial features exactly the same as in these photos (face shape, eyes, nose, mouth, skin tone, hair), even if the expression changes.`,
     identity: (people) =>
       (people.length === 1 ? `The featured person is ${people[0]}. This person must` : `The featured people are ${joinEn(people)}. Each must`) +
-      ' remain the same person, instantly recognisable, with the facial features of their photos. Only the expression changes when the scene or the art direction asks for it: the face shape, eyes, nose, mouth, skin tone and hair stay their own.',
+      ' remain the same person, instantly recognisable, with the facial features of their photos. Only the expression changes when the scene asks for it: the face shape, eyes, nose, mouth, skin tone and hair stay their own.',
     faceFix: (who) =>
       `replace the face with the face of ${who}, with exactly the same features (face shape, eyes, nose, mouth, skin tone, hair). Keep the expression, head angle, lighting, colours and grain of image 1, so the face blends in with no seam.`,
     title: (title) => `The thumbnail will appear next to the video title: ${title}. This title is context, not to be written in the image: the thumbnail should add curiosity to the title rather than repeat it.`,
     titlePlaceholder: '[video title]',
     scene: (brief) => `Scene: ${brief}`,
-    styleNone: 'Art direction: base the image’s art direction on the information given in the scene.',
-    styleHeading: 'Art direction:',
-    noPersonPhoto: 'No photo of a person is attached: if this direction mentions a person, use the subject of the scene.',
-    onePersonOfTwo: 'Only one person is provided in photos: the other one is free, unless the scene says otherwise.',
-    severalPeople: 'Several people are provided in photos: “the featured person” means all of them.',
     brandWeights: {
       subtle: 'Use them discreetly, in small touches.',
-      accents: 'Use them as accent colours, without replacing the colours the art direction asks for.',
-      dominant: 'Make them the dominant colours of the image, even if the art direction asks for others.',
+      accents: 'Use them as accent colours, without replacing the colours the scene asks for.',
+      dominant: 'Make them the dominant colours of the image, even if the scene asks for others.',
     },
     colors: (list) => `Brand colours: ${list}.`,
     generate: (format) => `Generate ${format}.`,
     text: {
-      style: 'Text: only the short elements the art direction asks for (badge, number, screen), with no other lettering, caption or watermark.',
-      none: 'Text: no letters, numbers, captions or watermarks in the image, even if the art direction mentions some.',
+      style: 'Text: only the short elements the scene asks for (badge, number, screen), with no other lettering, caption or watermark.',
+      none: 'Text: no letters, numbers, captions or watermarks in the image, even if the scene mentions some.',
     },
     zones: {
       'top-left': 'at the top left',
@@ -249,7 +232,7 @@ const COPY: Record<Lang, PromptCopy> = {
     sketchRender: 'Rendering: a realistic, striking YouTube thumbnail photo.',
     quality: 'Make it an effective thumbnail, understood in a split second on YouTube mobile: elements that stand out, a simple background, strong contrast and punchy colours.',
     margin: 'Leave some margin around the important elements: none should touch the edges of the frame or be cut off by accident. Keep the bottom-right corner clear, as the video’s duration appears there.',
-    priority: 'In case of conflict, the scene takes priority over the art direction, and the art direction over the general instructions.',
+    priority: 'In case of conflict, the scene takes priority over the general instructions.',
     edit: (instruction) => `Starting from image 1 (the current thumbnail), ${instruction}`,
     editApply:
       'Apply this instruction fully and visibly, even if it changes the position, size or framing of an element, or the composition. ' +
@@ -342,28 +325,10 @@ export function titlePreviewLine(lang: Lang, videoTitle?: string): string {
   return titleLine(lang, videoTitle) || titleLine(lang, COPY[lang].titlePlaceholder);
 }
 
+/** The scene, style text included, as typed: one of several lines starts on the line after its heading. */
 export function sceneLine(lang: Lang, brief: string): string {
-  return COPY[lang].scene(brief.trim());
-}
-
-/** With `people` (how many are attached), says who the style's people are when that differs from what it describes. */
-export function styleLine(lang: Lang, style?: string, people?: number): string {
-  const copy = COPY[lang];
-  if (!style?.trim()) return copy.styleNone;
-  const note = people === undefined ? '' : peopleNote(lang, style, people);
-  // A list keeps its lines; a user's style may be a plain sentence.
-  if (style.trim().startsWith('- ')) return [`${copy.styleHeading}\n${style.trim()}`, note && `- ${note}`].filter(Boolean).join('\n');
-  return [`${copy.styleHeading} ${style.trim()}`, note].filter(Boolean).join(' ');
-}
-
-// A user's own style stays in the language it was written in, whatever the interface's.
-function peopleNote(lang: Lang, style: string, people: number): string {
-  const copy = COPY[lang];
-  if (!/personne|\bperson\b|\bpeople\b/i.test(style)) return '';
-  const duo = /deux personnes|two people/i.test(style);
-  if (people === 0) return duo ? '' : copy.noPersonPhoto;
-  if (people === 1) return duo ? copy.onePersonOfTwo : '';
-  return copy.severalPeople;
+  const scene = brief.trim();
+  return scene.includes('\n') ? `${COPY[lang].scene('').trimEnd()}\n${scene}` : COPY[lang].scene(scene);
 }
 
 export function colorsLine(lang: Lang, colors: string[], weight: ResolvedPromptOptions['brandWeight'] = 'accents'): string {
@@ -393,7 +358,7 @@ export function sketchLine(lang: Lang, n = 1): string {
   return COPY[lang].sketch(n);
 }
 
-/** Takes the place of the style, generated text and title zone, greyed in the Gribouillis view. */
+/** Takes the place of the generated text and title zone, greyed in the Gribouillis view. */
 export function sketchRenderLine(lang: Lang): string {
   return COPY[lang].sketchRender;
 }
@@ -416,8 +381,7 @@ export function priorityLine(lang: Lang): string {
 }
 
 export function buildGenerationPrompt(input: BriefInput): string {
-  const { lang, brief, videoTitle, aspectRatio, style, roles, colors = [], options = DEFAULT_PROMPT_OPTIONS } = input;
-  const people = new Set(roles.flatMap((r) => (r.kind === 'persona' ? [r.name] : []))).size;
+  const { lang, brief, videoTitle, aspectRatio, roles, colors = [], options = DEFAULT_PROMPT_OPTIONS } = input;
 
   const hasSketch = roles.some((r) => r.kind === 'sketch');
   const fromSketchView = input.sketchView || hasSketch;
@@ -431,7 +395,6 @@ export function buildGenerationPrompt(input: BriefInput): string {
   if (identity) sections.push(identity);
   if (fromSketchView) sections.push(sketchRenderLine(lang));
   else {
-    sections.push(styleLine(lang, style, people));
     sections.push(textLine(lang, options.text));
     const zone = titleZoneLine(lang, options.titleZone);
     if (zone) sections.push(zone);

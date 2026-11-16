@@ -12,7 +12,7 @@ import { useBlobUrl } from '../../hooks/use-blob-url';
 import { useUI } from '../../stores/ui';
 import { useWorkspace, type ConceptPreview, toastError } from '../../stores/workspace';
 import { useSettings } from '../../stores/settings';
-import { conceptIdea, conceptPoints, conceptsPrompt, suggestConcepts, type Concept, type ConceptsInput } from '../../lib/ai';
+import { conceptPoints, conceptsPrompt, suggestConcepts, type Concept, type ConceptsInput } from '../../lib/ai';
 import { conceptStyles, findStyle } from '../../lib/styles';
 import { isAbort } from '../../lib/providers';
 import { useT } from '../../i18n';
@@ -139,9 +139,8 @@ export function AssistantDialog() {
     }
   }
 
-  /** The brief a concept leaves in the panel: its points and the style its image was made with. */
-  const applyConcept = (concept: Concept) =>
-    setBrief({ brief: conceptIdea(concept), styleId: findStyle(concept.styleId ?? brief.styleId, customStyles)?.id ?? '' });
+  /** The scene a concept leaves in the panel: its points, then the text of the style its image was made with. */
+  const applyConcept = (concept: Concept) => useWorkspace.getState().applyConcept(concept);
 
   /** The button that puts a concept's image in the project, a new thumbnail per click. */
   const addButton = (i: number, className?: string) => {

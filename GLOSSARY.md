@@ -6,12 +6,12 @@ Le vocabulaire de Miniature Studio, à employer tel quel dans le code, les ticke
 
 **Projet** (project) : le travail autour d'une vidéo. Il garde son brief, ses références, sa chaîne, ses personnes choisies et ses réglages de sortie.
 
-**Brief** : tout ce que le créateur remplit dans le panneau de gauche pour générer une image, surtout le titre de la vidéo, la scène et le style.
+**Brief** : tout ce que le créateur remplit dans le panneau de gauche pour générer une image, surtout le titre de la vidéo et la scène.
 
-**Scène** (scene) : la description de ce que l'image doit montrer. C'est une partie du brief.
+**Scène** (scene) : la description de ce que l'image doit montrer, direction artistique comprise. C'est une partie du brief, et la seule à dire au modèle à quoi l'image doit ressembler.
 _À éviter : idée, description._
 
-**Concept** : un angle de miniature proposé par l'assistant à partir du titre de la vidéo. Il remplit la scène et le style si le créateur le choisit.
+**Concept** : un angle de miniature proposé par l'assistant à partir du titre de la vidéo. Il remplit la scène, avec le texte de son style, si le créateur le choisit.
 
 ## Les images
 
@@ -61,7 +61,7 @@ _À éviter : barre de prompt, barre d'outils._
 
 **Prompt** : le texte complet envoyé à un modèle, écrit dans la langue de l'interface. Le créateur peut le voir avant l'envoi grâce à l'œil.
 
-**Style** : une direction artistique réutilisable, préréglée ou créée par le créateur. Un style créé par le créateur reste dans la langue où il l'a écrit.
+**Style** : un texte de direction artistique réutilisable, préréglé ou écrit par le créateur, qu'on insère dans la scène pour l'adapter ensuite. Le projet ne garde pas de style choisi : seule la scène compte. Un style écrit par le créateur reste dans la langue où il l'a écrit.
 
 **Personne** (persona) : quelqu'un dont les photos servent à garder le visage fidèle. Elle garde jusqu'à dix photos, dont celles qui sont cochées, quatre au plus, sont envoyées au modèle. Les personnes forment une bibliothèque commune à tous les projets, et chaque projet en choisit au plus cinq.
 

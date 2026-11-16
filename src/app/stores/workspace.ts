@@ -27,8 +27,8 @@ import { resolvedResolution } from '../lib/models';
 import { addStroke, EMPTY_SKETCH, isEmptySketch, isSketch, sketchBlob, undoStroke, type Sketch, type SketchStroke } from '../lib/sketch';
 import { randomSeed } from '../lib/channel';
 import { newGeneration, type VersionInput, historyOf, isOlderVersion, versionsAfter } from '../lib/versions';
-import { findStyle, optionsForNewStyle, resolveOptions } from '../lib/styles';
-import type { Concept } from '../lib/ai';
+import { findStyle, insertStyle as withStyle, resolveOptions, type StylePreset } from '../lib/styles';
+import { conceptIdea, type Concept } from '../lib/ai';
 import { rankThumbnails, type Ranking } from '../lib/ai';
 import type {
   BrandKit,
@@ -148,6 +148,12 @@ interface WorkspaceState {
   removeProject: (id: string) => Promise<void>;
   // brief
   setBrief: (patch: Partial<Brief>) => void;
+  /** Inserts a style's text into the scene (replacing the one inserted just before while untouched); a style that writes in the image turns generated text on. An unknown id does nothing. */
+  insertStyle: (id: string) => void;
+  /** Fills the scene with a concept: its points, then the text of the style it suggests. */
+  applyConcept: (concept: Concept) => void;
+  /** The style text last inserted into this project's scene in this session. */
+  lastStyleText?: string;
   addFiles: (files: Iterable<File | Blob>, source?: RefSource) => Promise<void>;
   addRef: (blob: Blob, source: RefSource, label?: string) => boolean;
   removeRef: (id: string) => void;
@@ -268,7 +274,7 @@ const EMPTY_BRAND: BrandKit = { id: 'default', channelName: '', colors: [], upda
 /** The name a new project gets, in either language: a project still named so was never renamed. */
 const DEFAULT_PROJECT_NAMES = new Set([translate('fr', 'topbar.untitled'), translate('en', 'topbar.untitled')]);
 
-const EMPTY_BRIEF: Brief = { videoTitle: '', brief: '', styleId: '' };
+const EMPTY_BRIEF: Brief = { videoTitle: '', brief: '' };
 
 /** A new project's output settings. */
 const DEFAULT_OUTPUT: ProjectOutput = { model: 'nano-banana-pro', aspectRatio: '16:9', resolution: '1K', format: 'png', safety: 'block_only_high', count: 1 };
@@ -499,7 +505,8 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
   /** Images and full prompt for the current brief, shared by `generate` and `previewPrompt`. */
   function generationRequest(concept?: Concept, fromAgent = false) {
     const { brief } = get();
-    const style = findStyle(concept?.styleId ?? brief.styleId, get().customStyles);
+    // A concept's preview is made from what applying it would leave in the scene.
+    const conceptStyle = concept && findStyle(concept.styleId, get().customStyles);
     // A concept is previewed from its text alone: no photos or references to send.
     const people = concept ? [] : personaImages();
     const attached = concept ? [] : [...people, ...referenceImages()];
@@ -511,17 +518,27 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     const roles: ImageRole[] = attached.map((a) => a.role);
     if (withSketch) roles.splice(sketchAt, 0, { kind: 'sketch' });
     const fullPrompt = buildGenerationPrompt({
-      brief: concept?.brief ?? brief.brief,
+      brief: concept ? conceptScene(concept, conceptIdea(concept)) : brief.brief,
       videoTitle: brief.videoTitle,
       aspectRatio: useSettings.getState().aspectRatio,
       lang: promptLang(),
-      style: style?.prompt[promptLang()],
       roles,
       sketchView,
       colors: get().brand.colors,
-      options: resolveOptions(style, brief.options),
+      options: resolveOptions({ ...brief.options, ...(conceptStyle ? textOption(conceptStyle).options : {}) }),
     });
     return { attached, fullPrompt, withSketch, sketchAt, imageCount: roles.length };
+  }
+
+  /** A concept's scene: the given text, then the text of the style it suggests. */
+  function conceptScene(concept: Concept, scene: string): string {
+    const style = findStyle(concept.styleId, get().customStyles);
+    return style ? withStyle(scene, style.prompt[promptLang()]) : scene;
+  }
+
+  /** A style that writes in the image turns generated text on, once: the creator may turn it off. */
+  function textOption(style: StylePreset | undefined): Pick<Partial<Brief>, 'options'> {
+    return style?.preset?.text ? { options: { ...get().brief.options, text: style.preset.text } } : {};
   }
 
   /** Something drawn on the sheet: from the Gribouillis view, it is sent as image 1. */
@@ -723,7 +740,9 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
         selectedId: generations[0]?.id ?? null,
         pickedIds: [],
         ranking: null,
-        brief: inputs.brief,
+        // Only what a brief is now: an older project's `styleId` is left behind.
+        brief: { videoTitle: inputs.brief.videoTitle, brief: inputs.brief.brief, options: inputs.brief.options },
+        lastStyleText: undefined,
         refs: inputs.refs,
         brand: inputs.brand,
         // The library is shared; the people in this project's thumbnails are its own.
@@ -770,10 +789,24 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     },
 
     setBrief: (patch) => {
-      const brief = { ...get().brief, ...patch };
-      if (brief.styleId !== get().brief.styleId && !patch.options) brief.options = optionsForNewStyle(brief.options);
-      set({ brief });
+      set({ brief: { ...get().brief, ...patch } });
       scheduleSave();
+    },
+
+    insertStyle: (id) => {
+      const style = findStyle(id, get().customStyles);
+      if (!style) return;
+      const text = style.prompt[promptLang()].trim();
+      const { brief, lastStyleText } = get();
+      get().setBrief({ brief: withStyle(brief.brief, text, lastStyleText), ...textOption(style) });
+      set({ lastStyleText: text });
+    },
+
+    applyConcept: (concept) => {
+      const style = findStyle(concept.styleId, get().customStyles);
+      const text = style?.prompt[promptLang()].trim();
+      get().setBrief({ brief: conceptScene(concept, conceptIdea(concept)), ...textOption(style) });
+      set({ lastStyleText: text });
     },
 
     addFiles: async (files, source = 'upload') => {
@@ -889,7 +922,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
       }
     },
 
-    promptOptions: () => resolveOptions(findStyle(get().brief.styleId, get().customStyles), get().brief.options),
+    promptOptions: () => resolveOptions(get().brief.options),
 
     previewImageLines: () => {
       // In the order they are sent: the people's photos (faces first), the sketch, the references.
@@ -1111,8 +1144,6 @@ export const useWorkspace = create<WorkspaceState>((set, get) => {
     reloadStyles: async () => {
       const customStyles = await db.listStyles();
       set({ customStyles });
-      // The open project falls back to no style when its style was just deleted.
-      if (!findStyle(get().brief.styleId, customStyles)) get().setBrief({ styleId: '' });
     },
     reloadLibrary: async () => set({ library: await db.listLibrary() }),
     saveBrand: async (kit) => {

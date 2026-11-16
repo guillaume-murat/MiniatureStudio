@@ -26,7 +26,7 @@ const RESOLUTIONS: Resolution[] = ['1K', '2K', '4K'];
 const WEIGHTS: ResolvedPromptOptions['brandWeight'][] = ['subtle', 'accents', 'dominant'];
 
 /**
- * Settle what the prompt's blocks could otherwise contradict; starts from the chosen style's preset.
+ * Settle what the prompt's blocks could otherwise contradict.
  * Folded by default.
  */
 export function AdvancedOptions({ number }: { number: number }) {

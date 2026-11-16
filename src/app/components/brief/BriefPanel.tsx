@@ -20,8 +20,7 @@ import { MOD } from '../TopBar';
 import { MAX_PERSONAS, useWorkspace } from '../../stores/workspace';
 import { useSettings } from '../../stores/settings';
 import { useUI } from '../../stores/ui';
-import { sceneLine, styleLine, titlePreviewLine } from '../../lib/prompt';
-import { findStyle } from '../../lib/styles';
+import { sceneLine, titlePreviewLine } from '../../lib/prompt';
 import { isEmptySketch } from '../../lib/sketch';
 import { ModelNote } from '../ModelNote';
 import { useT } from '../../i18n';
@@ -82,7 +81,7 @@ function PeopleSection({ number }: { number: number }) {
 export function BriefPanel() {
   const lang = useSettings((s) => s.lang);
   const t = useT();
-  const { brief, setBrief, generate, jobs, cancelAll, customStyles, personaIds } = useWorkspace();
+  const { brief, setBrief, generate, jobs, cancelAll } = useWorkspace();
   const open = useUI((s) => s.open);
   const running = jobs.filter((j) => j.status === 'running' && j.kind === 'generate').length;
   // The Gribouillis view: the sketch sets the composition and the rendering, the scene is optional.
@@ -116,6 +115,9 @@ export function BriefPanel() {
                 placeholder={t('brief.videoTitlePlaceholder')}
               />
             </Field>
+            <Field label={t('brief.style')} hint={t('brief.styleHint')}>
+              <StylePicker />
+            </Field>
             <Field label={t('brief.brief')} htmlFor="brief" required={!sketchView} prompt={sketchView && !brief.brief.trim() ? undefined : sceneLine(lang, brief.brief)}>
               <Textarea
                 id="brief"
@@ -125,9 +127,6 @@ export function BriefPanel() {
                 placeholder={t('brief.briefPlaceholder')}
                 className="min-h-28 resize-y"
               />
-            </Field>
-            <Field label={t('brief.style')} disabledReason={sketchView ? t('sketch.greyed') : undefined} prompt={styleLine(lang, findStyle(brief.styleId, customStyles)?.prompt[lang], personaIds.length)}>
-              <StylePicker />
             </Field>
             <GeneratedTextField />
             <TitleZonePicker />

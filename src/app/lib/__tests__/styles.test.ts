@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { STYLES, allStyles, conceptStyles, findStyle, lastGrapheme, optionsForNewStyle, resolveOptions } from '../styles';
+import { STYLES, allStyles, conceptStyles, findStyle, insertStyle, lastGrapheme, resolveOptions } from '../styles';
 import type { CustomStyle } from '../types';
 
 const mine: CustomStyle = { id: 'st_1', name: 'Signature', emoji: '🔥', prompt: 'Bold colours', createdAt: 1 };
@@ -25,9 +25,9 @@ describe('styles', () => {
     expect(rest).toEqual(STYLES);
   });
 
-  it('lets a style of the user’s allow text in the image', () => {
-    expect(resolveOptions(findStyle('st_1', [mine])).text).toBe('none');
-    expect(resolveOptions(findStyle('st_1', [{ ...mine, addsText: true }])).text).toBe('style');
+  it('lets a style of the user’s write in the image', () => {
+    expect(allStyles([mine])[0].preset).toBeUndefined();
+    expect(allStyles([{ ...mine, addsText: true }])[0].preset).toEqual({ text: 'style' });
   });
 
   it('gives the concepts prompt the whole library, in its language', () => {
@@ -54,18 +54,32 @@ describe('styles', () => {
     expect(lastGrapheme('')).toBe('');
   });
 
-  it('starts the options from the style’s preset, under the user’s choices', () => {
+  it('starts the options from the defaults, under the user’s choices', () => {
     expect(resolveOptions(undefined).text).toBe('none');
-    expect(resolveOptions(findStyle('versus')).text).toBe('style');
-    expect(resolveOptions(findStyle('reaction'), { text: 'style' }).text).toBe('style');
+    expect(resolveOptions({ text: 'style' }).text).toBe('style');
+  });
+});
+
+describe('inserting a style into the scene', () => {
+  const versus = '- Composition divisée en deux\n- Grand badge « VS »';
+  const reaction = '- Gros plan serré\n- Fond saturé';
+
+  it('fills an empty scene with the style’s text alone', () => {
+    expect(insertStyle('', versus)).toBe(versus);
+    expect(insertStyle('  \n', versus)).toBe(versus);
   });
 
-  it('keeps text on for a style that adds some', () => {
-    expect(resolveOptions(findStyle('versus'), { text: 'none' }).text).toBe('style');
+  it('adds it after what the creator wrote, after a blank line', () => {
+    expect(insertStyle('Un chef face à un robot cuisinier\n', versus)).toBe(`Un chef face à un robot cuisinier\n\n${versus}`);
   });
 
-  it('forgets what depends on the style when it changes', () => {
-    expect(optionsForNewStyle({ text: 'style', titleZone: 'left', brandWeight: 'subtle' })).toEqual({ titleZone: 'left', brandWeight: 'subtle' });
-    expect(optionsForNewStyle(undefined)).toBeUndefined();
+  it('replaces the style inserted just before while it is untouched', () => {
+    const scene = insertStyle('Un chef', versus);
+    expect(insertStyle(scene, reaction, versus)).toBe(`Un chef\n\n${reaction}`);
+  });
+
+  it('never replaces a style text the creator has changed', () => {
+    const edited = insertStyle('Un chef', versus).replace('deux', 'trois');
+    expect(insertStyle(edited, reaction, versus)).toBe(`${edited}\n\n${reaction}`);
   });
 });

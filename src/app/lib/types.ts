@@ -65,7 +65,7 @@ export interface Project {
 
 export type TitleZone = 'top-left' | 'top' | 'top-right' | 'left' | 'center' | 'right' | 'bottom-left' | 'bottom' | 'bottom-right' | 'none';
 
-/** The advanced options of the brief panel. Absent values come from the style's preset. */
+/** The advanced options of the brief panel. Absent values are the defaults; inserting a style that writes in the image sets `text`. */
 export interface PromptOptions {
   text?: 'none' | 'style';
   titleZone?: TitleZone;
@@ -76,7 +76,8 @@ export type ResolvedPromptOptions = Required<PromptOptions>;
 
 /** The brief panel of a project: each project starts empty and keeps its own. Only app settings (provider, keys, theme, language) are shared. */
 export interface ProjectInputs {
-  brief: { videoTitle: string; brief: string; styleId: string; options?: PromptOptions };
+  /** The scene (`brief`) holds the art direction too: a style is only a text inserted into it. A `styleId` saved before is ignored. */
+  brief: { videoTitle: string; brief: string; options?: PromptOptions };
   refs: RefImage[];
   brand: BrandKit;
   /** The people in this project's thumbnails, at most 5 (records in the `personas` store, a library shared by all projects). */

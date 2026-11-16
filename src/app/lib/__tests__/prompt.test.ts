@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { brandWeightLine, buildEditPrompt, buildFaceFixPrompt, buildGenerationPrompt, buildHealPrompt, identityLine, buildOutpaintPrompt, buildRegionEditPrompt, buildUpscalePrompt, colorsLine, DEFAULT_PROMPT_OPTIONS, describeImages, formatLine, imagesHeader, marginLine, outputRatio, priorityLine, qualityLine, sceneLine, sketchLine, sketchRenderLine, styleLine, textLine, titleLine, titlePreviewLine, titleZoneLine } from '../prompt';
+import { brandWeightLine, buildEditPrompt, buildFaceFixPrompt, buildGenerationPrompt, buildHealPrompt, identityLine, buildOutpaintPrompt, buildRegionEditPrompt, buildUpscalePrompt, colorsLine, DEFAULT_PROMPT_OPTIONS, describeImages, formatLine, imagesHeader, marginLine, outputRatio, priorityLine, qualityLine, sceneLine, sketchLine, sketchRenderLine, textLine, titleLine, titlePreviewLine, titleZoneLine } from '../prompt';
 
 const base = { lang: 'fr' as const, brief: 'Une développeuse sur Mars', aspectRatio: '16:9' as const, roles: [] };
 
@@ -31,9 +31,9 @@ describe('identityLine', () => {
   });
 
   it('comes right after the scene', () => {
-    const p = buildGenerationPrompt({ ...base, roles: [ines], style: 'Flat' });
+    const p = buildGenerationPrompt({ ...base, roles: [ines] });
     expect(p.indexOf(identityLine('fr', [ines]))).toBeGreaterThan(p.indexOf(sceneLine('fr', base.brief)));
-    expect(p.indexOf(identityLine('fr', [ines]))).toBeLessThan(p.indexOf(styleLine('fr', 'Flat', 1)));
+    expect(p.indexOf(identityLine('fr', [ines]))).toBeLessThan(p.indexOf(textLine('fr')));
   });
 });
 
@@ -67,19 +67,34 @@ describe('outputRatio', () => {
 
 describe('buildGenerationPrompt', () => {
   it('is made of the lines shown in the brief panel', () => {
-    const p = buildGenerationPrompt({ ...base, videoTitle: 'Mars', style: 'Flat', colors: ['#ff0000'] });
-    for (const line of [formatLine('fr', '16:9'), titleLine('fr', 'Mars'), styleLine('fr', 'Flat'), textLine('fr'), titleZoneLine('fr'), colorsLine('fr', ['#ff0000'])]) {
+    const p = buildGenerationPrompt({ ...base, videoTitle: 'Mars', colors: ['#ff0000'] });
+    for (const line of [formatLine('fr', '16:9'), titleLine('fr', 'Mars'), textLine('fr'), titleZoneLine('fr'), colorsLine('fr', ['#ff0000'])]) {
       expect(p).toContain(line);
     }
     expect([titleLine('fr', ' '), colorsLine('fr', [])]).toEqual(['', '']);
-    expect(buildGenerationPrompt(base)).toContain(styleLine('fr'));
-    expect(styleLine('fr')).toContain('informations fournies dans la scène');
+  });
+
+  it('lets the scene alone say what the image looks like: no art direction line', () => {
+    const scene = 'Un chef face à un robot\n\n- Composition divisée en deux\n- La personne mise en avant à gauche';
+    for (const roles of [[], [{ kind: 'persona', name: 'Alex' }]] as const) {
+      const p = buildGenerationPrompt({ ...base, brief: scene, roles: [...roles] });
+      expect(p).not.toMatch(/Direction artistique|direction artistique/);
+      expect(p).not.toContain('Aucune photo de personne');
+      expect(p).toContain(`Scène :\n${scene}`);
+    }
+    expect(buildGenerationPrompt({ ...base, lang: 'en' })).not.toMatch(/Art direction|art direction/);
+  });
+
+  it('starts a scene of several lines on the line after its heading', () => {
+    expect(sceneLine('fr', '- Gros plan\n- Fond saturé')).toBe('Scène :\n- Gros plan\n- Fond saturé');
+    expect(sceneLine('fr', 'Un chef\n\n- Gros plan')).toBe('Scène :\nUn chef\n\n- Gros plan');
+    expect(sceneLine('en', ' A chef ')).toBe('Scene: A chef');
   });
 
   it('sends nothing beyond the blocks shown in the brief panel', () => {
     const roles = [{ kind: 'persona', name: 'Alex' }, { kind: 'reference' }] as const;
-    let p = buildGenerationPrompt({ ...base, roles: [...roles], videoTitle: 'Mars', style: 'Flat', colors: ['#ff0000'] });
-    const shown = [formatLine('fr', '16:9'), titleLine('fr', 'Mars'), sceneLine('fr', base.brief), identityLine('fr', [...roles]), styleLine('fr', 'Flat', 1), textLine('fr'), titleZoneLine('fr'), imagesHeader('fr'), ...describeImages('fr', [...roles]), colorsLine('fr', ['#ff0000']), qualityLine('fr'), marginLine('fr'), priorityLine('fr')];
+    let p = buildGenerationPrompt({ ...base, roles: [...roles], videoTitle: 'Mars', colors: ['#ff0000'] });
+    const shown = [formatLine('fr', '16:9'), titleLine('fr', 'Mars'), sceneLine('fr', base.brief), identityLine('fr', [...roles]), textLine('fr'), titleZoneLine('fr'), imagesHeader('fr'), ...describeImages('fr', [...roles]), colorsLine('fr', ['#ff0000']), qualityLine('fr'), marginLine('fr'), priorityLine('fr')];
     for (const block of shown) {
       expect(p).toContain(block);
       p = p.replace(block, '');
@@ -114,17 +129,6 @@ describe('buildGenerationPrompt', () => {
     expect(titleZoneLine('fr', 'none')).toBe('');
   });
 
-  it('explains the style’s people when they differ from who is attached', () => {
-    const one = 'La personne mise en avant sourit.';
-    expect(styleLine('fr', one, 1)).toBe(`Direction artistique : ${one}`);
-    expect(styleLine('fr', one, 0)).toContain('Aucune photo de personne');
-    expect(styleLine('fr', one, 2)).toContain('les désigne toutes');
-    expect(styleLine('fr', 'Deux personnes face à face.', 1)).toContain('Une seule personne');
-    expect(styleLine('fr', 'Un paysage.', 0)).toBe('Direction artistique : Un paysage.');
-    expect(styleLine('fr', '- Un paysage\n- Fond clair', 0)).toBe('Direction artistique :\n- Un paysage\n- Fond clair');
-    expect(styleLine('fr', '- La personne\n- Fond clair', 0)).toMatch(/Fond clair\n- Aucune photo de personne/);
-  });
-
   it('states the format and the scene', () => {
     const p = buildGenerationPrompt(base);
     expect(p).toMatch(/^Génère une miniature de vidéo YouTube au format 16:9\./);
@@ -153,10 +157,9 @@ describe('buildGenerationPrompt', () => {
     expect(p).toContain('plutôt que le répéter');
   });
 
-  it('includes the style and the brand colours when given', () => {
+  it('includes the brand colours when given', () => {
     expect(buildGenerationPrompt(base)).not.toContain('Couleurs de marque');
-    const p = buildGenerationPrompt({ ...base, style: 'Pâte à modeler', colors: ['#ff0000', '#00ff00'] });
-    expect(p).toContain('Direction artistique : Pâte à modeler');
+    const p = buildGenerationPrompt({ ...base, colors: ['#ff0000', '#00ff00'] });
     expect(p).toContain('Couleurs de marque : #ff0000, #00ff00');
   });
 });
@@ -166,9 +169,9 @@ describe('a generation from a sketch', () => {
   // The people's photos come first, faces before anything else; then the sketch, then the references.
   const roles = [{ kind: 'persona', name: 'Alex' }, sketch, { kind: 'reference' }] as const;
 
-  it('sends the sketch after the people, its composition rule and the rendering, without style, generated text or title zone', () => {
+  it('sends the sketch after the people, its composition rule and the rendering, without generated text or title zone', () => {
     for (const lang of ['fr', 'en'] as const) {
-      let p = buildGenerationPrompt({ ...base, lang, roles: [...roles], videoTitle: 'Mars', style: 'Flat', colors: ['#ff0000'], options: { ...DEFAULT_PROMPT_OPTIONS, text: 'style', titleZone: 'top' } });
+      let p = buildGenerationPrompt({ ...base, lang, roles: [...roles], videoTitle: 'Mars', colors: ['#ff0000'], options: { ...DEFAULT_PROMPT_OPTIONS, text: 'style', titleZone: 'top' } });
       const shown = [formatLine(lang, '16:9'), titleLine(lang, 'Mars'), sketchLine(lang, 2), sceneLine(lang, base.brief), identityLine(lang, [...roles]), sketchRenderLine(lang), imagesHeader(lang), ...describeImages(lang, [...roles]), colorsLine(lang, ['#ff0000']), qualityLine(lang), marginLine(lang), priorityLine(lang)];
       for (const block of shown) {
         expect(p).toContain(block);
@@ -194,7 +197,7 @@ describe('a generation from a sketch', () => {
   });
 
   it('from the Gribouillis view with a blank sheet, keeps the scene and the rendering but sends no sketch', () => {
-    let p = buildGenerationPrompt({ ...base, sketchView: true, style: 'Flat', options: { ...DEFAULT_PROMPT_OPTIONS, text: 'style', titleZone: 'top' } });
+    let p = buildGenerationPrompt({ ...base, sketchView: true, options: { ...DEFAULT_PROMPT_OPTIONS, text: 'style', titleZone: 'top' } });
     for (const block of [formatLine('fr', '16:9'), sceneLine('fr', base.brief), sketchRenderLine('fr'), qualityLine('fr'), marginLine('fr'), priorityLine('fr')]) {
       expect(p).toContain(block);
       p = p.replace(block, '');
@@ -287,9 +290,9 @@ describe('the prompts follow the interface language', () => {
   it('writes the whole generation prompt in that language', () => {
     const roles = [{ kind: 'persona', name: 'Alex' }, { kind: 'reference', use: 'style', label: 'logo' }] as const;
     const options = { text: 'style', titleZone: 'bottom-right', brandWeight: 'dominant' } as const;
-    const p = buildGenerationPrompt({ ...en, roles: [...roles], videoTitle: 'Mars', style: 'Flat', colors: ['#ff0000'], options });
+    const p = buildGenerationPrompt({ ...en, roles: [...roles], videoTitle: 'Mars', colors: ['#ff0000'], options });
     expect(p).toMatch(/^Generate a YouTube video thumbnail in 16:9 format\. The thumbnail will appear next to the video title: Mars\./);
-    for (const part of ['Scene: A developer on Mars', 'Art direction: Flat', 'Attached images, in order:', '- Image 1: photos of Alex.', '- Image 2: style reference (logo):', 'Brand colours: #ff0000.', 'the corner where the duration appears']) {
+    for (const part of ['Scene: A developer on Mars', 'Attached images, in order:', '- Image 1: photos of Alex.', '- Image 2: style reference (logo):', 'Brand colours: #ff0000.', 'the corner where the duration appears']) {
       expect(p).toContain(part);
     }
     // None of the French words the prompts are made of.
@@ -297,8 +300,8 @@ describe('the prompts follow the interface language', () => {
   });
 
   it('keeps the blocks shown in the brief panel the same as what is sent', () => {
-    let p = buildGenerationPrompt({ ...en, videoTitle: 'Mars', style: 'Flat' });
-    for (const block of [formatLine('en', '16:9'), titleLine('en', 'Mars'), sceneLine('en', en.brief), styleLine('en', 'Flat', 0), textLine('en'), qualityLine('en'), marginLine('en'), priorityLine('en')]) {
+    let p = buildGenerationPrompt({ ...en, videoTitle: 'Mars' });
+    for (const block of [formatLine('en', '16:9'), titleLine('en', 'Mars'), sceneLine('en', en.brief), textLine('en'), qualityLine('en'), marginLine('en'), priorityLine('en')]) {
       expect(p).toContain(block);
       p = p.replace(block, '');
     }
@@ -314,13 +317,6 @@ describe('the prompts follow the interface language', () => {
     expect(buildHealPrompt('fr')).toContain('N’ajoute rien de nouveau');
     expect(buildUpscalePrompt('en')).toMatch(/^Enlarge image 1/);
     expect(buildOutpaintPrompt('en')).toContain('Change nothing outside the grey areas');
-  });
-
-  it('notices the people of a style written in either language, as a user’s own stays as typed', () => {
-    expect(styleLine('en', 'The featured person smiles.', 0)).toContain('No photo of a person');
-    expect(styleLine('en', 'La personne sourit.', 0)).toContain('No photo of a person');
-    expect(styleLine('fr', 'Two people talking.', 1)).toContain('Une seule personne');
-    expect(styleLine('en', 'A landscape.', 0)).toBe('Art direction: A landscape.');
   });
 
   it('previews the missing title in that language', () => {

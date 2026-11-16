@@ -39,7 +39,7 @@ Reference images: say what each one is for in its `label` ("the product — keep
 | Podcasts, interviews | `podcast` |
 | Gaming | `gaming` |
 
-Presets are a starting grammar, not a rule; `styleId: ""` for none.
+Presets are a starting grammar, not a rule. `styleId` inserts the style's text into the brief, which is all the model is told about the image: adapt it there (with `set_brief`) rather than leaving lines that don't fit the video.
 
 ## Critique checklist
 

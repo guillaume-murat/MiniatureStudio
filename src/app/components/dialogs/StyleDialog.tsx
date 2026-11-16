@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { ArrowLeft, Check, Pencil, Plus, RemoveFormatting, Trash2, Type } from 'lucide-react';
+import { ArrowLeft, Pencil, Plus, RemoveFormatting, Trash2, Type } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -12,15 +12,14 @@ import { useUI } from '../../stores/ui';
 import { useWorkspace } from '../../stores/workspace';
 import { useSettings } from '../../stores/settings';
 import { deleteStyle, putStyle, uid } from '../../lib/db';
-import { NO_STYLE_EMOJI, STYLES, STYLE_EMOJIS, allStyles, lastGrapheme } from '../../lib/styles';
-import { styleLine } from '../../lib/prompt';
+import { STYLES, STYLE_EMOJIS, lastGrapheme } from '../../lib/styles';
 import { useT } from '../../i18n';
 import type { CustomStyle } from '../../lib/types';
 import { cn } from '../../lib/utils';
 
 function Editor({ initial, onDone }: { initial?: CustomStyle; onDone: () => void }) {
   const t = useT();
-  const { reloadStyles, setBrief } = useWorkspace();
+  const reloadStyles = useWorkspace((s) => s.reloadStyles);
   const [emoji, setEmoji] = useState(initial?.emoji ?? STYLE_EMOJIS[0]);
   const [name, setName] = useState(initial?.name ?? '');
   const [hint, setHint] = useState(initial?.hint ?? '');
@@ -41,8 +40,6 @@ function Editor({ initial, onDone }: { initial?: CustomStyle; onDone: () => void
       createdAt: initial?.createdAt ?? Date.now(),
     });
     await reloadStyles();
-    // A style just written is the one the user wants here.
-    if (!initial) setBrief({ styleId: id });
     onDone();
   }
 
@@ -105,7 +102,6 @@ function TextBadge({ addsText }: { addsText: boolean }) {
 }
 
 function StyleOption({
-  active,
   emoji,
   title,
   hint,
@@ -114,7 +110,6 @@ function StyleOption({
   actions,
   onClick,
 }: {
-  active: boolean;
   emoji: string;
   title: string;
   hint: string;
@@ -123,8 +118,9 @@ function StyleOption({
   actions?: ReactNode;
   onClick: () => void;
 }) {
+  const t = useT();
   return (
-    <div className={cn('group relative rounded-lg border transition-colors hover:bg-accent', active && 'border-primary bg-accent')}>
+    <div className="group relative rounded-lg border transition-colors hover:bg-accent">
       <button type="button" onClick={onClick} className="flex size-full flex-col gap-1.5 rounded-lg p-2.5 text-left">
         <span className="flex w-full items-start gap-2">
           <span className="text-lg leading-tight" aria-hidden>
@@ -134,29 +130,26 @@ function StyleOption({
             <span className="block truncate text-sm font-medium">{title}</span>
             <span className="block truncate text-xs text-muted-foreground">{hint}</span>
           </span>
-          {active && <Check className="mt-0.5 size-4 shrink-0 text-primary" />}
         </span>
         <TextBadge addsText={addsText} />
-        <PromptCode text={prompt} />
+        <PromptCode text={prompt} heading={t('brief.styleText')} />
       </button>
       {actions && <div className="absolute top-1.5 right-7 flex gap-0.5 rounded-md bg-card opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100">{actions}</div>}
     </div>
   );
 }
 
-function CustomStyleOption({ style, active, onChoose, onEdit }: { style: CustomStyle; active: boolean; onChoose: () => void; onEdit: () => void }) {
+function CustomStyleOption({ style, onChoose, onEdit }: { style: CustomStyle; onChoose: () => void; onEdit: () => void }) {
   const t = useT();
-  const lang = useSettings((s) => s.lang);
   const reloadStyles = useWorkspace((s) => s.reloadStyles);
   const [confirming, setConfirming] = useState(false);
   return (
     <StyleOption
-      active={active}
       emoji={style.emoji}
       title={style.name}
       hint={style.hint ?? ''}
       addsText={style.addsText}
-      prompt={styleLine(lang, style.prompt)}
+      prompt={style.prompt}
       onClick={onChoose}
       actions={
         confirming ? (
@@ -190,20 +183,18 @@ function CustomStyleOption({ style, active, onChoose, onEdit }: { style: CustomS
   );
 }
 
-/** The style library: the user's own styles, shared by every project, and the presets. */
+/** The style library: the user's own styles, shared by every project, and the presets. Choosing one inserts its text into the scene. */
 export function StyleDialog() {
   const t = useT();
   const lang = useSettings((s) => s.lang);
   const dialog = useUI((s) => s.dialog);
   const close = useUI((s) => s.close);
-  const styleId = useWorkspace((s) => s.brief.styleId);
   const customStyles = useWorkspace((s) => s.customStyles);
-  const setBrief = useWorkspace((s) => s.setBrief);
+  const insertStyle = useWorkspace((s) => s.insertStyle);
   const [editing, setEditing] = useState<CustomStyle | 'new' | null>(null);
-  const hasStyle = allStyles(customStyles).some((s) => s.id === styleId);
 
   const choose = (id: string) => {
-    setBrief({ styleId: id });
+    insertStyle(id);
     close();
   };
 
@@ -246,7 +237,7 @@ export function StyleDialog() {
               ) : (
                 <div className="grid gap-2 grid-cols-2">
                   {customStyles.map((s) => (
-                    <CustomStyleOption key={s.id} style={s} active={s.id === styleId} onChoose={() => choose(s.id)} onEdit={() => setEditing(s)} />
+                    <CustomStyleOption key={s.id} style={s} onChoose={() => choose(s.id)} onEdit={() => setEditing(s)} />
                   ))}
                 </div>
               )}
@@ -254,9 +245,8 @@ export function StyleDialog() {
             <section className="space-y-2">
               <h3 className="text-sm font-medium">{t('styles.presets')}</h3>
               <div className="grid gap-2 grid-cols-2">
-                <StyleOption active={!hasStyle} emoji={NO_STYLE_EMOJI} title={t('brief.styleNone')} hint="—" prompt={styleLine(lang)} onClick={() => choose('')} />
                 {STYLES.map((s) => (
-                  <StyleOption key={s.id} active={s.id === styleId} emoji={s.emoji} title={s.name[lang]} hint={s.hint[lang]} addsText={s.preset?.text === 'style'} prompt={styleLine(lang, s.prompt[lang])} onClick={() => choose(s.id)} />
+                  <StyleOption key={s.id} emoji={s.emoji} title={s.name[lang]} hint={s.hint[lang]} addsText={s.preset?.text === 'style'} prompt={s.prompt[lang]} onClick={() => choose(s.id)} />
                 ))}
               </div>
             </section>
